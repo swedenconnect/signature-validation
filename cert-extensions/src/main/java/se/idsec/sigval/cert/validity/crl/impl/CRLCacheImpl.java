@@ -1,0 +1,382 @@
+package se.idsec.sigval.cert.validity.crl.impl;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Setter;
+import lombok.extern.java.Log;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.bouncycastle.asn1.DERIA5String;
+import org.bouncycastle.asn1.x509.*;
+import se.idsec.sigval.cert.validity.crl.CRLCache;
+import se.idsec.sigval.cert.validity.crl.CRLCacheData;
+import se.idsec.sigval.cert.validity.crl.CRLCacheRecord;
+
+import javax.naming.Context;
+import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.DirContext;
+import javax.naming.directory.InitialDirContext;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigInteger;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509CRL;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.stream.Collectors;
+
+/**
+ * CRL cache implementation. Two main functions allows retrieval of a CRL from this cache which adds the CRL to the cache if not present,
+ * and a function for re-caching all CRLs on the cache. The latter function is meant to be called periodically by a daemon process in the background
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
+@Log
+public class CRLCacheImpl implements CRLCache {
+
+  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final String CACHE_DATA_FILE = "crlCache.json";
+  private static final String CACHE_DIR = "cache";
+  private static final String TEMP_DIR = "temp";
+  private static final String LDAP_CONNECT_TIMEOUT = "com.sun.jndi.ldap.connect.timeout";
+  private static final String LDAP_READ_TIMEOUT = "com.sun.jndi.ldap.read.timeout";
+  private static final String LDAP_CONTEXT_FACTORY = "com.sun.jndi.ldap.LdapCtxFactory";
+  private static final int DEFAULT_CONNECT_TIMEOUT = 1000;
+  private static final int DEFAULT_READ_TIMEOUT = 7000;
+
+  private final long recacheGracePeriod;
+  private CRLCacheData crlCacheData;
+  private final File cacheDir;
+  private final File tempDir;
+  private File crlCacheFile;
+  /**
+   * Setter for connection timout for LDAP and HTTP
+   *
+   * @param connectTimeout the connection timout time in milliseconds
+   */
+  @Setter private int connectTimeout;
+  /**
+   * Setter for read timout for LDAP and HTTP
+   *
+   * @param readTimeout the read value timeout time in milliseconds
+   */
+  @Setter private int readTimeout;
+
+  /**
+   * Constructor for the CRL cache
+   * @param cacheDataFolder the data folder used to store cache data
+   * @param recacheGracePeriod time in milliseconds for the time after last cache instance when first re-cache will be attempted
+   */
+  public CRLCacheImpl(File cacheDataFolder, long recacheGracePeriod) {
+    this.recacheGracePeriod = recacheGracePeriod;
+    this.cacheDir = new File(cacheDataFolder, CACHE_DIR);
+    this.tempDir = new File(cacheDataFolder, TEMP_DIR);
+    this.crlCacheFile = new File(cacheDataFolder, CACHE_DATA_FILE);
+    this.connectTimeout = DEFAULT_CONNECT_TIMEOUT;
+    this.readTimeout = DEFAULT_READ_TIMEOUT;
+    if (!cacheDir.exists()) {
+      cacheDir.mkdirs();
+    }
+    if (!tempDir.exists()) {
+      tempDir.mkdirs();
+    }
+    recache();
+  }
+
+  /**
+   * Returns the current list of cached CRL records
+   * @return list of cached CRLs
+   */
+  public List<CRLCacheRecord> getCrlCacheRecords() {
+    return crlCacheData.getCrlCacheRecordList();
+  }
+
+  /**
+   * This function is a more practical use of the cache rather than asking for a particular cached URL. This function is however
+   * limited to the following specific usage policy:
+   * <ul>
+   *   <li>Only distribution points with absent reason settings are accepted (Not limited to a subset of reasons)</li>
+   *   <li>Only distribution points with absent crlIssuer are accepted (CRL must be issued by cert issuer)</li>
+   *   <li>Both LDAP(S) and HTTP(S) sources are accepted</li>
+   *   <li>If both LDAP and HTTP sources are present, HTTP is attempted first. LDAP will only be attempted if HTTP fails</li>
+   *   <li>If several sources are present, only the first successful source will be cached</li>
+   * </ul>
+   *
+   * @param crlDistributionPointExt
+   * @return CRL
+   * @throws IOException on error to obtain the CRL from this extension
+   */
+  @Override public X509CRL getCRL(CRLDistPoint crlDistributionPointExt) throws IOException{
+    List<String> approvedUriList = new ArrayList<>();
+    boolean crlIssuerPresent = false;
+    boolean reasonsPresent = false;
+    DistributionPoint[] distributionPoints = crlDistributionPointExt.getDistributionPoints();
+    for (DistributionPoint dp : distributionPoints) {
+      GeneralNames crlIssuer = dp.getCRLIssuer();
+      ReasonFlags reasons = dp.getReasons();
+      GeneralNames dpGeneralNames = GeneralNames.getInstance(dp.getDistributionPoint().getName());
+      Optional<String> crlDpUrlOptional = Arrays.stream(dpGeneralNames.getNames())
+        .filter(generalName -> generalName.getTagNo() == 6)
+        .map(generalName -> ((DERIA5String) generalName.getName()).getString())
+        .findFirst();
+      GeneralName[] names = dpGeneralNames.getNames();
+      if (crlDpUrlOptional.isPresent() && crlIssuer == null && reasons == null) {
+        // This distribution point meets the basic acceptance criteria
+        approvedUriList.add(crlDpUrlOptional.get());
+      }
+      else {
+        // This distribution point does not meet basic acceptance criteria. Store reason for proper error logging
+        crlIssuerPresent = crlIssuer != null || crlIssuerPresent;
+        reasonsPresent = reasons != null || reasonsPresent;
+      }
+    }
+    if (approvedUriList.isEmpty()){
+      // We didnt find any acceptable distribution points. Throw exception
+      if (crlIssuerPresent){
+        log.fine("No acceptable CRL distribution point found. Declaration of crlIssuer is not allowed");
+        throw new IOException("No acceptable CRL distribution point found. Declaration of crlIssuer is not allowed");
+      }
+      if (reasonsPresent){
+        log.fine("No acceptable CRL distribution point found. Declaration of reason is not allowed");
+        throw new IOException("No acceptable CRL distribution point found. Declaration of reason is not allowed");
+      }
+    }
+
+    log.fine("Found valid CRLDP URL:s " + String.join(", ", approvedUriList));
+
+    // We have at least one acceptable URI
+    Optional<String> httpUrlOptional = approvedUriList.stream()
+      .filter(s -> s != null && s.toLowerCase().startsWith("http"))
+      .findFirst();
+    Optional<String> ldapUrlOptional = approvedUriList.stream()
+      .filter(s -> s != null && s.toLowerCase().startsWith("ldap"))
+      .findFirst();
+
+
+    if (httpUrlOptional.isPresent()){
+      try {
+        return getCRL(httpUrlOptional.get());
+      } catch (Exception ex) {
+        log.fine("Attempt to cache CRL from http URL failed: " + ex.getMessage() + " - attempting other URLs if present");
+      }
+    }
+
+    if (ldapUrlOptional.isPresent()){
+      try {
+        return getCRL(ldapUrlOptional.get());
+      } catch (Exception ex) {
+        log.fine("Attempt to cache CRL from ldap URL failed: " + ex.getMessage());
+      }
+    }
+    throw new IOException("The provided CRL distribution point did not provide any valid distribution point providing a valid CRL");
+  }
+
+  /**
+   * Retrieves a CRL from the CRL cache. If the CRL is not in the cache or if the cached CRL is expired,
+   * then an attempt to download and cache the CRL is made.
+   *
+   * @param url the location of the CRL
+   * @return cached or downloaded CRL
+   * @throws IOException if it is not possible to obtain a CRL from this location
+   */
+  @Override public X509CRL getCRL(String url) throws IOException {
+    try {
+      new URI(url);
+    }
+    catch (Exception ex) {
+      log.warning("Malformed url in requested CRL: " + url);
+      throw new IOException("Malformed url in requested CRL: " + url);
+    }
+
+    Optional<CRLCacheRecord> cacheRecordOptional = crlCacheData.getCrlCacheRecordList().stream()
+      .filter(crlCacheRecord -> url.equalsIgnoreCase(crlCacheRecord.getUrl()))
+      .findFirst();
+
+    if (cacheRecordOptional.isPresent()) {
+      // This CRL is cached. check if it is still valid
+      X509CRL cachedCrl = getCachedCrl(cacheRecordOptional.get().getFileName());
+      Date nextUpdate = cachedCrl.getNextUpdate();
+      if (nextUpdate.after(new Date())) {
+        log.fine("Returning cached CRL for location: " + url);
+        return cachedCrl;
+      }
+      else {
+        log.fine("Cached CRL expired for location " + url);
+      }
+    }
+    else {
+      log.fine("No cached CRL present for location " + url);
+    }
+
+    // Reaching this point means that the CRL is not cached or the cached CRL has expired.
+    log.fine("Attempting to cache CRL from " + url);
+    try {
+      CRLCacheRecord crlCacheRecord = CRLCacheRecord.builder()
+        .url(url)
+        .fileName(getFileName(url))
+        .build();
+
+      // Cache CRL
+      cacheCrlRecord(crlCacheRecord);
+      // Add cache record data
+      crlCacheData.getCrlCacheRecordList().add(crlCacheRecord);
+      // Save cache data file
+      FileUtils.writeByteArrayToFile(crlCacheFile, jsonMapper.writeValueAsBytes(crlCacheData));
+      // Return cached CRL
+      return getCachedCrl(crlCacheRecord.getFileName());
+    }
+    catch (Exception ex) {
+      log.warning("Unable to cache CRL from " + url + " " + ex.getMessage());
+      throw new IOException(ex.getMessage());
+    }
+  }
+
+  /**
+   * Performs a re-cache of all cached CRL records. This method should be called by a daemon process periodically
+   */
+  @Override public void recache() {
+    List<String> badUrlList = new ArrayList<>();
+    try {
+      reloadCrlCacheData();
+      crlCacheData.getCrlCacheRecordList().stream().forEach(crlCacheRecord -> {
+        try {
+          cacheCrlRecord(crlCacheRecord);
+        }
+        catch (Exception ex) {
+          log.warning("Unable to cache CRL from: " + crlCacheRecord.getUrl() + ". Removing it from cache. " + ex.getMessage());
+          badUrlList.add(crlCacheRecord.getUrl());
+        }
+      });
+
+      if (!badUrlList.isEmpty()) {
+        // We found bad URL:s that could not be cached. We remove them from the cache for now.
+        List<CRLCacheRecord> filteredCacheRecords = crlCacheData.getCrlCacheRecordList().stream()
+          .filter(crlCacheRecord -> !badUrlList.contains(crlCacheRecord.getUrl()))
+          .collect(Collectors.toList());
+        // Remove cached CRL
+        crlCacheData.getCrlCacheRecordList().stream()
+          .filter(crlCacheRecord -> badUrlList.contains(crlCacheRecord.getUrl()))
+          .forEach(crlCacheRecord -> {
+            File cacheFile = new File(cacheDir, crlCacheRecord.getFileName());
+            cacheFile.delete();
+          });
+        // Set the consolidated list
+        crlCacheData.setCrlCacheRecordList(filteredCacheRecords);
+      }
+      // Save cache data file, storing any changes made to it.
+      FileUtils.writeByteArrayToFile(crlCacheFile, jsonMapper.writeValueAsBytes(crlCacheData));
+    }
+    catch (Exception e) {
+      log.log(Level.SEVERE, "Unable to re-cache CRL data", e);
+      return;
+    }
+  }
+
+  private void cacheCrlRecord(CRLCacheRecord crlCacheRecord) throws Exception {
+    String urlStr = crlCacheRecord.getUrl();
+    if (System.currentTimeMillis() < crlCacheRecord.getLastCache() + recacheGracePeriod) {
+      log.fine("Crl " + urlStr + " is recently cached. Skipping this re-cache");
+      return;
+    }
+    log.fine("Re-caching CRL from: " + urlStr);
+    File tempFile = new File(tempDir, crlCacheRecord.getFileName());
+    File cacheFile = new File(cacheDir, crlCacheRecord.getFileName());
+    if (urlStr.toLowerCase().startsWith("http")) {
+      URL url = new URL(urlStr);
+      URLConnection connection = url.openConnection();
+      connection.setConnectTimeout(connectTimeout);
+      connection.setReadTimeout(readTimeout);
+      connection.setDefaultUseCaches(true);
+      FileUtils.writeByteArrayToFile(tempFile, IOUtils.toByteArray(connection));
+    }
+    if (urlStr.toLowerCase().startsWith("ldap")) {
+      FileUtils.writeByteArrayToFile(tempFile, downloadCRLFromLDAP(urlStr));
+    }
+    // If data was downloaded but deletion is not done due to exception condition. Then at least remove temp file on exit.
+    tempFile.deleteOnExit();
+    X509CRL crl = getCachedCrl(tempFile);
+    Date nextUpdate = crl.getNextUpdate();
+    if (nextUpdate.before(new Date())) {
+      tempFile.delete();
+      throw new IOException("Downloaded CRL expired " + nextUpdate.toString());
+    }
+    crlCacheRecord.setNextUpdate(nextUpdate.getTime());
+    crlCacheRecord.setLastCache(System.currentTimeMillis());
+    FileUtils.copyFile(tempFile, cacheFile);
+    tempFile.delete();
+  }
+
+  private X509CRL getCachedCrl(String fileName) throws IOException {
+    File cacheFile = new File(cacheDir, fileName);
+    try {
+      return getCachedCrl(cacheFile);
+    }
+    catch (Exception e) {
+      throw new IOException(e.getMessage());
+    }
+  }
+
+  private X509CRL getCachedCrl(File crlFile) throws Exception {
+    InputStream inStream = null;
+    try {
+      inStream = new FileInputStream(crlFile);
+      CertificateFactory cf = CertificateFactory.getInstance("X.509");
+      return (X509CRL) cf.generateCRL(inStream);
+    }
+    finally {
+      if (inStream != null) {
+        inStream.close();
+      }
+    }
+  }
+
+  private void reloadCrlCacheData() throws Exception {
+    if (!crlCacheFile.canRead()) {
+      crlCacheData = CRLCacheData.builder().crlCacheRecordList(new ArrayList<>()).build();
+      FileUtils.writeByteArrayToFile(crlCacheFile, jsonMapper.writeValueAsBytes(crlCacheData));
+      return;
+    }
+    crlCacheData = jsonMapper.readValue(crlCacheFile, CRLCacheData.class);
+  }
+
+  private String getFileName(String url) throws Exception {
+    MessageDigest digest = MessageDigest.getInstance("SHA-1");
+    return new BigInteger(1, digest.digest(url.getBytes(StandardCharsets.UTF_8))).toString(32) + ".crl";
+
+  }
+
+  /**
+   * Downloads a CRL from given LDAP url, e.g.
+   * ldap://ldap.infonotary.com/dc=identity-ca,dc=infonotary,dc=com
+   */
+  private byte[] downloadCRLFromLDAP(String ldapURL)
+    throws NamingException, IOException {
+    Hashtable<String, String> env = new Hashtable<>();
+    env.put(Context.INITIAL_CONTEXT_FACTORY, LDAP_CONTEXT_FACTORY);
+    env.put(LDAP_CONNECT_TIMEOUT, String.valueOf(connectTimeout));
+    env.put(LDAP_READ_TIMEOUT, String.valueOf(readTimeout));
+    env.put(Context.PROVIDER_URL, ldapURL);
+
+    DirContext ctx = new InitialDirContext(env);
+    Attributes avals = ctx.getAttributes("");
+    Attribute aval = avals.get("certificateRevocationList;binary");
+    byte[] val = (byte[]) aval.get();
+    if ((val == null) || (val.length == 0)) {
+      throw new IOException(
+        "Can not download CRL from: " + ldapURL);
+    }
+    else {
+      return val;
+    }
+  }
+
+}
