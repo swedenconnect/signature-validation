@@ -14,9 +14,9 @@ public interface CRLCache {
    * @return CRL
    * @throws IOException On error obtaining a CRL based on this extension
    */
-  X509CRL getCRL(CRLDistPoint crlDistributionPointExt) throws IOException;
+  CRLInfo getCRL(CRLDistPoint crlDistributionPointExt) throws IOException;
 
-  X509CRL getCRL(String url) throws IOException;
+  CRLInfo getCRL(String url) throws IOException;
 
   void recache();
 }

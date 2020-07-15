@@ -18,6 +18,11 @@ import java.util.Optional;
 @Log
 public class CertUtils {
 
+  private CertUtils() {
+  }
+
+  public static final String OCSP_NO_CHECK_EXT = "1.3.6.1.5.5.7.48.1.5";
+
   public static String getOCSPUrl(X509Certificate certificate) throws IOException {
     ASN1Primitive obj;
     try {
@@ -41,27 +46,6 @@ public class CertUtils {
       .findFirst();
 
     return ocspUrlOptional.isPresent() ? ocspUrlOptional.get() : null;
-
-/*
-    AccessDescription[] accessDescriptions = authorityInformationAccess.getAccessDescriptions();
-    for (AccessDescription accessDescription : accessDescriptions) {
-      boolean correctAccessMethod = accessDescription.getAccessMethod().equals(X509ObjectIdentifiers.ocspAccessMethod);
-      if (!correctAccessMethod) {
-        continue;
-      }
-
-      GeneralName name = accessDescription.getAccessLocation();
-      if (name.getTagNo() != GeneralName.uniformResourceIdentifier) {
-        continue;
-      }
-
-      DERIA5String derStr = DERIA5String.getInstance((ASN1TaggedObject) name.toASN1Primitive(), false);
-      return derStr.getString();
-    }
-
-    return null;
-*/
-
   }
 
   /**
@@ -72,7 +56,7 @@ public class CertUtils {
    * @return the extension value as an ASN1Primitive object
    * @throws IOException
    */
-  private static ASN1Primitive getExtensionValue(X509Certificate certificate, String oid) throws IOException {
+  public static ASN1Primitive getExtensionValue(X509Certificate certificate, String oid) throws IOException {
     byte[] bytes = certificate.getExtensionValue(oid);
     if (bytes == null) {
       return null;
@@ -94,4 +78,30 @@ public class CertUtils {
     return certList;
   }
 
+  public static CRLDistPoint getCrlDistPoint(X509Certificate certificate) throws IOException {
+    ASN1Primitive obj;
+    try {
+      obj = getExtensionValue(certificate, Extension.cRLDistributionPoints.getId());
+    } catch (IOException ex) {
+      log.warning("Exception while accessing CRL Distribution point extension" + ex.getMessage());
+      return null;
+    }
+    if (obj == null) {
+      log.fine("This certificate is not supported by CRL checking");
+      return null;
+    }
+    return CRLDistPoint.getInstance(obj);
+  }
+
+  public static boolean isOCSPNocheckExt(X509Certificate certificate) {
+    ASN1Primitive obj;
+    try {
+      obj = getExtensionValue(certificate, OCSP_NO_CHECK_EXT);
+    } catch (IOException ex) {
+      log.warning("Exception while accessing OCSP-nocheck extension" + ex.getMessage());
+      return false;
+    }
+    log.fine(obj != null ? "Target certificate has ocsp-nocheck" : "Target certificate does not have ocsp-nocheck");
+    return obj != null;
+  }
 }

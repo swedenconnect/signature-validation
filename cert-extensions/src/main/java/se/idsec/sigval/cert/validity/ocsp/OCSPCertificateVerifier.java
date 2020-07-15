@@ -6,7 +6,7 @@
 
 package se.idsec.sigval.cert.validity.ocsp;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
@@ -16,12 +16,11 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import se.idsec.sigval.cert.utils.CertUtils;
+import se.idsec.sigval.cert.validity.AbstractValidityChecker;
 import se.idsec.sigval.cert.validity.ValidationStatus;
 import se.idsec.sigval.cert.validity.ValidationStatus.CertificateValidity;
 import se.idsec.sigval.cert.validity.ValidationStatus.ValidatorSourceType;
-import se.idsec.sigval.cert.validity.ValidityChecker;
 
-import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -30,7 +29,6 @@ import java.net.URL;
 import java.security.Principal;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -39,23 +37,14 @@ import java.util.List;
  *
  * @author Stefan Santesson
  */
-@Log
-public class OCSPCertificateVerifier implements ValidityChecker {
+@Slf4j
+public class OCSPCertificateVerifier extends AbstractValidityChecker {
 
-  List<PropertyChangeListener> listeners;
-  X509Certificate certificate;
-  X509Certificate issuer;
+  public static final String EVENT_ID = "ocsp-validity";
 
-  public OCSPCertificateVerifier(X509Certificate certificate, X509Certificate issuer, PropertyChangeListener... propertyChangeListeners) {
-    this.certificate = certificate;
-    this.issuer = issuer;
-    this.listeners = Arrays.asList(propertyChangeListeners);
-  }
-
-  @Override public void run() {
-    ValidationStatus validationStatus = checkValidity();
-    PropertyChangeEvent event = new PropertyChangeEvent(this, "ocsp-validity", null, validationStatus);
-    listeners.stream().forEach(propertyChangeListener -> propertyChangeListener.propertyChange(event));
+  public OCSPCertificateVerifier(X509Certificate certificate, X509Certificate issuer,
+    PropertyChangeListener... propertyChangeListeners) {
+    super(certificate, issuer, EVENT_ID, propertyChangeListeners);
   }
 
   @Override public ValidationStatus checkValidity() {
@@ -76,12 +65,12 @@ public class OCSPCertificateVerifier implements ValidityChecker {
 
       String ocspUrl = CertUtils.getOCSPUrl(certificate);
       if (ocspUrl == null) {
-        log.warning("OCSP URL for '" + subject + "' is empty");
+        log.warn("OCSP URL for '{}' is empty" , subject);
         return status;
       }
 
       status.setValdationSourceLocation(ocspUrl);
-      log.fine("OCSP URL for '" + subject + "' is '" + ocspUrl + "'");
+      log.debug("OCSP URL for '{}' is '{}'" , subject , ocspUrl);
 
       DigestCalculator digestCalculator = new JcaDigestCalculatorProviderBuilder().build().get(CertificateID.HASH_SHA1);
       CertificateID certificateId = new CertificateID(digestCalculator, new JcaX509CertificateHolder(issuer),
@@ -93,7 +82,7 @@ public class OCSPCertificateVerifier implements ValidityChecker {
       // Get OCSP response from server
       OCSPResp ocspResp = requestOCSPResponse(ocspUrl, ocspReq);
       if (ocspResp.getStatus() != OCSPRespBuilder.SUCCESSFUL) {
-        log.warning("OCSP response is invalid from " + ocspUrl);
+        log.warn("OCSP response is invalid from {}", ocspUrl);
         status.setValidity(CertificateValidity.INVALID);
         return status;
       }
@@ -111,27 +100,27 @@ public class OCSPCertificateVerifier implements ValidityChecker {
 
         foundResponse = true;
 
-        log.fine("OCSP validationDate: " + validationDate);
-        log.fine("OCSP thisUpdate: " + singleResp.getThisUpdate());
-        log.fine("OCSP nextUpdate: " + singleResp.getNextUpdate());
+        log.debug("OCSP validationDate: {}", validationDate);
+        log.debug("OCSP thisUpdate: {}", singleResp.getThisUpdate());
+        log.debug("OCSP nextUpdate: {}", singleResp.getNextUpdate());
 
         status.setRevocationObjectIssuingTime(basicOCSPResp.getProducedAt());
 
         Object certStatus = singleResp.getCertStatus();
         if (certStatus == CertificateStatus.GOOD) {
-          log.fine("OCSP status is valid for '" + certificate.getSubjectX500Principal() + "'");
+          log.debug("OCSP status is valid for '" + certificate.getSubjectX500Principal() + "'");
           status.setValidity(CertificateValidity.VALID);
         }
         else {
           if (singleResp.getCertStatus() instanceof RevokedStatus) {
-            log.fine("OCSP status is revoked for: " + subject);
+            log.debug("OCSP status is revoked for: " + subject);
             if (validationDate.before(((RevokedStatus) singleResp.getCertStatus()).getRevocationTime())) {
               log.info("OCSP revocation time after the validation date, the certificate '" + subject + "' was valid at " + validationDate);
               status.setValidity(CertificateValidity.VALID);
             }
             else {
               Date revocationDate = ((RevokedStatus) singleResp.getCertStatus()).getRevocationTime();
-              log.warning("OCSP for certificate '" + subject + "' is revoked since " + revocationDate);
+              log.warn("OCSP for certificate '{}' is revoked since {}", subject, revocationDate);
               status.setRevocationTime(revocationDate);
               status.setRevocationObjectIssuingTime(singleResp.getThisUpdate());
               status.setValidity(CertificateValidity.REVOKED);
@@ -141,11 +130,12 @@ public class OCSPCertificateVerifier implements ValidityChecker {
       }
 
       if (!foundResponse) {
-        log.fine("There is no matching OCSP response entries");
+        log.debug("There is no matching OCSP response entries");
       }
     }
     catch (Exception ex) {
-      log.warning("OCSP exception: " + ex.getMessage());
+      log.warn("OCSP exception: " + ex.getMessage());
+      status.setException(ex);
     }
 
     return status;
@@ -160,10 +150,16 @@ public class OCSPCertificateVerifier implements ValidityChecker {
     }
 
     for (X509Certificate cert : certList) {
-      if (basicOCSPResp.isSignatureValid(new JcaContentVerifierProviderBuilder().build(cert))) {
-        status.setStatusSignerCertificate(cert);
-        status.setStatusSignerCertificateChain(certList);
-        status.setStatusSignatureValid(true);
+      try {
+        // Attempt validation with all certs
+        if (basicOCSPResp.isSignatureValid(new JcaContentVerifierProviderBuilder().build(cert))) {
+          status.setStatusSignerCertificate(cert);
+          status.setStatusSignerCertificateChain(certList);
+          status.setStatusSignatureValid(true);
+          log.debug("Attempt to use the certificate from {} to verify OCSP response succeeded", cert.getSubjectDN());
+        }
+      } catch (Exception ex){
+        log.debug("Attempt to use the certificate from {} to verify OCSP response failed", cert.getSubjectDN());
       }
     }
   }

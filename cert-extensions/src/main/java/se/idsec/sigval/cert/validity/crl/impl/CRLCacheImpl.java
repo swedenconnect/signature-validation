@@ -2,7 +2,7 @@ package se.idsec.sigval.cert.validity.crl.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Setter;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.bouncycastle.asn1.DERIA5String;
@@ -10,6 +10,7 @@ import org.bouncycastle.asn1.x509.*;
 import se.idsec.sigval.cert.validity.crl.CRLCache;
 import se.idsec.sigval.cert.validity.crl.CRLCacheData;
 import se.idsec.sigval.cert.validity.crl.CRLCacheRecord;
+import se.idsec.sigval.cert.validity.crl.CRLInfo;
 
 import javax.naming.Context;
 import javax.naming.NamingException;
@@ -30,7 +31,6 @@ import java.security.MessageDigest;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509CRL;
 import java.util.*;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 /**
@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-@Log
+@Slf4j
 public class CRLCacheImpl implements CRLCache {
 
   private static final ObjectMapper jsonMapper = new ObjectMapper();
@@ -115,7 +115,7 @@ public class CRLCacheImpl implements CRLCache {
    * @return CRL
    * @throws IOException on error to obtain the CRL from this extension
    */
-  @Override public X509CRL getCRL(CRLDistPoint crlDistributionPointExt) throws IOException{
+  @Override public CRLInfo getCRL(CRLDistPoint crlDistributionPointExt) throws IOException{
     List<String> approvedUriList = new ArrayList<>();
     boolean crlIssuerPresent = false;
     boolean reasonsPresent = false;
@@ -124,34 +124,37 @@ public class CRLCacheImpl implements CRLCache {
       GeneralNames crlIssuer = dp.getCRLIssuer();
       ReasonFlags reasons = dp.getReasons();
       GeneralNames dpGeneralNames = GeneralNames.getInstance(dp.getDistributionPoint().getName());
-      Optional<String> crlDpUrlOptional = Arrays.stream(dpGeneralNames.getNames())
-        .filter(generalName -> generalName.getTagNo() == 6)
+      List<String> uriNameList = Arrays.stream(dpGeneralNames.getNames())
+        .filter(generalName -> generalName.getTagNo() == GeneralName.uniformResourceIdentifier)
         .map(generalName -> ((DERIA5String) generalName.getName()).getString())
-        .findFirst();
-      GeneralName[] names = dpGeneralNames.getNames();
-      if (crlDpUrlOptional.isPresent() && crlIssuer == null && reasons == null) {
-        // This distribution point meets the basic acceptance criteria
-        approvedUriList.add(crlDpUrlOptional.get());
+        .collect(Collectors.toList());
+
+      for (String uri: uriNameList){
+        if (uri !=null && crlIssuer == null && reasons == null) {
+          // This distribution point meets the basic acceptance criteria
+          approvedUriList.add(uri);
+        } else {
+          // This distribution point does not meet basic acceptance criteria. Store reason for proper error logging
+          crlIssuerPresent = crlIssuer != null || crlIssuerPresent;
+          reasonsPresent = reasons != null || reasonsPresent;
+        }
       }
-      else {
-        // This distribution point does not meet basic acceptance criteria. Store reason for proper error logging
-        crlIssuerPresent = crlIssuer != null || crlIssuerPresent;
-        reasonsPresent = reasons != null || reasonsPresent;
-      }
+
     }
     if (approvedUriList.isEmpty()){
       // We didnt find any acceptable distribution points. Throw exception
       if (crlIssuerPresent){
-        log.fine("No acceptable CRL distribution point found. Declaration of crlIssuer is not allowed");
+        log.debug("No acceptable CRL distribution point found. Declaration of crlIssuer is not allowed");
         throw new IOException("No acceptable CRL distribution point found. Declaration of crlIssuer is not allowed");
       }
       if (reasonsPresent){
-        log.fine("No acceptable CRL distribution point found. Declaration of reason is not allowed");
+
+        log.debug("No acceptable CRL distribution point found. Declaration of reason is not allowed");
         throw new IOException("No acceptable CRL distribution point found. Declaration of reason is not allowed");
       }
     }
 
-    log.fine("Found valid CRLDP URL:s " + String.join(", ", approvedUriList));
+    log.debug("Found valid CRLDP URL:s " + String.join(", ", approvedUriList));
 
     // We have at least one acceptable URI
     Optional<String> httpUrlOptional = approvedUriList.stream()
@@ -166,7 +169,7 @@ public class CRLCacheImpl implements CRLCache {
       try {
         return getCRL(httpUrlOptional.get());
       } catch (Exception ex) {
-        log.fine("Attempt to cache CRL from http URL failed: " + ex.getMessage() + " - attempting other URLs if present");
+        log.debug("Attempt to cache CRL from http URL failed: " + ex.getMessage() + " - attempting other URLs if present");
       }
     }
 
@@ -174,7 +177,7 @@ public class CRLCacheImpl implements CRLCache {
       try {
         return getCRL(ldapUrlOptional.get());
       } catch (Exception ex) {
-        log.fine("Attempt to cache CRL from ldap URL failed: " + ex.getMessage());
+        log.debug("Attempt to cache CRL from ldap URL failed: " + ex.getMessage());
       }
     }
     throw new IOException("The provided CRL distribution point did not provide any valid distribution point providing a valid CRL");
@@ -188,12 +191,12 @@ public class CRLCacheImpl implements CRLCache {
    * @return cached or downloaded CRL
    * @throws IOException if it is not possible to obtain a CRL from this location
    */
-  @Override public X509CRL getCRL(String url) throws IOException {
+  @Override public CRLInfo getCRL(String url) throws IOException {
     try {
       new URI(url);
     }
     catch (Exception ex) {
-      log.warning("Malformed url in requested CRL: " + url);
+      log.warn("Malformed url in requested CRL: " + url);
       throw new IOException("Malformed url in requested CRL: " + url);
     }
 
@@ -206,19 +209,19 @@ public class CRLCacheImpl implements CRLCache {
       X509CRL cachedCrl = getCachedCrl(cacheRecordOptional.get().getFileName());
       Date nextUpdate = cachedCrl.getNextUpdate();
       if (nextUpdate.after(new Date())) {
-        log.fine("Returning cached CRL for location: " + url);
-        return cachedCrl;
+        log.debug("Returning cached CRL for location: " + url);
+        return CRLInfo.builder().crl(cachedCrl).location(cacheRecordOptional.get().getUrl()).build();
       }
       else {
-        log.fine("Cached CRL expired for location " + url);
+        log.debug("Cached CRL expired for location " + url);
       }
     }
     else {
-      log.fine("No cached CRL present for location " + url);
+      log.debug("No cached CRL present for location " + url);
     }
 
     // Reaching this point means that the CRL is not cached or the cached CRL has expired.
-    log.fine("Attempting to cache CRL from " + url);
+    log.debug("Attempting to cache CRL from " + url);
     try {
       CRLCacheRecord crlCacheRecord = CRLCacheRecord.builder()
         .url(url)
@@ -232,10 +235,10 @@ public class CRLCacheImpl implements CRLCache {
       // Save cache data file
       FileUtils.writeByteArrayToFile(crlCacheFile, jsonMapper.writeValueAsBytes(crlCacheData));
       // Return cached CRL
-      return getCachedCrl(crlCacheRecord.getFileName());
+      return CRLInfo.builder().crl(getCachedCrl(crlCacheRecord.getFileName())).location(crlCacheRecord.getUrl()).build();
     }
     catch (Exception ex) {
-      log.warning("Unable to cache CRL from " + url + " " + ex.getMessage());
+      log.warn("Unable to cache CRL from " + url + " " + ex.getMessage());
       throw new IOException(ex.getMessage());
     }
   }
@@ -252,7 +255,7 @@ public class CRLCacheImpl implements CRLCache {
           cacheCrlRecord(crlCacheRecord);
         }
         catch (Exception ex) {
-          log.warning("Unable to cache CRL from: " + crlCacheRecord.getUrl() + ". Removing it from cache. " + ex.getMessage());
+          log.warn("Unable to cache CRL from: " + crlCacheRecord.getUrl() + ". Removing it from cache. " + ex.getMessage());
           badUrlList.add(crlCacheRecord.getUrl());
         }
       });
@@ -276,7 +279,7 @@ public class CRLCacheImpl implements CRLCache {
       FileUtils.writeByteArrayToFile(crlCacheFile, jsonMapper.writeValueAsBytes(crlCacheData));
     }
     catch (Exception e) {
-      log.log(Level.SEVERE, "Unable to re-cache CRL data", e);
+      log.error("Unable to re-cache CRL data", e);
       return;
     }
   }
@@ -284,10 +287,10 @@ public class CRLCacheImpl implements CRLCache {
   private void cacheCrlRecord(CRLCacheRecord crlCacheRecord) throws Exception {
     String urlStr = crlCacheRecord.getUrl();
     if (System.currentTimeMillis() < crlCacheRecord.getLastCache() + recacheGracePeriod) {
-      log.fine("Crl " + urlStr + " is recently cached. Skipping this re-cache");
+      log.debug("Crl " + urlStr + " is recently cached. Skipping this re-cache");
       return;
     }
-    log.fine("Re-caching CRL from: " + urlStr);
+    log.debug("Re-caching CRL from: " + urlStr);
     File tempFile = new File(tempDir, crlCacheRecord.getFileName());
     File cacheFile = new File(cacheDir, crlCacheRecord.getFileName());
     if (urlStr.toLowerCase().startsWith("http")) {
