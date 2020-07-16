@@ -48,6 +48,12 @@ public class BasicValidityPathChecker implements ValidityPathChecker {
       log.debug("CRL validation failed: CRL issuer certificate missing for CRL validation");
       throw new RuntimeException("CRL validation failed: CRL issuer certificate missing for CRL validation");
     }
+
+    if (!CertUtils.isCurrentlyValid(issuer)){
+      log.debug("CRL validation failed: Expired or not yet valid CRL issuer certificate");
+      throw new RuntimeException("CRL validation failed: Expired or not yet valid CRL issuer certificate");
+    }
+
     if (!issuer.equals(statusSignerCertificate)) {
       log.debug("CRL validation failed: CRL is not verified through the target CA certificate");
       throw new RuntimeException("CRL validation failed: CRL is not verified through the target CA certificate");
@@ -84,6 +90,16 @@ public class BasicValidityPathChecker implements ValidityPathChecker {
       || statusSignerCertificateChain.isEmpty()) {
       log.debug("OCSP validation failed: Missing necessary certificates to validate OCSP response");
       throw new RuntimeException("OCSP validation failed: Missing necessary certificates to validate OCSP response");
+    }
+
+    if (!CertUtils.isCurrentlyValid(issuer)){
+      log.debug("OCSP validation failed: Expired or not yet valid issuer certificate");
+      throw new RuntimeException("OCSP validation failed: Expired or not yet valid issuer certificate");
+    }
+
+    if (!CertUtils.isCurrentlyValid(statusSignerCertificate)){
+      log.debug("OCSP validation failed: Expired or not yet valid OCSP signer certificate");
+      throw new RuntimeException("OCSP validation failed: Expired or not yet valid OCSP signer certificate");
     }
 
     try {

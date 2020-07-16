@@ -41,6 +41,15 @@ import java.util.List;
 public class OCSPCertificateVerifier extends AbstractValidityChecker {
 
   public static final String EVENT_ID = "ocsp-validity";
+  public static final String[] RESPONSE_STATUS = new String[]{
+    "SUCCESSFUL",
+    "MALFORMED_REQUEST",
+    "INTERNAL_ERROR",
+    "TRY_LATER",
+    "NO_USED",
+    "SIG_REQUIRED",
+    "UNAUTHORIZED"
+  };
 
   public OCSPCertificateVerifier(X509Certificate certificate, X509Certificate issuer,
     PropertyChangeListener... propertyChangeListeners) {
@@ -84,6 +93,7 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
       if (ocspResp.getStatus() != OCSPRespBuilder.SUCCESSFUL) {
         log.warn("OCSP response is invalid from {}", ocspUrl);
         status.setValidity(CertificateValidity.INVALID);
+        status.setException(new IOException("OCSP response is invalid from" + ocspUrl + " - Status: " + RESPONSE_STATUS[ocspResp.getStatus()]));
         return status;
       }
 
@@ -130,7 +140,8 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
       }
 
       if (!foundResponse) {
-        log.debug("There is no matching OCSP response entries");
+        log.debug("There are no matching OCSP response entries");
+        status.setException(new IOException("There are no matching OCSP response entries"));
       }
     }
     catch (Exception ex) {

@@ -180,7 +180,7 @@ public class CRLCacheImpl implements CRLCache {
         log.debug("Attempt to cache CRL from ldap URL failed: " + ex.getMessage());
       }
     }
-    throw new IOException("The provided CRL distribution point did not provide any valid distribution point providing a valid CRL");
+    throw new IOException("No valid CRL could be obtained from the provided CRL distribution point");
   }
 
   /**

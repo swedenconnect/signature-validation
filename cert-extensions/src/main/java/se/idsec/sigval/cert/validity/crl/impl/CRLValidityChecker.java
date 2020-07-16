@@ -10,6 +10,7 @@ import se.idsec.sigval.cert.validity.crl.CRLCache;
 import se.idsec.sigval.cert.validity.crl.CRLInfo;
 
 import java.beans.PropertyChangeListener;
+import java.security.cert.CRLReason;
 import java.security.cert.X509CRL;
 import java.security.cert.X509CRLEntry;
 import java.security.cert.X509Certificate;
@@ -39,7 +40,8 @@ public class CRLValidityChecker extends AbstractValidityChecker {
     builder
       .sourceType(ValidationStatus.ValidatorSourceType.CRL)
       .certificate(certificate)
-      .validationTime(new Date());
+      .validationTime(new Date())
+      .validity(ValidationStatus.CertificateValidity.UNKNOWN);
 
     try {
       CRLDistPoint crlDistPoint = CertUtils.getCrlDistPoint(certificate);
@@ -49,14 +51,17 @@ public class CRLValidityChecker extends AbstractValidityChecker {
       crl.verify(issuer.getPublicKey());
       builder.statusSignatureValid(true).issuer(issuer).statusSignerCertificate(issuer).statusSignerCertificateChain(Arrays.asList(issuer));
       boolean revoked = crl.isRevoked(certificate);
-      ValidationStatus.CertificateValidity validity = ValidationStatus.CertificateValidity.UNKNOWN;
-      if (revoked){
+      if (revoked) {
         builder.validity(ValidationStatus.CertificateValidity.REVOKED);
         X509CRLEntry crlEntry = crl.getRevokedCertificate(certificate);
         builder.revocationTime(crlEntry.getRevocationDate());
-        builder.reason(crlEntry.getRevocationReason().toString());
-        log.debug("The certificate was revoked with reason: " + crlEntry.getRevocationReason().toString());
-      } else {
+        CRLReason reason = crlEntry.getRevocationReason();
+        if (reason != null) {
+          builder.reason(reason.name());
+          log.debug("The certificate was revoked with reason: " + reason.name());
+        }
+      }
+      else {
         builder.validity(ValidationStatus.CertificateValidity.VALID);
       }
     }

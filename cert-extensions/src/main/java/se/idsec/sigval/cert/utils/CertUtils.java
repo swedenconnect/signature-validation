@@ -1,6 +1,8 @@
 package se.idsec.sigval.cert.utils;
 
+import lombok.Data;
 import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.X509CertificateHolder;
@@ -8,14 +10,13 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
-@Log
+@Slf4j
 public class CertUtils {
 
   private CertUtils() {
@@ -28,12 +29,12 @@ public class CertUtils {
     try {
       obj = getExtensionValue(certificate, Extension.authorityInfoAccess.getId());
     } catch (IOException ex) {
-      log.warning("Failed to get OCSP URL" + ex.getMessage());
+      log.warn("Failed to get OCSP URL" + ex.getMessage());
       return null;
     }
 
     if (obj == null) {
-      log.fine("This certificate is not supported by OCSP checking");
+      log.debug("This certificate is not supported by OCSP checking");
       return null;
     }
 
@@ -83,11 +84,11 @@ public class CertUtils {
     try {
       obj = getExtensionValue(certificate, Extension.cRLDistributionPoints.getId());
     } catch (IOException ex) {
-      log.warning("Exception while accessing CRL Distribution point extension" + ex.getMessage());
+      log.warn("Exception while accessing CRL Distribution point extension" + ex.getMessage());
       return null;
     }
     if (obj == null) {
-      log.fine("This certificate is not supported by CRL checking");
+      log.debug("This certificate is not supported by CRL checking");
       return null;
     }
     return CRLDistPoint.getInstance(obj);
@@ -98,10 +99,59 @@ public class CertUtils {
     try {
       obj = getExtensionValue(certificate, OCSP_NO_CHECK_EXT);
     } catch (IOException ex) {
-      log.warning("Exception while accessing OCSP-nocheck extension" + ex.getMessage());
+      log.warn("Exception while accessing OCSP-nocheck extension" + ex.getMessage());
       return false;
     }
-    log.fine(obj != null ? "Target certificate has ocsp-nocheck" : "Target certificate does not have ocsp-nocheck");
+    log.debug(obj != null ? "Target certificate has ocsp-nocheck" : "Target certificate does not have ocsp-nocheck");
     return obj != null;
   }
+
+  /**
+   * Verifies that a certificate currently is within its validity period
+   * @param certificate certificate to check
+   * @return true if the certificate is within its validity period
+   */
+  public static boolean isCurrentlyValid(X509Certificate certificate){
+    return isCurrentlyValid(certificate, new Date());
+  }
+
+  /**
+   * Verifies that a certificate at a specified time was within its validity period
+   * @param certificate certificate to check
+   * @param validationTime the time when the certificate should be valid
+   * @return true if the certificate was within its validity period at the specified time
+   */
+  public static boolean isCurrentlyValid(X509Certificate certificate, Date validationTime){
+    Date notBefore = certificate.getNotBefore();
+    Date notAfter = certificate.getNotAfter();
+    boolean notYetValid = validationTime.before(notBefore);
+    boolean expired = validationTime.after(notAfter);
+    if (notYetValid) {
+      log.debug("Certificate not yet valid for {}", certificate.getSubjectX500Principal().toString());
+    }
+    if (expired) {
+      log.debug("Certificate expired for {}", certificate.getSubjectX500Principal().toString());
+    }
+    return !notYetValid && !expired;
+  }
+
+  /**
+   * Get a certificate from input stream
+   * @param inStream input stream
+   * @return certificate
+   * @throws CertificateException error parsing certificate data
+   * @throws IOException IO errors
+   */
+  public static X509Certificate getCert (InputStream inStream) throws CertificateException, IOException {
+    try {
+      CertificateFactory cf = CertificateFactory.getInstance("X.509");
+      return (X509Certificate)cf.generateCertificate(inStream);
+    }
+    finally {
+      if (inStream != null) {
+        inStream.close();
+      }
+    }
+  }
+
 }

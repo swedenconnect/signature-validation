@@ -113,11 +113,12 @@ public class BasicCertificateValidityChecker extends CertificateValidityChecker 
       return validStatusOptional.get();
     }
     if (validationStatusList.isEmpty()){
-      log.warn("Certificate validity checking aborted due to time-out conditions");
-      throw new RuntimeException("Validity checking time-out");
+      log.warn("Certificate validity checking aborted: No valid responses");
+      throw new RuntimeException("Validity checking: No valid responses");
     }
     ValidationStatus validationStatus = validationStatusList.get(0);
-    log.info("Certificate status {} for {}", validationStatus.getValidity().name(), revokedStatusOptional.get().getCertificate().getSubjectX500Principal().toString());
+    log.info("Certificate status {} for {}",
+      validationStatus.getValidity().name(), validationStatus.getCertificate().getSubjectX500Principal().toString());
     return validationStatus;
   }
 
