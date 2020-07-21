@@ -7,6 +7,9 @@ import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import se.idsec.sigval.cert.extensions.missing.SubjectInformationAccess;
+import sun.security.util.ObjectIdentifier;
+import sun.security.x509.SubjectInfoAccessExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -23,6 +26,17 @@ public class CertUtils {
   }
 
   public static final String OCSP_NO_CHECK_EXT = "1.3.6.1.5.5.7.48.1.5";
+  private static final String[] generalNameTagText = new String[] {
+    "Other Name",
+    "E-Mail",
+    "DNS",
+    "x400Address",
+    "Directory Name",
+    "EDI Party Name",
+    "URI",
+    "IP Address",
+    "Registered ID" };
+
 
   public static String getOCSPUrl(X509Certificate certificate) throws IOException {
     ASN1Primitive obj;
@@ -94,6 +108,21 @@ public class CertUtils {
     return CRLDistPoint.getInstance(obj);
   }
 
+  public static SubjectInformationAccess getSIAExtension(X509Certificate certificate) {
+    ASN1Primitive obj;
+    try {
+      obj = getExtensionValue(certificate, Extension.subjectInfoAccess.getId());
+    } catch (IOException ex) {
+      log.warn("Exception while accessing CRL Distribution point extension" + ex.getMessage());
+      return null;
+    }
+    if (obj == null) {
+      log.debug("This certificate is not supported by CRL checking");
+      return null;
+    }
+    return SubjectInformationAccess.getInstance(obj);
+  }
+
   public static boolean isOCSPNocheckExt(X509Certificate certificate) {
     ASN1Primitive obj;
     try {
@@ -151,6 +180,35 @@ public class CertUtils {
       if (inStream != null) {
         inStream.close();
       }
+    }
+  }
+
+  private static String getGeneralNamesString(GeneralNames genNames) {
+    GeneralName[] names = genNames.getNames();
+    StringBuilder b = new StringBuilder();
+    b.append("GeneralNames {");
+    for (int i = 0; i < names.length; i++) {
+      b.append(getGeneralNameStr(names[i]));
+      if (i + 1 < names.length) {
+        b.append(" | ");
+      }
+    }
+    b.append("}");
+    return b.toString();
+  }
+
+  public static String getGeneralNameStr(GeneralName generalName) {
+    if (generalName == null) {
+      return "null";
+    }
+    String toString = generalName.toString();
+    try {
+      int tagNo = Integer.valueOf(toString.substring(0, toString.indexOf(":")));
+      return generalNameTagText[tagNo] + toString.substring(toString.indexOf(":"));
+
+    }
+    catch (Exception e) {
+      return toString;
     }
   }
 

@@ -75,6 +75,7 @@ public class BasicCertificateValidityChecker extends CertificateValidityChecker 
       // Multithreaded
       validityCheckers.stream().forEach(validityChecker -> {
         Thread validityThread = new Thread(validityChecker);
+        validityThread.setDaemon(true);
         validityThread.start();
       });
 

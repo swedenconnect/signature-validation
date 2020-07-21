@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified"
+    targetNamespace="http://id.elegnamnden.se/auth-cont/1.0/saci"
+    xmlns:saci="http://id.elegnamnden.se/auth-cont/1.0/saci"
+    xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
+
+    <xs:import namespace="urn:oasis:names:tc:SAML:2.0:assertion"
+        schemaLocation="http://docs.oasis-open.org/security/saml/v2.0/saml-schema-assertion-2.0.xsd"/>
+    <xs:element name="SAMLAuthContext" type="saci:SAMLAuthContextType"/>
+    <xs:complexType name="SAMLAuthContextType">
+        <xs:sequence>
+            <xs:element ref="saci:AuthContextInfo" minOccurs="0"/>
+            <xs:element ref="saci:IdAttributes" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="AuthContextInfo" type="saci:AuthContextInfoType"/>
+    <xs:complexType name="AuthContextInfoType">
+        <xs:sequence>
+            <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="IdentityProvider" type="xs:string" use="required"/>
+        <xs:attribute name="AuthenticationInstant" type="xs:dateTime" use="required"/>
+        <xs:attribute name="AuthnContextClassRef" type="xs:anyURI" use="required"/>
+        <xs:attribute name="AssertionRef" type="xs:string"/>
+        <xs:attribute name="ServiceID" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:element name="IdAttributes" type="saci:IdAttributesType"/>
+    <xs:complexType name="IdAttributesType">
+        <xs:sequence>
+            <xs:element maxOccurs="unbounded" minOccurs="1" ref="saci:AttributeMapping"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="AttributeMapping" type="saci:AttributeMappingType"/>
+    <xs:complexType name="AttributeMappingType">
+        <xs:sequence>
+            <xs:element ref="saml:Attribute"/>
+            <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="Type" use="required">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="rdn"/>
+                    <xs:enumeration value="san"/>
+                    <xs:enumeration value="sda"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+        <xs:attribute name="Ref" type="xs:string" use="required"/>
+    </xs:complexType>
+</xs:schema>
