@@ -44,6 +44,14 @@ public class BasicPathBuilder implements PathBuilder {
     return (PKIXCertPathBuilderResult) certPathBuilder.build(builderParameters);
   }
 
+  /**
+   * Obtains the path builder parameters
+   * @param targetCert the certificate to build from
+   * @param certStores list of supporting certificate cert stores
+   * @param trustAnchors list of trust anchors based on X.509 certificates
+   * @return path builder parameters
+   * @throws InvalidAlgorithmParameterException if algorithm parameters are illegal
+   */
   private PKIXBuilderParameters getBuilderParameters(X509Certificate targetCert, List<CertStore> certStores, Set<TrustAnchor> trustAnchors)
     throws InvalidAlgorithmParameterException {
     X509CertSelector certSelect = new X509CertSelector();
@@ -57,16 +65,19 @@ public class BasicPathBuilder implements PathBuilder {
 
   /**
    * This method returns the resulting path as a list of certificates starting from the target certificate, ending in the trust anchor certificate
-   * This method requires that the function "getTrustedPath" has been called
-   * @param result
-   * @return
+   * Any self signed root is removed from the supporting intermediary certificates as the path construction requires chaining to a trust anchor.
+   * @param result validated certificate path
+   * @return validated certificate path starting with the target certificate and ending with the self signed TA root certificate
    */
   public List<X509Certificate> getResultPath(PKIXCertPathBuilderResult result){
     try {
       List<X509Certificate> x509CertificateList = result.getCertPath().getCertificates().stream()
         .map(certificate -> (X509Certificate) certificate)
+        // Filter away any self issued certs
+        .filter(certificate -> !certificate.getSubjectDN().equals(certificate.getIssuerDN()))
         .collect(Collectors.toList());
       List<X509Certificate> resultPath = new ArrayList<>(x509CertificateList);
+      // Add TA certificate
       resultPath.add(result.getTrustAnchor().getTrustedCert());
       return resultPath;
     } catch (Exception ex){

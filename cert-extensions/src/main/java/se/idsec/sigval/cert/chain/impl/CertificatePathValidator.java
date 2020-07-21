@@ -10,10 +10,14 @@ import se.idsec.sigval.cert.validity.impl.BasicCertificateValidityChecker;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.security.cert.*;
+import java.security.cert.CertStore;
+import java.security.cert.PKIXCertPathBuilderResult;
+import java.security.cert.TrustAnchor;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class CertificatePathValidator extends AbstractPathValidator implements PropertyChangeListener {
@@ -38,18 +42,17 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
    */
   @Setter private int maxValidationSeconds = 15;
 
-
   /**
    * Constructs the chain validator
    *
    * @param targetCert              the certificate being validated
    * @param chain                   the supporting chain of certificates which may include the target certificate and root certificates
-   * @param crlCache                CRL cache providing access to certificate revocation lists
    * @param trustAnchors            a list of trust anchors that must be used to terminate the validated chain
    * @param certStore               certificate store providing complementary intermediary certificates
+   * @param crlCache                CRL cache providing access to certificate revocation lists
    * @param propertyChangeListeners listeners that are notified when the validation process is complete
    */
-  protected CertificatePathValidator(X509Certificate targetCert, List<X509Certificate> chain,
+  public CertificatePathValidator(X509Certificate targetCert, List<X509Certificate> chain,
     List<TrustAnchor> trustAnchors, CertStore certStore, CRLCache crlCache,
     PropertyChangeListener... propertyChangeListeners) {
     super(targetCert, chain, crlCache, new BasicPathBuilder(), trustAnchors, certStore, EVENT_ID, propertyChangeListeners);
@@ -60,12 +63,12 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     //First step is to construct a valid path to a trusted root
     try {
       certPathBuilderResult = (PKIXCertPathBuilderResult) pathBuilder.buildPath(targetCert, chain, certStore, trustAnchors);
-      certPath = ((BasicPathBuilder)pathBuilder).getResultPath(certPathBuilderResult);
+      certPath = ((BasicPathBuilder) pathBuilder).getResultPath(certPathBuilderResult);
     }
     catch (Exception e) {
       log.warn("Unable to build path to trust anchor: {}", e.getMessage());
       Throwable cause = e.getCause();
-      while(cause != null){
+      while (cause != null) {
         log.debug("Caused by: {}", cause.getMessage());
         cause = cause.getCause();
       }
@@ -75,7 +78,7 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
         .build();
     }
 
-    if (chain.size() <2){
+    if (certPath.size() < 2) {
       // This is an impossible outcome of a successful path validation. Something is wrong in the implementation
       log.error("Successful path validation provided insufficient chain length. Chain length must be at least 2");
       return PathValidationResult.builder()
@@ -87,11 +90,14 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     // We have a trusted path and all certificates pass PKIX path validation rules, including expiry date checking, basic constraints etc.
     // Now check validity
     validationStatusList = new ArrayList<>();
-    if (singleThreaded){
+    if (singleThreaded) {
       getSingleThreadedValidityStatus();
-    } else {
+    }
+    else {
       runValidationThreads();
     }
+
+    sortResults();
 
     // We should now have all validity status results. Check them top down (from TA to EE cert)
     PathValidationResult.PathValidationResultBuilder resultBuilder = PathValidationResult.builder();
@@ -99,29 +105,29 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
       .validCert(false)
       .pkixCertPathBuilderResult(certPathBuilderResult)
       .validationStatusList(validationStatusList)
-      .targetCertificate(chain.get(0))
-      .chain(chain);
+      .targetCertificate(certPath.get(0))
+      .chain(certPath);
 
-    for (int i = chain.size() - 2 ; i<0 ;i--) {
-      X509Certificate checkedCert = chain.get(i);
+    for (int i = certPath.size() - 2; i >= 0; i--) {
+      X509Certificate checkedCert = certPath.get(i);
       Optional<ValidationStatus> statusOptional = getStatus(checkedCert);
-      if (!statusOptional.isPresent()){
+      if (!statusOptional.isPresent()) {
         log.warn("Validation status is missing for certificate {}", checkedCert.getSubjectX500Principal());
         return resultBuilder
           .exception(new RuntimeException("Missing path validation result for " + checkedCert.getSubjectX500Principal()))
           .build();
       }
       ValidationStatus status = statusOptional.get();
-      if (status.getValidity().equals(ValidationStatus.CertificateValidity.VALID) && status.isStatusSignatureValid()){
+      if (status.getValidity().equals(ValidationStatus.CertificateValidity.VALID) && status.isStatusSignatureValid()) {
         continue;
       }
-      if (status.getValidity().equals(ValidationStatus.CertificateValidity.UNKNOWN)){
+      if (status.getValidity().equals(ValidationStatus.CertificateValidity.UNKNOWN)) {
         log.warn("Certificate validity could not be determined for {}", checkedCert.getSubjectX500Principal());
         return resultBuilder
           .exception(new RuntimeException("Certificate validity could not be determined for " + checkedCert.getSubjectX500Principal()))
           .build();
       }
-      if (status.getValidity().equals(ValidationStatus.CertificateValidity.REVOKED)){
+      if (status.getValidity().equals(ValidationStatus.CertificateValidity.REVOKED)) {
         log.warn("Certificate REVOKED for {}", checkedCert.getSubjectX500Principal());
         return resultBuilder
           .exception(new RuntimeException("Certificate REVOKED for " + checkedCert.getSubjectX500Principal()))
@@ -135,6 +141,14 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     return resultBuilder.validCert(true).build();
   }
 
+  private void sortResults() {
+    validationStatusList = certPath.stream()
+      .map(certificate -> getStatus(certificate))
+      .filter(validationStatus -> validationStatus.isPresent())
+      .map(validationStatus -> validationStatus.get())
+      .collect(Collectors.toList());
+  }
+
   private Optional<ValidationStatus> getStatus(X509Certificate checkedCert) {
     return validationStatusList.stream()
       .filter(status -> status.getCertificate().equals(checkedCert))
@@ -145,8 +159,8 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     long startTime = System.currentTimeMillis();
 
     //Start validity threads
-    for (int i = 0; i<chain.size() - 1; i++){
-      BasicCertificateValidityChecker validityChecker = new BasicCertificateValidityChecker(chain.get(i), chain.get(i+1), crlCache, this);
+    for (int i = 0; i < certPath.size() - 1; i++) {
+      BasicCertificateValidityChecker validityChecker = new BasicCertificateValidityChecker(certPath.get(i), certPath.get(i + 1), crlCache, this);
       validityChecker.setMaxValidationSeconds(maxValidationSeconds);
       Thread validityThread = new Thread(validityChecker);
       validityThread.setDaemon(true);
@@ -154,11 +168,11 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     }
 
     //Wait for them to conclude or for timeout
-    while (true){
-      if (System.currentTimeMillis() > startTime + (maxValidationSeconds * 1000)){
+    while (true) {
+      if (System.currentTimeMillis() > startTime + (maxValidationSeconds * 1000)) {
         break;
       }
-      if (validationStatusList.size() == chain.size() -1){
+      if (validationStatusList.size() == certPath.size() - 1) {
         break;
       }
       try {
@@ -171,23 +185,27 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
   }
 
   private void getSingleThreadedValidityStatus() {
-    for (int i = 0; i<chain.size() - 1; i++){
-      BasicCertificateValidityChecker validityChecker = new BasicCertificateValidityChecker(chain.get(i), chain.get(i+1), crlCache);
+    for (int i = 0; i < certPath.size() - 1; i++) {
+      BasicCertificateValidityChecker validityChecker = new BasicCertificateValidityChecker(certPath.get(i), certPath.get(i + 1), crlCache);
+      validityChecker.setSingleThreaded(true);
       validationStatusList.add(validityChecker.checkValidity());
     }
   }
 
   @Override public void propertyChange(PropertyChangeEvent evt) {
     String propertyName = evt.getPropertyName();
-    if (!propertyName.equalsIgnoreCase(BasicCertificateValidityChecker.EVENT_ID)){
-      log.error("Wrong event ID in certificate validity check event. Expected {}. Found {}", BasicCertificateValidityChecker.EVENT_ID, propertyName);
+    if (!propertyName.equalsIgnoreCase(BasicCertificateValidityChecker.EVENT_ID)) {
+      log.error("Wrong event ID in certificate validity check event. Expected {}. Found {}", BasicCertificateValidityChecker.EVENT_ID,
+        propertyName);
       return;
     }
-    if (evt.getNewValue() instanceof ValidationStatus){
+    if (evt.getNewValue() instanceof ValidationStatus) {
       ValidationStatus validationStatus = (ValidationStatus) evt.getNewValue();
       validationStatusList.add(validationStatus);
-    } else {
-      log.error("Wrong result object in certificate validity check event. Expected {}. Found {}", ValidationStatus.class, evt.getNewValue().getClass());
+    }
+    else {
+      log.error("Wrong result object in certificate validity check event. Expected {}. Found {}", ValidationStatus.class,
+        evt.getNewValue().getClass());
     }
   }
 }
