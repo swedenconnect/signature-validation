@@ -1,10 +1,27 @@
+/*
+ * Copyright 2019-2020 IDsec Solutions AB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package se.idsec.sigval.cert.chain.impl;
 
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import se.idsec.sigval.cert.chain.AbstractPathValidator;
 import se.idsec.sigval.cert.chain.PathValidationResult;
+import se.idsec.sigval.cert.utils.CertUtils;
 import se.idsec.sigval.cert.validity.ValidationStatus;
+
 import se.idsec.sigval.cert.validity.crl.CRLCache;
 import se.idsec.sigval.cert.validity.impl.BasicCertificateValidityChecker;
 
@@ -19,6 +36,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Slf4j
 public class CertificatePathValidator extends AbstractPathValidator implements PropertyChangeListener {
 
@@ -34,7 +56,7 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
   /** The result of certificate path building and PKIX path validation except revocation checking */
   protected PKIXCertPathBuilderResult certPathBuilderResult;
   /** The Certificate path starting with the target certificate first and ending with the trust anchor certificate */
-  protected List<X509Certificate> certPath;
+  protected List<X509Certificate> pathBuilderCertPath;
   /**
    * The maximum number of seconds to wait for conclusion of path validation. This number is ignored in single threaded mode.
    *
@@ -63,7 +85,7 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     //First step is to construct a valid path to a trusted root
     try {
       certPathBuilderResult = (PKIXCertPathBuilderResult) pathBuilder.buildPath(targetCert, chain, certStore, trustAnchors);
-      certPath = ((BasicPathBuilder) pathBuilder).getResultPath(certPathBuilderResult);
+      pathBuilderCertPath = CertUtils.getResultPath(certPathBuilderResult);
     }
     catch (Exception e) {
       log.warn("Unable to build path to trust anchor: {}", e.getMessage());
@@ -78,7 +100,7 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
         .build();
     }
 
-    if (certPath.size() < 2) {
+    if (pathBuilderCertPath.size() < 2) {
       // This is an impossible outcome of a successful path validation. Something is wrong in the implementation
       log.error("Successful path validation provided insufficient chain length. Chain length must be at least 2");
       return PathValidationResult.builder()
@@ -105,11 +127,11 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
       .validCert(false)
       .pkixCertPathBuilderResult(certPathBuilderResult)
       .validationStatusList(validationStatusList)
-      .targetCertificate(certPath.get(0))
-      .chain(certPath);
+      .targetCertificate(pathBuilderCertPath.get(0))
+      .chain(pathBuilderCertPath);
 
-    for (int i = certPath.size() - 2; i >= 0; i--) {
-      X509Certificate checkedCert = certPath.get(i);
+    for (int i = pathBuilderCertPath.size() - 2; i >= 0; i--) {
+      X509Certificate checkedCert = pathBuilderCertPath.get(i);
       Optional<ValidationStatus> statusOptional = getStatus(checkedCert);
       if (!statusOptional.isPresent()) {
         log.warn("Validation status is missing for certificate {}", checkedCert.getSubjectX500Principal());
@@ -142,7 +164,7 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
   }
 
   private void sortResults() {
-    validationStatusList = certPath.stream()
+    validationStatusList = pathBuilderCertPath.stream()
       .map(certificate -> getStatus(certificate))
       .filter(validationStatus -> validationStatus.isPresent())
       .map(validationStatus -> validationStatus.get())
@@ -159,8 +181,9 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     long startTime = System.currentTimeMillis();
 
     //Start validity threads
-    for (int i = 0; i < certPath.size() - 1; i++) {
-      BasicCertificateValidityChecker validityChecker = new BasicCertificateValidityChecker(certPath.get(i), certPath.get(i + 1), crlCache, this);
+    for (int i = 0; i < pathBuilderCertPath.size() - 1; i++) {
+      BasicCertificateValidityChecker validityChecker = new BasicCertificateValidityChecker(
+        pathBuilderCertPath.get(i), pathBuilderCertPath.get(i + 1), crlCache, this);
       validityChecker.setMaxValidationSeconds(maxValidationSeconds);
       Thread validityThread = new Thread(validityChecker);
       validityThread.setDaemon(true);
@@ -172,7 +195,7 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
       if (System.currentTimeMillis() > startTime + (maxValidationSeconds * 1000)) {
         break;
       }
-      if (validationStatusList.size() == certPath.size() - 1) {
+      if (validationStatusList.size() == pathBuilderCertPath.size() - 1) {
         break;
       }
       try {
@@ -185,8 +208,9 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
   }
 
   private void getSingleThreadedValidityStatus() {
-    for (int i = 0; i < certPath.size() - 1; i++) {
-      BasicCertificateValidityChecker validityChecker = new BasicCertificateValidityChecker(certPath.get(i), certPath.get(i + 1), crlCache);
+    for (int i = 0; i < pathBuilderCertPath.size() - 1; i++) {
+      BasicCertificateValidityChecker validityChecker = new BasicCertificateValidityChecker(
+        pathBuilderCertPath.get(i), pathBuilderCertPath.get(i + 1), crlCache);
       validityChecker.setSingleThreaded(true);
       validationStatusList.add(validityChecker.checkValidity());
     }

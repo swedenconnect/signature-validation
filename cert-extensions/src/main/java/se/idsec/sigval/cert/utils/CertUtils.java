@@ -1,24 +1,43 @@
+/*
+ * Copyright (c) 2020. IDsec Solutions AB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package se.idsec.sigval.cert.utils;
 
-import lombok.Data;
-import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import se.idsec.sigval.cert.extensions.missing.SubjectInformationAccess;
-import sun.security.util.ObjectIdentifier;
-import sun.security.x509.SubjectInfoAccessExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.PKIXCertPathBuilderResult;
 import java.security.cert.X509Certificate;
 import java.util.*;
+import java.util.stream.Collectors;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Slf4j
 public class CertUtils {
 
@@ -211,5 +230,25 @@ public class CertUtils {
       return toString;
     }
   }
+
+  /**
+   * This method returns the resulting path as a list of certificates starting from the target certificate, ending in the trust anchor certificate
+   * @param result validated certificate path
+   * @return validated certificate path starting with the target certificate and ending with the self signed TA root certificate
+   */
+  public static List<X509Certificate> getResultPath(PKIXCertPathBuilderResult result){
+    try {
+      List<X509Certificate> x509CertificateList = result.getCertPath().getCertificates().stream()
+        .map(certificate -> (X509Certificate) certificate)
+        .collect(Collectors.toList());
+      List<X509Certificate> resultPath = new ArrayList<>(x509CertificateList);
+      // Add TA certificate
+      resultPath.add(result.getTrustAnchor().getTrustedCert());
+      return resultPath;
+    } catch (Exception ex){
+      throw new RuntimeException(ex.getMessage());
+    }
+  }
+
 
 }

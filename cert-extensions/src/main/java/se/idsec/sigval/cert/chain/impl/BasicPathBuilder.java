@@ -1,6 +1,22 @@
+/*
+ * Copyright 2019-2020 IDsec Solutions AB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package se.idsec.sigval.cert.chain.impl;
 
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import se.idsec.sigval.cert.chain.PathBuilder;
 
@@ -9,6 +25,16 @@ import java.security.cert.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of a basic path builder used to construct a certificate path from a specified target certificate to a specified set
+ * of trust anchors via a finite set of supporting intermediary CA certificates.
+ *
+ * This implementation uses standard PKIX path validation rules to construct and validate the path.
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
+@Slf4j
 @NoArgsConstructor
 public class BasicPathBuilder implements PathBuilder {
 
@@ -25,12 +51,27 @@ public class BasicPathBuilder implements PathBuilder {
       ? new ArrayList<>()
       : new ArrayList<>(supportingCertificates);
     if (!chainCerts.contains(targetCertificate)){
+      log.debug("Target certificate is added to provided certificate chain");
       chainCerts.add(targetCertificate);
     }
+    // Exclude any self issued certificates from the chainCerts or else it will end up in the path built to the TA
+    chainCerts = chainCerts.stream()
+      .filter(certificate -> {
+        try {
+          certificate.verify(certificate.getPublicKey());
+          log.debug("Removing a self signed cert from the supporting cert chain");
+          return false;  //This cert is self issued. Exclude it.
+        } catch (Exception ex) {
+          return true; // This cert was not self issued. Keep it.
+        }
+      })
+      .collect(Collectors.toList());
+    log.debug("Provided chain including target certificate and excluding trust anchor contains {} certificate(s)", chainCerts.size());
 
     // Get cert stores
     List<CertStore> certStoreList = new ArrayList<>();
     if (intermediaryStore!=null){
+      log.debug("Adding provided intermediary CA certificate store");
       certStoreList.add(intermediaryStore);
     }
     CertStore chainStore = CertStore.getInstance(
@@ -41,7 +82,23 @@ public class BasicPathBuilder implements PathBuilder {
 
     PKIXBuilderParameters builderParameters = getBuilderParameters(targetCertificate, certStoreList, trustAnchorSet);
     CertPathBuilder certPathBuilder = CertPathBuilder.getInstance(PKIX_ALGORITHM, BouncyCastleProvider.PROVIDER_NAME);
-    return (PKIXCertPathBuilderResult) certPathBuilder.build(builderParameters);
+    PKIXCertPathBuilderResult certPathBuilderResult = (PKIXCertPathBuilderResult) certPathBuilder.build(builderParameters);
+
+    logResult(certPathBuilderResult);
+    return certPathBuilderResult;
+  }
+
+  private void logResult(PKIXCertPathBuilderResult certPathBuilderResult) {
+    log.trace("cert path result: {}", certPathBuilderResult);
+    try {
+      certPathBuilderResult.getCertPath().getCertificates().stream()
+        .map(certificate -> (X509Certificate)certificate)
+        .forEach(certificate -> log.debug("path cert: {}", certificate.getSubjectX500Principal()));
+    } catch (Exception ex){
+      log.error("Error reading result path certificates",ex);
+    }
+    PolicyNode policyTree = certPathBuilderResult.getPolicyTree();
+    log.debug("Policy tree: {}", policyTree);
   }
 
   /**
@@ -61,28 +118,6 @@ public class BasicPathBuilder implements PathBuilder {
     pkixParameters.setRevocationEnabled(false);
     pkixParameters.setMaxPathLength(-1);
     return pkixParameters;
-  }
-
-  /**
-   * This method returns the resulting path as a list of certificates starting from the target certificate, ending in the trust anchor certificate
-   * Any self signed root is removed from the supporting intermediary certificates as the path construction requires chaining to a trust anchor.
-   * @param result validated certificate path
-   * @return validated certificate path starting with the target certificate and ending with the self signed TA root certificate
-   */
-  public List<X509Certificate> getResultPath(PKIXCertPathBuilderResult result){
-    try {
-      List<X509Certificate> x509CertificateList = result.getCertPath().getCertificates().stream()
-        .map(certificate -> (X509Certificate) certificate)
-        // Filter away any self issued certs
-        .filter(certificate -> !certificate.getSubjectDN().equals(certificate.getIssuerDN()))
-        .collect(Collectors.toList());
-      List<X509Certificate> resultPath = new ArrayList<>(x509CertificateList);
-      // Add TA certificate
-      resultPath.add(result.getTrustAnchor().getTrustedCert());
-      return resultPath;
-    } catch (Exception ex){
-      throw new RuntimeException(ex.getMessage());
-    }
   }
 
 }
