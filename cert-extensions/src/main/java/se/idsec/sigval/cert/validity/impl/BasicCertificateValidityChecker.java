@@ -82,14 +82,7 @@ public class BasicCertificateValidityChecker extends CertificateValidityChecker 
       // Singlethreaded
       validityCheckers.stream().forEach(validityChecker -> {
         ValidationStatus status = validityChecker.checkValidity();
-        try {
-          if (status.getValidity().equals(ValidationStatus.CertificateValidity.VALID) && status.isStatusSignatureValid()){
-            validityPathChecker.verifyValidityStatusTrustPath(status);
-          }
-        } catch (Exception ex){
-          status.setValidity(ValidationStatus.CertificateValidity.UNKNOWN);
-          status.setException(ex);
-        }
+        status = checkStatusPath(status);
         validationStatusList.add(status);
       });
     } else {
@@ -144,6 +137,30 @@ public class BasicCertificateValidityChecker extends CertificateValidityChecker 
     return validationStatus;
   }
 
+  private ValidationStatus checkStatusPath(ValidationStatus status) {
+    if (status == null) {
+      status = ValidationStatus.builder()
+        .validity(ValidationStatus.CertificateValidity.UNKNOWN)
+        .exception(new RuntimeException("No status information"))
+        .build();
+      return status;
+    }
+    try {
+      if (status.isStatusSignatureValid()){
+        validityPathChecker.verifyValidityStatusTrustPath(status);
+      } else {
+        status.setValidity(ValidationStatus.CertificateValidity.INVALID);
+        status.setException(new RuntimeException("Signature validation check failed for status token"));
+        log.debug("Status token failed signature validation: {}", status);
+      }
+    } catch (Exception ex){
+      log.debug("Exception when checking status token certificate path: {}", ex.getMessage());
+      status.setValidity(ValidationStatus.CertificateValidity.UNKNOWN);
+      status.setException(ex);
+    }
+    return status;
+  }
+
   private boolean isCompleteValidation(int size) {
     if (validationStatusList.isEmpty()){
       return false;
@@ -162,19 +179,13 @@ public class BasicCertificateValidityChecker extends CertificateValidityChecker 
     return !conclusiveList.isEmpty();
   }
 
-  @Override public void propertyChange(PropertyChangeEvent evt) {
+  @Override public synchronized void propertyChange(PropertyChangeEvent evt) {
     String id = evt.getPropertyName();
     if (id.equals(CRLValidityChecker.EVENT_ID) || id.equals(OCSPCertificateVerifier.EVENT_ID)) {
       ValidationStatus status = (ValidationStatus) evt.getNewValue();
-      try {
-        if (status.getValidity().equals(ValidationStatus.CertificateValidity.VALID) && status.isStatusSignatureValid()){
-          validityPathChecker.verifyValidityStatusTrustPath(status);
-        }
-      } catch (Exception ex){
-        status.setValidity(ValidationStatus.CertificateValidity.UNKNOWN);
-        status.setException(ex);
-      }
+      status = checkStatusPath(status);
       validationStatusList.add(status);
+      log.debug("Received validity status for event '{}': {}", id, status);
     }
   }
 }

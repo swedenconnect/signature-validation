@@ -15,6 +15,8 @@
  */
 package se.idsec.sigval.cert.chain;
 
+import lombok.Getter;
+import lombok.Setter;
 import se.idsec.sigval.cert.validity.crl.CRLCache;
 
 import java.beans.PropertyChangeEvent;
@@ -33,14 +35,19 @@ import java.util.List;
  */
 public abstract class AbstractPathValidator implements Runnable {
 
-  private List<PropertyChangeListener> listeners;
-  private String id;
-  protected CRLCache crlCache;
-  protected PathBuilder pathBuilder;
-  protected X509Certificate targetCert;
-  protected List<X509Certificate> chain;
-  protected List<TrustAnchor> trustAnchors;
-  protected CertStore certStore;
+  private final List<PropertyChangeListener> listeners;
+  /**
+   * The id of the event being communicated back to registered property change listeners as property name
+   *
+   * @param id the id being returned as the event property name
+   */
+  @Setter private String id;
+  protected final CRLCache crlCache;
+  protected final PathBuilder pathBuilder;
+  protected final X509Certificate targetCert;
+  protected final List<X509Certificate> chain;
+  protected final List<TrustAnchor> trustAnchors;
+  protected final CertStore certStore;
 
   /**
    * Constructs the chain validator

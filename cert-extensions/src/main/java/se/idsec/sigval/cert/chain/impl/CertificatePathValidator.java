@@ -18,6 +18,7 @@ package se.idsec.sigval.cert.chain.impl;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import se.idsec.sigval.cert.chain.AbstractPathValidator;
+import se.idsec.sigval.cert.chain.PathBuilder;
 import se.idsec.sigval.cert.chain.PathValidationResult;
 import se.idsec.sigval.cert.utils.CertUtils;
 import se.idsec.sigval.cert.validity.ValidationStatus;
@@ -37,6 +38,12 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
+ * Certificate path validator implementation. This path validator can be executed as a runnable object in a designated Thread
+ * The result is delivered to the callback function of any registered PropertyChange listeners. Alternatively, path validation
+ * can be executed by calling the validateCertificatePath() function.
+ *
+ * The option to set the boolean singleThreaded applies only to underlying validity checks and has nothing to do with whether this
+ * path validator itself is executed as a runnable or as a direct function call.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -44,9 +51,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class CertificatePathValidator extends AbstractPathValidator implements PropertyChangeListener {
 
-  public static final String EVENT_ID = "certPathValidator";
+  public static final String DEFAULT_EVENT_ID = "certPathValidator";
+  protected static final PathBuilder PATH_BUILDER = new BasicPathBuilder();
   /**
-   * Force the validation operations to be performed in a single thread.
+   * Force the underlying validation operations to be performed in a single thread.
    *
    * @param singleThreaded set to true to perform all validation tasks in a single thread.
    */
@@ -77,7 +85,7 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
   public CertificatePathValidator(X509Certificate targetCert, List<X509Certificate> chain,
     List<TrustAnchor> trustAnchors, CertStore certStore, CRLCache crlCache,
     PropertyChangeListener... propertyChangeListeners) {
-    super(targetCert, chain, crlCache, new BasicPathBuilder(), trustAnchors, certStore, EVENT_ID, propertyChangeListeners);
+    super(targetCert, chain, crlCache, PATH_BUILDER, trustAnchors, certStore, DEFAULT_EVENT_ID, propertyChangeListeners);
   }
 
   @Override public PathValidationResult validateCertificatePath() {
@@ -216,7 +224,7 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     }
   }
 
-  @Override public void propertyChange(PropertyChangeEvent evt) {
+  @Override public synchronized void propertyChange(PropertyChangeEvent evt) {
     String propertyName = evt.getPropertyName();
     if (!propertyName.equalsIgnoreCase(BasicCertificateValidityChecker.EVENT_ID)) {
       log.error("Wrong event ID in certificate validity check event. Expected {}. Found {}", BasicCertificateValidityChecker.EVENT_ID,
@@ -226,6 +234,7 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     if (evt.getNewValue() instanceof ValidationStatus) {
       ValidationStatus validationStatus = (ValidationStatus) evt.getNewValue();
       validationStatusList.add(validationStatus);
+      log.debug("Certificate status validation received for event '{}' with status '{}' for {}", propertyName, validationStatus.getValidity(), validationStatus.getCertificate().getSubjectX500Principal());
     }
     else {
       log.error("Wrong result object in certificate validity check event. Expected {}. Found {}", ValidationStatus.class,

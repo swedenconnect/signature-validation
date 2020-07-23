@@ -150,7 +150,7 @@ public class CertUtils {
       log.warn("Exception while accessing OCSP-nocheck extension" + ex.getMessage());
       return false;
     }
-    log.debug(obj != null ? "Target certificate has ocsp-nocheck" : "Target certificate does not have ocsp-nocheck");
+    log.trace(obj != null ? "Target certificate has ocsp-nocheck" : "Target certificate does not have ocsp-nocheck");
     return obj != null;
   }
 

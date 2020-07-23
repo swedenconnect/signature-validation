@@ -124,7 +124,8 @@ public class BasicValidityPathChecker implements ValidityPathChecker {
       statusSignerCertificate.verify(issuer.getPublicKey());
     }
     catch (Exception e) {
-      log.debug("OCSP validation failed: OCSP responder certificate can't be verified using target CA certificate", e);
+      log.debug("OCSP validation failed: OCSP responder certificate can't be verified using target CA certificate");
+      log.trace("OCSP certificate validation exception: ", e);
       throw new RuntimeException("OCSP validation failed: OCSP responder certificate can't be verified using target CA certificate");
     }
 
@@ -154,13 +155,18 @@ public class BasicValidityPathChecker implements ValidityPathChecker {
     //Check OCSP responder cert validity status
     boolean ocspNocheck = CertUtils.isOCSPNocheckExt(statusSignerCertificate);
     if (!ocspNocheck) {
+      log.debug("OCSP service certificate without no-check extension for {}", statusSignerCertificate.getSubjectX500Principal());
       CertificateValidityChecker certChecker = new BasicCertificateValidityChecker(
         statusSignerCertificate, issuer, crlCache);
       ValidationStatus validationStatus = certChecker.checkValidity();
       if (!validationStatus.getValidity().equals(ValidationStatus.CertificateValidity.VALID)) {
         log.debug("OCSP validation failed: OCSP responder certificate failed validity check");
         throw new RuntimeException("OCSP validation failed: OCSP responder certificate failed validity check");
+      } else {
+        log.debug("Validity check of OCSP signer certificate is VALID for {}", statusSignerCertificate.getSubjectX500Principal());
       }
+    } else {
+      log.debug("OCSP service certificate has no-check extension for {}", statusSignerCertificate.getSubjectX500Principal());
     }
   }
 }

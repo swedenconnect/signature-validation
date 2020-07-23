@@ -19,6 +19,11 @@ import java.security.cert.*;
 import java.util.List;
 
 /**
+ * Interface for a path builder used to construct valid X.509 Certificate paths from a target certificate to a trust anchor.
+ * In order to support OCSP validity checking, all trust anchors must be in the form of X.509 Certificates as this is required
+ * to construct the OCSP requester ID.
+ *
+ * Implementations of this interface MUST be thread safe, allowing one implemented object to serve multiple parallel threads.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
