@@ -21,6 +21,7 @@ import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import se.idsec.sigval.cert.enums.OidName;
 import se.idsec.sigval.cert.extensions.missing.SubjectInformationAccess;
 
 import java.io.ByteArrayInputStream;
@@ -34,6 +35,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * Utility class for X.509 Certificate related functions
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -41,10 +43,13 @@ import java.util.stream.Collectors;
 @Slf4j
 public class CertUtils {
 
+  /**
+   * Private constructor to prevent instantiation
+   */
   private CertUtils() {
   }
 
-  public static final String OCSP_NO_CHECK_EXT = "1.3.6.1.5.5.7.48.1.5";
+  /** General name display names */
   private static final String[] generalNameTagText = new String[] {
     "Other Name",
     "E-Mail",
@@ -56,8 +61,12 @@ public class CertUtils {
     "IP Address",
     "Registered ID" };
 
-
-  public static String getOCSPUrl(X509Certificate certificate) throws IOException {
+  /**
+   * Get OCSP url from certificate
+   * @param certificate certificate
+   * @return OCSP responder URL or null if no such URL is present
+   */
+  public static String getOCSPUrl(X509Certificate certificate) {
     ASN1Primitive obj;
     try {
       obj = getExtensionValue(certificate, Extension.authorityInfoAccess.getId());
@@ -67,7 +76,6 @@ public class CertUtils {
     }
 
     if (obj == null) {
-      log.debug("This certificate is not supported by OCSP checking");
       return null;
     }
 
@@ -88,7 +96,7 @@ public class CertUtils {
    * @param oid
    *            the Object Identifier value for the extension.
    * @return the extension value as an ASN1Primitive object
-   * @throws IOException
+   * @throws IOException on error
    */
   public static ASN1Primitive getExtensionValue(X509Certificate certificate, String oid) throws IOException {
     byte[] bytes = certificate.getExtensionValue(oid);
@@ -112,6 +120,12 @@ public class CertUtils {
     return certList;
   }
 
+  /**
+   * Get CRL Distribution point extension from certificate
+   * @param certificate certificate
+   * @return {@link CRLDistPoint} extension or null if no such extension is present
+   * @throws IOException on error obtaining extension data
+   */
   public static CRLDistPoint getCrlDistPoint(X509Certificate certificate) throws IOException {
     ASN1Primitive obj;
     try {
@@ -127,6 +141,11 @@ public class CertUtils {
     return CRLDistPoint.getInstance(obj);
   }
 
+  /**
+   * Get Subject information access extension from certificate
+   * @param certificate certificate
+   * @return {@link SubjectInformationAccess}
+   */
   public static SubjectInformationAccess getSIAExtension(X509Certificate certificate) {
     ASN1Primitive obj;
     try {
@@ -142,10 +161,15 @@ public class CertUtils {
     return SubjectInformationAccess.getInstance(obj);
   }
 
+  /**
+   * Test if certificate has OCSP no-check extension
+   * @param certificate certificate
+   * @return true if OCSP no-check extension is present
+   */
   public static boolean isOCSPNocheckExt(X509Certificate certificate) {
     ASN1Primitive obj;
     try {
-      obj = getExtensionValue(certificate, OCSP_NO_CHECK_EXT);
+      obj = getExtensionValue(certificate, OidName.id_pkix_ocsp_nocheck.getOid());
     } catch (IOException ex) {
       log.warn("Exception while accessing OCSP-nocheck extension" + ex.getMessage());
       return false;
@@ -202,6 +226,11 @@ public class CertUtils {
     }
   }
 
+  /**
+   * Get the presentation name string of general names
+   * @param genNames X.509 certificate general names
+   * @return presentation string
+   */
   private static String getGeneralNamesString(GeneralNames genNames) {
     GeneralName[] names = genNames.getNames();
     StringBuilder b = new StringBuilder();
@@ -216,6 +245,11 @@ public class CertUtils {
     return b.toString();
   }
 
+  /**
+   * Get the general name string for a particular general name
+   * @param generalName general name
+   * @return presentation string
+   */
   public static String getGeneralNameStr(GeneralName generalName) {
     if (generalName == null) {
       return "null";

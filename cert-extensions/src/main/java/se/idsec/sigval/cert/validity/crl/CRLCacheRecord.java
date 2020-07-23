@@ -22,6 +22,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
+ * Data class for CRL cache information
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -32,8 +33,12 @@ import lombok.NoArgsConstructor;
 @Builder
 public class CRLCacheRecord {
 
+  /** time when this cache was updated */
   private long lastCache;
+  /** tme when this cache should be updated */
   private long nextUpdate;
+  /** URL to CRL */
   private String url;
+  /** The name of the cache file */
   private String fileName;
 }

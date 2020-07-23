@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
  * The option to set the boolean singleThreaded applies only to underlying validity checks and has nothing to do with whether this
  * path validator itself is executed as a runnable or as a direct function call.
  *
+ *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
@@ -168,9 +169,22 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
         .exception(new RuntimeException("Certificate status checking failed for " + checkedCert.getSubjectX500Principal()))
         .build();
     }
-    return resultBuilder.validCert(true).build();
+
+    return extendedPathChecks(resultBuilder.validCert(true).build());
   }
 
+  /**
+   * Override this function to perform additional path validation checks
+   * @param result results of certificate path building
+   * @return result of certificate path building after extended path checks
+   */
+  private PathValidationResult extendedPathChecks(PathValidationResult result) {
+    return result;
+  }
+
+  /**
+   * sort the validation status list to match the order of the certificate path.
+   */
   private void sortResults() {
     validationStatusList = pathBuilderCertPath.stream()
       .map(certificate -> getStatus(certificate))
@@ -185,6 +199,9 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
       .findFirst();
   }
 
+  /**
+   * Perform parallel validation checks in separate threads
+   */
   private void runValidationThreads() {
     long startTime = System.currentTimeMillis();
 
@@ -198,7 +215,7 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
       validityThread.start();
     }
 
-    //Wait for them to conclude or for timeout
+    //Wait for validation checks to conclude or to timeout
     while (true) {
       if (System.currentTimeMillis() > startTime + (maxValidationSeconds * 1000)) {
         break;
@@ -215,6 +232,9 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     }
   }
 
+  /**
+   * Perform sequential validation checks in the main thread
+   */
   private void getSingleThreadedValidityStatus() {
     for (int i = 0; i < pathBuilderCertPath.size() - 1; i++) {
       BasicCertificateValidityChecker validityChecker = new BasicCertificateValidityChecker(
@@ -224,6 +244,10 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     }
   }
 
+  /**
+   * Callback function to collect validation results from validation threads
+   * @param evt event holding validation result data
+   */
   @Override public synchronized void propertyChange(PropertyChangeEvent evt) {
     String propertyName = evt.getPropertyName();
     if (!propertyName.equalsIgnoreCase(BasicCertificateValidityChecker.EVENT_ID)) {

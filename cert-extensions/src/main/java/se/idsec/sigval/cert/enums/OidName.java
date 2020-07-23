@@ -15,13 +15,21 @@
  */
 package se.idsec.sigval.cert.enums;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.bouncycastle.asn1.x509.AccessDescription;
 
+import java.util.Arrays;
+import java.util.Optional;
+
 /**
+ * Enumeration of relevant Object Identifiers
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
+@AllArgsConstructor
+@Getter
 public enum OidName {
     cp_anyPolicy("anyPolicy", "2.5.29.32.0"),
     cp_etsiQcPubSscd("ETSI QC Public with SSCD (0.4.0.1456.1.1)", "0.4.0.1456.1.1"),
@@ -47,33 +55,10 @@ public enum OidName {
     id_pkix_ad_timestamping("timeStamping","1.3.6.1.5.5.7.48.3"),
     id_pkix_ad_caIssuers("caIssuers", AccessDescription.id_ad_caIssuers.getId()),
     id_pkix_ad_ocsp("ocsp", AccessDescription.id_ad_ocsp.getId()),
-    ;
-    
-    String name;
-    String oid;
+    id_pkix_ocsp_nocheck("OCSP No Check Extension", "1.3.6.1.5.5.7.48.1.5");
 
-    private OidName(String name, String oid) {
-        this.name = name;
-        this.oid = oid;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getOid() {
-        return oid;
-    }
-    
-    
-    
-    public static String getName(String oidStr){
-        for (OidName oid : values()){
-            if (oid.getOid().equalsIgnoreCase(oidStr)){
-                return oid.getName();
-            }
-        }
-        return oidStr;
-    }
-    
+    /** Friendly name of the OID */
+    private String name;
+    /** Object Identifier String */
+    private String oid;
 }

@@ -29,6 +29,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * Utility class for XML objects instantiated using XMLBeans
+ *
+ * @TODO Consider migration to JAXB
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)

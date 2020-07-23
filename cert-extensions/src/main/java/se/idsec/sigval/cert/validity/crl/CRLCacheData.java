@@ -24,6 +24,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
+ * Data class for a list of CRL cache records
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -33,5 +34,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 public class CRLCacheData {
+
+  /** CRL cache records */
   List<CRLCacheRecord> crlCacheRecordList;
 }

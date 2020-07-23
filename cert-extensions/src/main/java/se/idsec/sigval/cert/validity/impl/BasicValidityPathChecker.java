@@ -28,6 +28,7 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 
 /**
+ * Checker of the path supporting the validity token (CRL or OCSP response)
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -35,17 +36,27 @@ import java.util.List;
 @Slf4j
 public class BasicValidityPathChecker implements ValidityPathChecker {
 
-  CRLCache crlCache;
+  /** CRL cache */
+  private final CRLCache crlCache;
 
+  /**
+   * Constructor
+   * @param crlCache CRL cache
+   */
   public BasicValidityPathChecker(CRLCache crlCache) {
     this.crlCache = crlCache;
   }
 
+  /** {@inheritDoc} */
   @Override public void verifyValidityStatusTrustPath(ValidationStatus validityStatus) throws RuntimeException {
+    verifyValidityStatusTrustPath(validityStatus, false);
+  }
+
+  public void verifyValidityStatusTrustPath(ValidationStatus validityStatus, boolean singleThreaded) throws RuntimeException {
     ValidationStatus.ValidatorSourceType sourceType = validityStatus.getSourceType();
     switch (sourceType) {
     case OCSP:
-      checkOcspTrustPath(validityStatus);
+      checkOcspTrustPath(validityStatus, singleThreaded);
       break;
     case CRL:
       checkCrlTrustPath(validityStatus);
@@ -98,7 +109,7 @@ public class BasicValidityPathChecker implements ValidityPathChecker {
    * @param validityStatus validation status from OCSP validation
    * @throws RuntimeException is thrown if OCSP responder certificate trust path is not valid
    */
-  private void checkOcspTrustPath(ValidationStatus validityStatus) throws RuntimeException {
+  private void checkOcspTrustPath(ValidationStatus validityStatus, boolean singleThreaded) throws RuntimeException {
     X509Certificate issuer = validityStatus.getIssuer();
     X509Certificate statusSignerCertificate = validityStatus.getStatusSignerCertificate();
     List<X509Certificate> statusSignerCertificateChain = validityStatus.getStatusSignerCertificateChain();
@@ -156,8 +167,9 @@ public class BasicValidityPathChecker implements ValidityPathChecker {
     boolean ocspNocheck = CertUtils.isOCSPNocheckExt(statusSignerCertificate);
     if (!ocspNocheck) {
       log.debug("OCSP service certificate without no-check extension for {}", statusSignerCertificate.getSubjectX500Principal());
-      CertificateValidityChecker certChecker = new BasicCertificateValidityChecker(
+      BasicCertificateValidityChecker certChecker = new BasicCertificateValidityChecker(
         statusSignerCertificate, issuer, crlCache);
+      certChecker.setSingleThreaded(singleThreaded);
       ValidationStatus validationStatus = certChecker.checkValidity();
       if (!validationStatus.getValidity().equals(ValidationStatus.CertificateValidity.VALID)) {
         log.debug("OCSP validation failed: OCSP responder certificate failed validity check");

@@ -17,6 +17,7 @@
 package se.idsec.sigval.cert.validity;
 
 /**
+ * Interface for certificate validity checkers
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)

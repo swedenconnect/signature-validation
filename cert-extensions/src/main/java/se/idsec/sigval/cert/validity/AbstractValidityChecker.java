@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
+ * Abstract class for Validity checkers
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -34,7 +35,13 @@ public abstract class AbstractValidityChecker implements ValidityChecker {
   protected X509Certificate certificate;
   protected X509Certificate issuer;
 
-
+  /**
+   * Constructor
+   * @param certificate the target certificate being validated
+   * @param issuer issuer certificate for the CA issuign the target certificate
+   * @param id event id being returned as the property name to registered listeners.
+   * @param propertyChangeListeners optional listeners when performing validation as a {@link Runnable} class
+   */
   public AbstractValidityChecker(X509Certificate certificate, X509Certificate issuer, String id, PropertyChangeListener... propertyChangeListeners) {
     this.certificate = certificate;
     this.issuer = issuer;
@@ -42,15 +49,14 @@ public abstract class AbstractValidityChecker implements ValidityChecker {
     this.listeners = Arrays.asList(propertyChangeListeners);
   }
 
+  /** {@inheritDoc} */
   @Override public void run() {
     ValidationStatus validationStatus = checkValidity();
     PropertyChangeEvent event = new PropertyChangeEvent(this, id,null, validationStatus);
     listeners.stream().forEach(propertyChangeListener -> propertyChangeListener.propertyChange(event));
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override public abstract ValidationStatus checkValidity();
 
 }

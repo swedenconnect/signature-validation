@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.security.cert.X509CRL;
 
 /**
+ * CRL Cache interface
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -37,7 +38,16 @@ public interface CRLCache {
    */
   CRLInfo getCRL(CRLDistPoint crlDistributionPointExt) throws IOException;
 
+  /**
+   * Obtains the current CRL specified by a CRL access URL
+   * @param url CRL access URL
+   * @return {@link CRLInfo} object if a CRL could be obtained
+   * @throws IOException On error obtaining a CRL based on this URL
+   */
   CRLInfo getCRL(String url) throws IOException;
 
+  /**
+   * Update the current cache. Implementations of this function must be thread safe, allowing use of the CRL cache while it is being updated.
+   */
   void recache();
 }

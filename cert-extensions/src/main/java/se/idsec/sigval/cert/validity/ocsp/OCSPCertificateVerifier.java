@@ -86,6 +86,7 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
       String ocspUrl = CertUtils.getOCSPUrl(certificate);
       if (ocspUrl == null) {
         log.debug("OCSP URL for '{}' is empty" , subject);
+        status.setStatusSignatureValid(false);
         return status;
       }
 

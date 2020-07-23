@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
+ * Basic implementation of a certificate validity checker
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -60,6 +61,13 @@ public class BasicCertificateValidityChecker extends CertificateValidityChecker 
    */
   @Setter private int maxValidationSeconds = 10;
 
+  /**
+   * Constructor for this validity checker
+   * @param certificate certificate being checked for validity
+   * @param issuer issuer certificate for the CA issuing the target certificate
+   * @param crlCache the CRL cache used to obtain CRL data
+   * @param propertyChangeListeners listeners providing callback when using {@link Runnable} implementation
+   */
   public BasicCertificateValidityChecker(X509Certificate certificate, X509Certificate issuer, CRLCache crlCache,
     PropertyChangeListener... propertyChangeListeners) {
     super(certificate, issuer, EVENT_ID, propertyChangeListeners);
@@ -147,11 +155,14 @@ public class BasicCertificateValidityChecker extends CertificateValidityChecker 
     }
     try {
       if (status.isStatusSignatureValid()){
-        validityPathChecker.verifyValidityStatusTrustPath(status);
+        if (validityPathChecker instanceof BasicValidityPathChecker) {
+          ((BasicValidityPathChecker)validityPathChecker).verifyValidityStatusTrustPath(status, singleThreaded);
+        } else {
+          validityPathChecker.verifyValidityStatusTrustPath(status);
+        }
       } else {
-        status.setValidity(ValidationStatus.CertificateValidity.INVALID);
-        status.setException(new RuntimeException("Signature validation check failed for status token"));
-        log.debug("Status token failed signature validation: {}", status);
+        status.setException(new RuntimeException("Unable to obtain valid status token for " + status.getSourceType()));
+        log.debug("Invalid or absent status token for {}: {}", status.getSourceType(), status);
       }
     } catch (Exception ex){
       log.debug("Exception when checking status token certificate path: {}", ex.getMessage());

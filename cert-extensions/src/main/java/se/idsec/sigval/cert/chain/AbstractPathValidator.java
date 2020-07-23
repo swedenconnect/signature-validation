@@ -73,6 +73,9 @@ public abstract class AbstractPathValidator implements Runnable {
     this.listeners = Arrays.asList(propertyChangeListeners);
   }
 
+  /**
+   * Running the validation task as {@link Runnable} task and returning result to the callback function of all property change listeners
+   */
   @Override public void run() {
     PathValidationResult pathValidationResult = validateCertificatePath();
     PropertyChangeEvent event = new PropertyChangeEvent(this, id, null, pathValidationResult);

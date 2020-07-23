@@ -24,6 +24,7 @@ import lombok.NoArgsConstructor;
 import java.security.cert.X509CRL;
 
 /**
+ * Data class for information about a CRL
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -34,7 +35,9 @@ import java.security.cert.X509CRL;
 @Builder
 public class CRLInfo {
 
+  /** URL where this CRL was obtained */
   private String location;
+  /** CRL object */
   private X509CRL crl;
 
 }

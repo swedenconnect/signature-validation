@@ -26,6 +26,7 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 
 /**
+ * Data class for path validation results
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -36,10 +37,17 @@ import java.util.List;
 @Builder
 public class PathValidationResult {
 
+  /** Indicates if the validated path is valid */
   private boolean validCert;
+  /** Result of path building from target certificate to a trust anchor */
   private PKIXCertPathBuilderResult pkixCertPathBuilderResult;
+  /** The target certificate that is validated through the certificate path */
   private X509Certificate targetCertificate;
+  /** The validated certificate chain starting from the target certificate and ending in the trust anchor certificate */
   private List<X509Certificate> chain;
+  /** List of status validation results for all certificates in the chain except for the trust anchor certificate, following the same
+   * order as the chain certificates */
   private List<ValidationStatus> validationStatusList;
+  /** Exception thrown during path validation, if any */
   private Exception exception;
 }

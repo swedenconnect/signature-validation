@@ -60,20 +60,30 @@ public abstract class CertificateValidityChecker implements Runnable, PropertyCh
     this.listeners = Arrays.asList(propertyChangeListeners);
   }
 
+  /**
+   * Setter for validity checkers used to check validity status
+   * @param validityCheckers validity checkers
+   */
   public void setValidityCheckers(List<ValidityChecker> validityCheckers) {
     this.validityCheckers = validityCheckers;
   }
 
+  /**
+   * Setter for certificate path checker used to validate the certificate validity token
+   * @param validityPathChecker
+   */
   public void setValidityPathChecker(ValidityPathChecker validityPathChecker) {
     this.validityPathChecker = validityPathChecker;
   }
 
+  /** {@inheritDoc} */
   @Override public void run() {
     ValidationStatus validityCheckResult = checkValidity();
     PropertyChangeEvent event = new PropertyChangeEvent(this, id, null, validityCheckResult);
     listeners.stream().forEach(propertyChangeListener -> propertyChangeListener.propertyChange(event));
   }
 
+  /** {@inheritDoc} */
   public abstract ValidationStatus checkValidity();
 
 }
