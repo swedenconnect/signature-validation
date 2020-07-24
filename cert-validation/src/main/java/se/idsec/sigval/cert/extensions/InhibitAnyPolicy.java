@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.cert.extensions.missing;
+package se.idsec.sigval.cert.extensions;
 
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
-import org.bouncycastle.asn1.x509.X509Extension;
 
 import java.math.BigInteger;
 
 /**
+ * InhibitAnyPolicy X.509 extension implementation for extending Bouncycastle
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -41,13 +41,9 @@ public class InhibitAnyPolicy extends ASN1Object {
         if (obj instanceof InhibitAnyPolicy) {
             return (InhibitAnyPolicy) obj;
         }
-        if (obj instanceof X509Extension) {
-            return getInstance(X509Extension.convertValueToObject((X509Extension) obj));
-        }
         if (obj != null) {
             return new InhibitAnyPolicy(ASN1Integer.getInstance(obj));
         }
-
         return null;
     }
 

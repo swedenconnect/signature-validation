@@ -22,7 +22,7 @@ import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import se.idsec.sigval.cert.enums.OidName;
-import se.idsec.sigval.cert.extensions.missing.SubjectInformationAccess;
+import se.idsec.sigval.cert.extensions.SubjectInformationAccess;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

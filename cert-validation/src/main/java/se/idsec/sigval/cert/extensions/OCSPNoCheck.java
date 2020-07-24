@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.cert.extensions.missing;
+package se.idsec.sigval.cert.extensions;
 
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -23,6 +23,7 @@ import org.bouncycastle.asn1.DERNull;
 import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
 
 /**
+ * OCSPNoCheck X.509 extension implementation for extending Bouncycastle
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)

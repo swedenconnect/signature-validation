@@ -6,7 +6,7 @@
   <groupId>se.idsec.sigval.base</groupId>
   <artifactId>sigval-base-parent</artifactId>
   <packaging>pom</packaging>
-  <version>1.0.0</version>
+  <version>1.0.0-SNAPSHOT</version>
 
   <name>IDsec Solutions :: Parent POM for Signature validation :: Base</name>
   <description>Parent POM for SignService Validation libraries</description>
@@ -65,6 +65,7 @@
     <module>sigval-commons</module>
     <module>sigval-xml</module>
     <module>sigval-pdf</module>
+    <module>cert-validation</module>
     <module>cert-extensions</module>
   </modules>
 
@@ -118,11 +119,11 @@
         <artifactId>jackson-databind</artifactId>
         <version>2.11.0</version>
       </dependency>
+      <!-- XML Schemas -->
       <dependency>
-        <groupId>org.apache.xmlbeans</groupId>
-        <artifactId>xmlbeans</artifactId>
-        <version>3.1.0</version>
-        <type>jar</type>
+        <groupId>se.swedenconnect.schemas.cert</groupId>
+        <artifactId>authcontextinfo10-jaxb</artifactId>
+        <version>1.0.1</version>
       </dependency>
     </dependencies>
 

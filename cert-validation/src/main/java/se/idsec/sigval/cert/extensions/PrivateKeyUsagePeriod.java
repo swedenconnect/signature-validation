@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.cert.extensions.missing;
+package se.idsec.sigval.cert.extensions;
 
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.Extension;
@@ -23,6 +23,8 @@ import org.bouncycastle.asn1.x509.Extensions;
 import java.util.Date;
 
 /**
+ * Private key usage period X.509 extension implementation for extending Bouncycastle
+ *
  * The AuthorityInformationAccess object.
  * <pre>
  * id-pe-subjectInfoAccess OBJECT IDENTIFIER ::= { id-pe 11 }

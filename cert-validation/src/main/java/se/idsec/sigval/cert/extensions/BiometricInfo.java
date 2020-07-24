@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package se.idsec.sigval.cert.extensions.missing;
+package se.idsec.sigval.cert.extensions;
 
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.Extensions;
-import org.bouncycastle.asn1.x509.X509Extension;
 import org.bouncycastle.asn1.x509.qualified.BiometricData;
 import org.bouncycastle.asn1.x509.qualified.TypeOfBiometricData;
 import org.bouncycastle.util.encoders.Hex;
@@ -26,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * BiometricInfo X.509 extension implementation for extending Bouncycastle
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -43,13 +43,9 @@ public class BiometricInfo extends ASN1Object {
         if (obj instanceof BiometricInfo) {
             return (BiometricInfo) obj;
         }
-        if (obj instanceof X509Extension) {
-            return getInstance(X509Extension.convertValueToObject((X509Extension) obj));
-        }
         if (obj != null) {
             return new BiometricInfo(ASN1Sequence.getInstance(obj));
         }
-
         return null;
     }
 

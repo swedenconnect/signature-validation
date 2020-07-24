@@ -14,53 +14,42 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.cert.extensions;
+package se.idsec.sigval.cert.extensions.data;
+
+import lombok.*;
 
 import java.math.BigInteger;
 
 /**
+ * Monetary value data within a QCStatement Extension
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class MonetaryValue {
+
+    /**
+     * Currency parameter
+     *
+     * @param currency currency
+     * @return currency
+     */
     String currency;
+    /**
+     * Amount parameter
+     *
+     * @param amount amount
+     * @return amount
+     */
     BigInteger amount;
+    /**
+     * Exponent parameter
+     *
+     * @param exponent exponent
+     * @return
+     */
     BigInteger exponent;
-
-    public MonetaryValue() {
-    }
-
-    public MonetaryValue(String currency, BigInteger amount, BigInteger exponent) {
-        this.currency = currency;
-        this.amount = amount;
-        this.exponent = exponent;
-    }
-
-    public String getCurrency() {
-        return currency;
-    }
-
-    public void setCurrency(String currency) {
-        this.currency = currency;
-    }
-
-    public BigInteger getAmount() {
-        return amount;
-    }
-
-    public void setAmount(BigInteger amount) {
-        this.amount = amount;
-    }
-
-    public BigInteger getExponent() {
-        return exponent;
-    }
-
-    public void setExponent(BigInteger exponent) {
-        this.exponent = exponent;
-    }
-
-    
-    
 }

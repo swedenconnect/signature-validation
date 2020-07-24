@@ -14,25 +14,34 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.cert.extensions;
+package se.idsec.x509cert.extensions;
 
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.asn1.x509.GeneralName;
-import org.bouncycastle.asn1.x509.X509Extension;
 import org.bouncycastle.asn1.x509.qualified.QCStatement;
-import se.idsec.sigval.cert.utils.CertUtils;
+import se.idsec.x509cert.extensions.data.MonetaryValue;
+import se.idsec.x509cert.extensions.data.PDSLocation;
+import se.idsec.x509cert.extensions.data.SemanticsInformation;
+import se.idsec.x509cert.extensions.utils.ExtensionUtils;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * QCStatements X.509 extension implementation for extending Bouncycastle
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-public class QCStatementsExt extends ASN1Object {
+@NoArgsConstructor
+@Slf4j
+public class QCStatements extends ASN1Object {
 
     public static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.1.3");
     public static final ASN1ObjectIdentifier PKIX_SYNTAX_V1 = QCStatement.id_qcs_pkixQCSyntax_v1;
@@ -47,152 +56,60 @@ public class QCStatementsExt extends ASN1Object {
     public static final ASN1ObjectIdentifier RETENTION_PERIOD = QCStatement.id_etsi_qcs_RetentionPeriod;
     public static final ASN1ObjectIdentifier PKI_DISCLOSURE = new ASN1ObjectIdentifier("0.4.0.1862.1.5");
 
-    boolean pkixSyntaxV1;
-    boolean pkixSyntaxV2;
-    boolean qcCompliance;
-    boolean pdsStatement;
-    boolean qcSscd;
-    boolean qcType;
-    boolean retentionPeriod;
-    boolean limitValue;
-    MonetaryValue monetaryValue;
-    List<ASN1ObjectIdentifier> qcTypeIdList = new ArrayList<>();
-    BigInteger retentionPeriodVal;
-    List<PDSLocation> locationList = new ArrayList<>();
-    SemanticsInformation semanticsInfo;
+    @Getter @Setter private boolean pkixSyntaxV1;
+    @Getter @Setter private boolean pkixSyntaxV2;
+    @Getter @Setter private boolean qcCompliance;
+    @Getter @Setter private boolean pdsStatement;
+    @Getter @Setter private boolean qcSscd;
+    @Getter @Setter private boolean qcType;
+    @Getter @Setter private boolean retentionPeriod;
+    @Getter @Setter private boolean limitValue;
+    @Getter @Setter private MonetaryValue monetaryValue;
+    @Getter @Setter private List<ASN1ObjectIdentifier> qcTypeIdList = new ArrayList<>();
+    @Getter @Setter private BigInteger retentionPeriodVal;
+    @Getter @Setter private List<PDSLocation> locationList = new ArrayList<>();
+    @Getter @Setter private SemanticsInformation semanticsInfo;
 
-    public static QCStatementsExt getInstance(ASN1TaggedObject obj, boolean explicit) {
+    public static QCStatements getInstance(ASN1TaggedObject obj, boolean explicit) {
         return getInstance(ASN1Sequence.getInstance(obj, explicit));
     }
 
-    public static QCStatementsExt getInstance(Object obj) {
-        if (obj instanceof QCStatementsExt) {
-            return (QCStatementsExt) obj;
-        }
-        if (obj instanceof X509Extension) {
-            return getInstance(X509Extension.convertValueToObject((X509Extension) obj));
+    /**
+     * Creates an instance of the QCStatements extension object
+     *
+     * @param obj a representation of the extension
+     * @return QCStatements extension or null if no extension could be created from the provided object
+     */
+    public static QCStatements getInstance(Object obj) {
+        if (obj instanceof QCStatements) {
+            return (QCStatements) obj;
         }
         if (obj != null) {
-            return new QCStatementsExt(ASN1Sequence.getInstance(obj));
+            return new QCStatements(ASN1Sequence.getInstance(obj));
         }
-
+        log.error("A null object was provided");
         return null;
     }
 
-    public static QCStatementsExt fromExtensions(Extensions extensions) {
-        return QCStatementsExt.getInstance(extensions.getExtensionParsedValue(OID));
+    /**
+     * Creates an instance of the QCStatements extension object
+     *
+     * @param extensions Extension
+     * @return QCStatemnts extension
+     */
+    public static QCStatements fromExtensions(Extensions extensions) {
+        return QCStatements.getInstance(extensions.getExtensionParsedValue(OID));
     }
 
-    public boolean isPkixSyntaxV1() {
-        return pkixSyntaxV1;
-    }
-
-    public void setPkixSyntaxV1(boolean pkixSyntaxV1) {
-        this.pkixSyntaxV1 = pkixSyntaxV1;
-    }
-
-    public boolean isPkixSyntaxV2() {
-        return pkixSyntaxV2;
-    }
-
-    public void setPkixSyntaxV2(boolean pkixSyntaxV2) {
-        this.pkixSyntaxV2 = pkixSyntaxV2;
-    }
-
-    public boolean isQcCompliance() {
-        return qcCompliance;
-    }
-
-    public void setQcCompliance(boolean qcCompliance) {
-        this.qcCompliance = qcCompliance;
-    }
-
-    public boolean isPdsStatement() {
-        return pdsStatement;
-    }
-
-    public void setPdsStatement(boolean pdsStatement) {
-        this.pdsStatement = pdsStatement;
-    }
-
-    public boolean isQcSscd() {
-        return qcSscd;
-    }
-
-    public void setQcSscd(boolean qcSscd) {
-        this.qcSscd = qcSscd;
-    }
-
-    public boolean isQcType() {
-        return qcType;
-    }
-
-    public void setQcType(boolean qcType) {
-        this.qcType = qcType;
-    }
-
-    public boolean isRetentionPeriod() {
-        return retentionPeriod;
-    }
-
-    public void setRetentionPeriod(boolean retentionPeriod) {
-        this.retentionPeriod = retentionPeriod;
-    }
-
-    public boolean isLimitValue() {
-        return limitValue;
-    }
-
-    public void setLimitValue(boolean limitValue) {
-        this.limitValue = limitValue;
-    }
-
-    public MonetaryValue getMonetaryValue() {
-        return monetaryValue;
-    }
-
-    public void setMonetaryValue(MonetaryValue monetaryValue) {
-        this.monetaryValue = monetaryValue;
-    }
-
-    public List<ASN1ObjectIdentifier> getQcTypeIdList() {
-        return qcTypeIdList;
-    }
-
-    public void setQcTypeIdList(List<ASN1ObjectIdentifier> qcTypeIdList) {
-        this.qcTypeIdList = qcTypeIdList;
-    }
-
-    public BigInteger getRetentionPeriodVal() {
-        return retentionPeriodVal;
-    }
-
-    public void setRetentionPeriodVal(BigInteger retentionPeriodVal) {
-        this.retentionPeriodVal = retentionPeriodVal;
-    }
-
-    public List<PDSLocation> getLocationList() {
-        return locationList;
-    }
-
-    public void setLocationList(List<PDSLocation> locationList) {
-        this.locationList = locationList;
-    }
-
-    public SemanticsInformation getSemanticsInfo() {
-        return semanticsInfo;
-    }
-
-    public void setSemanticsInfo(SemanticsInformation semanticsInfo) {
-        this.semanticsInfo = semanticsInfo;
-    }
 
     /**
+     * Internal constructor
+     *
      * Parse the content of ASN1 sequence to populate set values
      *
      * @param seq
      */
-    private QCStatementsExt(ASN1Sequence seq) {
+    private QCStatements(ASN1Sequence seq) {
 
         try {
             for (int i = 0; i < seq.size(); i++) {
@@ -202,9 +119,6 @@ public class QCStatementsExt extends ASN1Object {
         } catch (Exception e) {
             throw new IllegalArgumentException("Bad extension content");
         }
-    }
-
-    public QCStatementsExt() {
     }
 
     /**
@@ -268,6 +182,8 @@ public class QCStatementsExt extends ASN1Object {
         return new DERSequence(qcStatements);
     }
 
+    @Override
+    /** {@inheritDoc} */
     public String toString() {
         StringBuilder b = new StringBuilder();
         //b.append("QCStatements [\n");
@@ -284,7 +200,7 @@ public class QCStatementsExt extends ASN1Object {
                 }
                 if (!semanticsInfo.getNameRegistrationAuthorityList().isEmpty()) {
                     semanticsInfo.getNameRegistrationAuthorityList().forEach((name) -> {
-                        b.append("    - NameRegistrationAuthority: ").append(CertUtils.getGeneralNameStr(name)).append("\n");
+                        b.append("    - NameRegistrationAuthority: ").append(ExtensionUtils.getGeneralNameStr(name)).append("\n");
                     });
                 }
             }
@@ -333,6 +249,9 @@ public class QCStatementsExt extends ASN1Object {
         return b.toString();
     }
 
+    /**
+     * Clear all values
+     */
     private void clearAll() {
         setPkixSyntaxV1(false);
         setPkixSyntaxV2(false);
