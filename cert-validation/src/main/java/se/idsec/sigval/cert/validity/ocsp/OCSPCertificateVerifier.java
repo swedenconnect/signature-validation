@@ -142,7 +142,7 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
             }
             else {
               Date revocationDate = ((RevokedStatus) singleResp.getCertStatus()).getRevocationTime();
-              log.warn("OCSP for certificate '{}' is revoked since {}", subject, revocationDate);
+              log.debug("OCSP for certificate '{}' is revoked since {}", subject, revocationDate);
               status.setRevocationTime(revocationDate);
               status.setRevocationObjectIssuingTime(singleResp.getThisUpdate());
               status.setValidity(CertificateValidity.REVOKED);

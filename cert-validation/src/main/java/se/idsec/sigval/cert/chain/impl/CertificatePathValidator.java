@@ -153,13 +153,13 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
         continue;
       }
       if (status.getValidity().equals(ValidationStatus.CertificateValidity.UNKNOWN)) {
-        log.warn("Certificate validity could not be determined for {}", checkedCert.getSubjectX500Principal());
+        log.debug("Certificate validity could not be determined for {}", checkedCert.getSubjectX500Principal());
         return resultBuilder
           .exception(new RuntimeException("Certificate validity could not be determined for " + checkedCert.getSubjectX500Principal()))
           .build();
       }
       if (status.getValidity().equals(ValidationStatus.CertificateValidity.REVOKED)) {
-        log.warn("Certificate REVOKED for {}", checkedCert.getSubjectX500Principal());
+        log.debug("Certificate REVOKED for {}", checkedCert.getSubjectX500Principal());
         return resultBuilder
           .exception(new RuntimeException("Certificate REVOKED for " + checkedCert.getSubjectX500Principal()))
           .build();

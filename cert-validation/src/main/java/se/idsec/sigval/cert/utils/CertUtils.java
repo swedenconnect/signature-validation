@@ -21,8 +21,8 @@ import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import se.idsec.sigval.cert.enums.OidName;
-import se.idsec.sigval.cert.extensions.SubjectInformationAccess;
+import se.idsec.x509cert.extensions.SubjectInformationAccess;
+import se.idsec.x509cert.extensions.data.OidName;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -48,18 +48,6 @@ public class CertUtils {
    */
   private CertUtils() {
   }
-
-  /** General name display names */
-  private static final String[] generalNameTagText = new String[] {
-    "Other Name",
-    "E-Mail",
-    "DNS",
-    "x400Address",
-    "Directory Name",
-    "EDI Party Name",
-    "URI",
-    "IP Address",
-    "Registered ID" };
 
   /**
    * Get OCSP url from certificate
@@ -223,45 +211,6 @@ public class CertUtils {
       if (inStream != null) {
         inStream.close();
       }
-    }
-  }
-
-  /**
-   * Get the presentation name string of general names
-   * @param genNames X.509 certificate general names
-   * @return presentation string
-   */
-  private static String getGeneralNamesString(GeneralNames genNames) {
-    GeneralName[] names = genNames.getNames();
-    StringBuilder b = new StringBuilder();
-    b.append("GeneralNames {");
-    for (int i = 0; i < names.length; i++) {
-      b.append(getGeneralNameStr(names[i]));
-      if (i + 1 < names.length) {
-        b.append(" | ");
-      }
-    }
-    b.append("}");
-    return b.toString();
-  }
-
-  /**
-   * Get the general name string for a particular general name
-   * @param generalName general name
-   * @return presentation string
-   */
-  public static String getGeneralNameStr(GeneralName generalName) {
-    if (generalName == null) {
-      return "null";
-    }
-    String toString = generalName.toString();
-    try {
-      int tagNo = Integer.valueOf(toString.substring(0, toString.indexOf(":")));
-      return generalNameTagText[tagNo] + toString.substring(toString.indexOf(":"));
-
-    }
-    catch (Exception e) {
-      return toString;
     }
   }
 

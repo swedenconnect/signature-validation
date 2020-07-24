@@ -16,6 +16,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>se.idsec.sigval.base</groupId>
+            <artifactId>cert-extensions</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
@@ -47,21 +52,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>se.swedenconnect.schemas.cert</groupId>
-            <artifactId>authcontextinfo10-jaxb</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.jvnet.jaxb2_commons</groupId>
-                    <artifactId>jaxb2-basics-runtime</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.jvnet.jaxb2_commons</groupId>
-            <artifactId>jaxb2-basics-runtime</artifactId>
-            <version>1.11.1</version>
         </dependency>
     </dependencies>
 
