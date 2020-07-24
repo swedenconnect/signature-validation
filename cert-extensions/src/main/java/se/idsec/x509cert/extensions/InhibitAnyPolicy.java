@@ -16,6 +16,7 @@
 
 package se.idsec.x509cert.extensions;
 
+import lombok.Getter;
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
@@ -31,8 +32,14 @@ import java.math.BigInteger;
 public class InhibitAnyPolicy extends ASN1Object {
 
     public static final ASN1ObjectIdentifier OID = Extension.inhibitAnyPolicy;
-    BigInteger skipCerts;
+    @Getter private BigInteger skipCerts;
 
+    /**
+     * Creates an instance of the InhibitAnyPolicy extension
+     *
+     * @param obj object holding extension data
+     * @return InhibitAnyPolicy extension
+     */
     public static InhibitAnyPolicy getInstance(Object obj) {
         if (obj instanceof InhibitAnyPolicy) {
             return (InhibitAnyPolicy) obj;
@@ -43,6 +50,12 @@ public class InhibitAnyPolicy extends ASN1Object {
         return null;
     }
 
+    /**
+     * Creates an instance of the InhibitAnyPolicy extension
+     *
+     * @param extensions extensions
+     * @return InhibitAnyPolicy extension
+     */
     public static InhibitAnyPolicy fromExtensions(Extensions extensions) {
         return InhibitAnyPolicy.getInstance(extensions.getExtensionParsedValue(OID));
     }
@@ -60,12 +73,12 @@ public class InhibitAnyPolicy extends ASN1Object {
         }
     }
 
+    /**
+     * Constructor
+     * @param skipcerts skipcerts parameter
+     */
     public InhibitAnyPolicy(int skipcerts) {
         this.skipCerts = BigInteger.valueOf(skipcerts);
-    }
-
-    public BigInteger getSkipCerts() {
-        return skipCerts;
     }
 
     /**
@@ -83,6 +96,7 @@ public class InhibitAnyPolicy extends ASN1Object {
         return new ASN1Integer(skipCerts);
     }
 
+    /** {@inheritDoc} */
     @Override
     public String toString() {
         StringBuilder b = new StringBuilder();

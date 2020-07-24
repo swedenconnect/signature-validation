@@ -5,14 +5,14 @@
     <parent>
         <artifactId>sigval-base-parent</artifactId>
         <groupId>se.idsec.sigval.base</groupId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <name>X509 Certificate Validation</name>
     <description>Certificate validation library</description>
 
     <artifactId>cert-validation</artifactId>
-
+    <version>1.0.0</version>
 
     <dependencies>
         <dependency>

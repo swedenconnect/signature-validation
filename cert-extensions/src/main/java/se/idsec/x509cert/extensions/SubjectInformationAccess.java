@@ -16,6 +16,7 @@
 
 package se.idsec.x509cert.extensions;
 
+import lombok.Getter;
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.AccessDescription;
 import org.bouncycastle.asn1.x509.Extension;
@@ -44,8 +45,14 @@ public class SubjectInformationAccess extends ASN1Object {
 
     public static final ASN1ObjectIdentifier caRepository = new ASN1ObjectIdentifier(OidName.id_pkix_ad_caRepository.getOid());
     public static final ASN1ObjectIdentifier timeStamping = new ASN1ObjectIdentifier(OidName.id_pkix_ad_timestamping.getOid());
-    private AccessDescription[] descriptions;
+    /** Access descriptions */
+    @Getter private AccessDescription[] descriptions;
 
+    /**
+     * Creates an instance of SubjectInformationAccess extension
+     * @param obj object holding extension data
+     * @return {@link SubjectInformationAccess} extension
+     */
     public static SubjectInformationAccess getInstance(
             Object obj) {
         if (obj instanceof SubjectInformationAccess) {
@@ -59,10 +66,19 @@ public class SubjectInformationAccess extends ASN1Object {
         return null;
     }
 
+    /**
+     * Creates an instance of SubjectInformationAccess extension
+     * @param extensions extensions data
+     * @return {@link SubjectInformationAccess} extension
+     */
     public static SubjectInformationAccess fromExtensions(Extensions extensions) {
         return SubjectInformationAccess.getInstance(extensions.getExtensionParsedValue(Extension.authorityInfoAccess));
     }
 
+    /**
+     * Private constructor
+     * @param seq ASN.1 sequence
+     */
     private SubjectInformationAccess(
             ASN1Sequence seq) {
         if (seq.size() < 1) {
@@ -76,11 +92,19 @@ public class SubjectInformationAccess extends ASN1Object {
         }
     }
 
+    /**
+     * Constructor
+     * @param description access description
+     */
     public SubjectInformationAccess(
             AccessDescription description) {
         this(new AccessDescription[]{description});
     }
 
+    /**
+     * Constructor
+     * @param descriptions access descriptions
+     */
     public SubjectInformationAccess(
             AccessDescription[] descriptions) {
         this.descriptions = new AccessDescription[descriptions.length];
@@ -89,19 +113,14 @@ public class SubjectInformationAccess extends ASN1Object {
 
     /**
      * create an AuthorityInformationAccess with the oid and location provided.
+     *
+     * @param oid OID
+     * @param location location
      */
     public SubjectInformationAccess(
             ASN1ObjectIdentifier oid,
             GeneralName location) {
         this(new AccessDescription(oid, location));
-    }
-
-    /**
-     *
-     * @return the access descriptions contained in this object.
-     */
-    public AccessDescription[] getAccessDescriptions() {
-        return descriptions;
     }
 
     public ASN1Primitive toASN1Primitive() {
@@ -114,6 +133,8 @@ public class SubjectInformationAccess extends ASN1Object {
         return new DERSequence(vec);
     }
 
+    /** {@inheritDoc} */
+    @Override
     public String toString() {
         return ("SubjectInformationAccess: Oid(" + this.descriptions[0].getAccessMethod().getId() + ")");
     }

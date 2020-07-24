@@ -182,8 +182,8 @@ public class QCStatements extends ASN1Object {
         return new DERSequence(qcStatements);
     }
 
-    @Override
     /** {@inheritDoc} */
+    @Override
     public String toString() {
         StringBuilder b = new StringBuilder();
         //b.append("QCStatements [\n");

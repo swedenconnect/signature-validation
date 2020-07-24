@@ -15,6 +15,8 @@
  */
 package se.idsec.x509cert.extensions;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.asn1.x509.qualified.BiometricData;
@@ -33,12 +35,13 @@ import java.util.List;
 public class BiometricInfo extends ASN1Object {
 
     public static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.1.2");
-    List<BiometricData> biometricDataList = new ArrayList<>();
+    @Getter private List<BiometricData> biometricDataList = new ArrayList<>();
 
-    public static BiometricInfo getInstance(ASN1TaggedObject obj, boolean explicit) {
-        return getInstance(ASN1Sequence.getInstance(obj, explicit));
-    }
-
+    /**
+     * Creates BiometricInfo extension object
+     * @param obj object holding extension data
+     * @return BiometricInfo extension
+     */
     public static BiometricInfo getInstance(Object obj) {
         if (obj instanceof BiometricInfo) {
             return (BiometricInfo) obj;
@@ -49,11 +52,18 @@ public class BiometricInfo extends ASN1Object {
         return null;
     }
 
+    /**
+     * Creates BiometricInfo extension object
+     * @param extensions BiometricInfo extension
+     * @return BiometricInfo extension
+     */
     public static BiometricInfo fromExtensions(Extensions extensions) {
         return BiometricInfo.getInstance(extensions.getExtensionParsedValue(OID));
     }
 
     /**
+     * Internal Constructor
+     *
      * Parse the content of ASN1 sequence to populate set values
      *
      * @param seq
@@ -70,12 +80,13 @@ public class BiometricInfo extends ASN1Object {
         }
     }
 
+    /**
+     * Constructor
+     *
+     * @param biometricDataList List of biometric data
+     */
     public BiometricInfo(List<BiometricData> biometricDataList) {
         this.biometricDataList = biometricDataList;
-    }
-
-    public List<BiometricData> getBiometricDataList() {
-        return biometricDataList;
     }
 
     /**
@@ -101,6 +112,7 @@ public class BiometricInfo extends ASN1Object {
         return new DERSequence(biometricInfo);
     }
 
+    /** {@inheritDoc} */
     @Override
     public String toString() {
         StringBuilder b = new StringBuilder();
@@ -116,6 +128,11 @@ public class BiometricInfo extends ASN1Object {
         return b.toString();
     }
 
+    /**
+     * Get a string representing the type of biometric data
+     * @param typeOfBiometricData type of biomentric data
+     * @return presentation string representing type
+     */
     public static String getTypeString(TypeOfBiometricData typeOfBiometricData){
         if (typeOfBiometricData.isPredefined()){
             switch (typeOfBiometricData.getPredefinedBiometricType()){

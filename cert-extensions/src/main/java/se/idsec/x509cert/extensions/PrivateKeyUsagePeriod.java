@@ -16,6 +16,7 @@
 
 package se.idsec.x509cert.extensions;
 
+import lombok.Getter;
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
@@ -42,9 +43,16 @@ import java.util.Date;
 public class PrivateKeyUsagePeriod
         extends ASN1Object {
 
-    private Date notBefore;
-    private Date notAfter;
+    /** Start time for usage of private key */
+    @Getter private Date notBefore;
+    /** End time for usage of private key */
+    @Getter private Date notAfter;
 
+    /**
+     * Creates an instance of the PrivateKeyUsagePeriod extension
+     * @param obj object holding extension data
+     * @return {@link PrivateKeyUsagePeriod} extension
+     */
     public static PrivateKeyUsagePeriod getInstance(
             Object obj) {
         if (obj instanceof PrivateKeyUsagePeriod) {
@@ -58,10 +66,19 @@ public class PrivateKeyUsagePeriod
         return null;
     }
 
+    /**
+     * Creates an instance of the PrivateKeyUsagePeriod extension
+     * @param extensions extensions data
+     * @return {@link PrivateKeyUsagePeriod} extension
+     */
     public static PrivateKeyUsagePeriod fromExtensions(Extensions extensions) {
         return PrivateKeyUsagePeriod.getInstance(extensions.getExtensionParsedValue(Extension.authorityInfoAccess));
     }
 
+    /**
+     * Private constructor based on asn.1 sequence. This is used by the public getInstance function
+     * @param seq ASN.1 sequence
+     */
     private PrivateKeyUsagePeriod(ASN1Sequence seq) {
         
         for (int i=0;i<seq.size();i++){
@@ -81,21 +98,17 @@ public class PrivateKeyUsagePeriod
         }        
     }
 
-
+    /**
+     * Constructor
+     * @param notBefore not before date
+     * @param notAfter not after date
+     */
     public PrivateKeyUsagePeriod(Date notBefore, Date notAfter) {
         this.notBefore = notBefore;
         this.notAfter = notAfter;
     }
 
-    public Date getNotBefore() {
-        return notBefore;
-    }
-
-    public Date getNotAfter() {
-        return notAfter;
-    }
-
-
+    /** {@inheritDoc} */
     @Override
     public ASN1Primitive toASN1Primitive() {
         ASN1EncodableVector vec = new ASN1EncodableVector();
@@ -113,6 +126,7 @@ public class PrivateKeyUsagePeriod
         return new DERSequence(vec);
     }
 
+    /** {@inheritDoc} */
     @Override
     public String toString() {
         StringBuilder b = new StringBuilder();

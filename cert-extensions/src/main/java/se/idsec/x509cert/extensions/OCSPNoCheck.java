@@ -32,12 +32,18 @@ public class OCSPNoCheck extends ASN1Object {
 
     public static final ASN1ObjectIdentifier OID = OCSPObjectIdentifiers.id_pkix_ocsp_nocheck;
 
-
+    /**
+     * Creates an instance of the OCSPNoCheck extension
+     *
+     * @return OCSPNoCheck extension
+     */
     public static OCSPNoCheck getInstance() {
             return new OCSPNoCheck();
     }
 
-
+    /**
+     * Constructor
+     */
     public OCSPNoCheck() {
     }
 
@@ -57,6 +63,7 @@ public class OCSPNoCheck extends ASN1Object {
         return DERNull.INSTANCE;
     }
 
+    /** {@inheritDoc} */
     @Override
     public String toString() {
         return "OCSP Nocheck";
