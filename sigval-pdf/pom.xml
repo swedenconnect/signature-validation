@@ -9,7 +9,35 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
+    <name>Signature Validation Base PDF</name>
+    <description>PDF signature validation implementation</description>
+
     <artifactId>sigval-pdf</artifactId>
 
+    <dependencies>
+        <dependency>
+            <groupId>se.idsec.sigval.base</groupId>
+            <artifactId>sigval-commons</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>se.idsec.sigval.base</groupId>
+            <artifactId>cert-validation</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

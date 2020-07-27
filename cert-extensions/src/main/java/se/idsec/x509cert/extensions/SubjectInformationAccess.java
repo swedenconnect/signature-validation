@@ -46,7 +46,7 @@ public class SubjectInformationAccess extends ASN1Object {
     public static final ASN1ObjectIdentifier caRepository = new ASN1ObjectIdentifier(OidName.id_pkix_ad_caRepository.getOid());
     public static final ASN1ObjectIdentifier timeStamping = new ASN1ObjectIdentifier(OidName.id_pkix_ad_timestamping.getOid());
     /** Access descriptions */
-    @Getter private AccessDescription[] descriptions;
+    @Getter private AccessDescription[] accessDescriptions;
 
     /**
      * Creates an instance of SubjectInformationAccess extension
@@ -85,10 +85,10 @@ public class SubjectInformationAccess extends ASN1Object {
             throw new IllegalArgumentException("sequence may not be empty");
         }
 
-        descriptions = new AccessDescription[seq.size()];
+        accessDescriptions = new AccessDescription[seq.size()];
 
         for (int i = 0; i != seq.size(); i++) {
-            descriptions[i] = AccessDescription.getInstance(seq.getObjectAt(i));
+            accessDescriptions[i] = AccessDescription.getInstance(seq.getObjectAt(i));
         }
     }
 
@@ -103,12 +103,12 @@ public class SubjectInformationAccess extends ASN1Object {
 
     /**
      * Constructor
-     * @param descriptions access descriptions
+     * @param accessDescriptions access descriptions
      */
     public SubjectInformationAccess(
-            AccessDescription[] descriptions) {
-        this.descriptions = new AccessDescription[descriptions.length];
-        System.arraycopy(descriptions, 0, this.descriptions, 0, descriptions.length);
+            AccessDescription[] accessDescriptions) {
+        this.accessDescriptions = new AccessDescription[accessDescriptions.length];
+        System.arraycopy(accessDescriptions, 0, this.accessDescriptions, 0, accessDescriptions.length);
     }
 
     /**
@@ -126,8 +126,8 @@ public class SubjectInformationAccess extends ASN1Object {
     public ASN1Primitive toASN1Primitive() {
         ASN1EncodableVector vec = new ASN1EncodableVector();
 
-        for (int i = 0; i != descriptions.length; i++) {
-            vec.add(descriptions[i]);
+        for (int i = 0; i != accessDescriptions.length; i++) {
+            vec.add(accessDescriptions[i]);
         }
 
         return new DERSequence(vec);
@@ -136,6 +136,6 @@ public class SubjectInformationAccess extends ASN1Object {
     /** {@inheritDoc} */
     @Override
     public String toString() {
-        return ("SubjectInformationAccess: Oid(" + this.descriptions[0].getAccessMethod().getId() + ")");
+        return ("SubjectInformationAccess: Oid(" + this.accessDescriptions[0].getAccessMethod().getId() + ")");
     }
 }
