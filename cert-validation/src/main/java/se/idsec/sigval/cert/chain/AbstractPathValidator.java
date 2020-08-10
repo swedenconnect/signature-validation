@@ -15,7 +15,6 @@
  */
 package se.idsec.sigval.cert.chain;
 
-import lombok.Getter;
 import lombok.Setter;
 import se.idsec.sigval.cert.validity.crl.CRLCache;
 
@@ -51,18 +50,19 @@ public abstract class AbstractPathValidator implements Runnable {
 
   /**
    * Constructs the chain validator
-   * @param targetCert the certificate being validated
-   * @param chain the supporting chain of certificates which may include the target certificate and root certificates
-   * @param crlCache CRL cache providing access to certificate revocation lists
-   * @param pathBuilder path builder used to find and verify the path to a trust anchor
-   * @param trustAnchors a list of trust anchors that must be used to terminate the validated chain
-   * @param certStore certificate store providing complementary intermediary certificates
-   * @param id the name of the process returned to registered listeners
+   *
+   * @param targetCert              the certificate being validated
+   * @param chain                   the supporting chain of certificates which may include the target certificate and root certificates
+   * @param crlCache                CRL cache providing access to certificate revocation lists
+   * @param pathBuilder             path builder used to find and verify the path to a trust anchor
+   * @param trustAnchors            a list of trust anchors that must be used to terminate the validated chain
+   * @param certStore               certificate store providing complementary intermediary certificates
+   * @param id                      the name of the process returned to registered listeners
    * @param propertyChangeListeners listeners that are notified when the validation process is complete
    */
   protected AbstractPathValidator(X509Certificate targetCert, List<X509Certificate> chain,
     CRLCache crlCache, PathBuilder pathBuilder, List<TrustAnchor> trustAnchors,
-    CertStore certStore, String id,  PropertyChangeListener... propertyChangeListeners) {
+    CertStore certStore, String id, PropertyChangeListener... propertyChangeListeners) {
     this.id = id;
     this.crlCache = crlCache;
     this.pathBuilder = pathBuilder;
@@ -77,14 +77,23 @@ public abstract class AbstractPathValidator implements Runnable {
    * Running the validation task as {@link Runnable} task and returning result to the callback function of all property change listeners
    */
   @Override public void run() {
-    PathValidationResult pathValidationResult = validateCertificatePath();
-    PropertyChangeEvent event = new PropertyChangeEvent(this, id, null, pathValidationResult);
-    listeners.stream().forEach(propertyChangeListener -> propertyChangeListener.propertyChange(event));
+    PropertyChangeEvent event;
+    try {
+      PathValidationResult pathValidationResult = validateCertificatePath();
+      event = new PropertyChangeEvent(this, id, null, pathValidationResult);
+    }
+    catch (ExtendedCertPathValidatorException e) {
+      e.printStackTrace();
+      event = new PropertyChangeEvent(this, id, null, e);
+    }
+    PropertyChangeEvent finalEvent = event;
+    listeners.stream().forEach(propertyChangeListener -> propertyChangeListener.propertyChange(finalEvent));
   }
 
   /**
    * Validates a certificate path
+   *
    * @return {@link PathValidationResult}
    */
-  public abstract PathValidationResult validateCertificatePath();
+  public abstract PathValidationResult validateCertificatePath() throws ExtendedCertPathValidatorException;
 }

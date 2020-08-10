@@ -18,6 +18,7 @@ package se.idsec.sigval.cert.chain.impl;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import se.idsec.sigval.cert.chain.AbstractPathValidator;
+import se.idsec.sigval.cert.chain.ExtendedCertPathValidatorException;
 import se.idsec.sigval.cert.chain.PathBuilder;
 import se.idsec.sigval.cert.chain.PathValidationResult;
 import se.idsec.sigval.cert.utils.CertUtils;
@@ -89,7 +90,7 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     super(targetCert, chain, crlCache, PATH_BUILDER, trustAnchors, certStore, DEFAULT_EVENT_ID, propertyChangeListeners);
   }
 
-  @Override public PathValidationResult validateCertificatePath() {
+  @Override public PathValidationResult validateCertificatePath() throws ExtendedCertPathValidatorException {
 
     //First step is to construct a valid path to a trusted root
     try {
@@ -103,19 +104,13 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
         log.debug("Caused by: {}", cause.getMessage());
         cause = cause.getCause();
       }
-      return PathValidationResult.builder()
-        .validCert(false)
-        .exception(e)
-        .build();
+      throw new ExtendedCertPathValidatorException(e);
     }
 
     if (pathBuilderCertPath.size() < 2) {
       // This is an impossible outcome of a successful path validation. Something is wrong in the implementation
       log.error("Successful path validation provided insufficient chain length. Chain length must be at least 2");
-      return PathValidationResult.builder()
-        .validCert(false)
-        .exception(new RuntimeException("Valid path too short for validity checking. Must be at least length = 2"))
-        .build();
+      throw new ExtendedCertPathValidatorException(new RuntimeException("Valid path too short for validity checking. Must be at least length = 2"));
     }
 
     // We have a trusted path and all certificates pass PKIX path validation rules, including expiry date checking, basic constraints etc.
@@ -126,6 +121,10 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     }
     else {
       runValidationThreads();
+      if (validationStatusList.size() != pathBuilderCertPath.size() - 1) {
+        log.debug("Unable to obtain status information for all certificates in the path. Expected {} results, got {}", pathBuilderCertPath.size() - 1, validationStatusList.size());
+        throw new ExtendedCertPathValidatorException(new RuntimeException("Unable to obtain status information for all certificates in the path"));
+      }
     }
 
     sortResults();
@@ -133,20 +132,20 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     // We should now have all validity status results. Check them top down (from TA to EE cert)
     PathValidationResult.PathValidationResultBuilder resultBuilder = PathValidationResult.builder();
     resultBuilder
-      .validCert(false)
       .pkixCertPathBuilderResult(certPathBuilderResult)
       .validationStatusList(validationStatusList)
       .targetCertificate(pathBuilderCertPath.get(0))
-      .chain(pathBuilderCertPath);
+      .validatedCertificatePath(pathBuilderCertPath);
+
 
     for (int i = pathBuilderCertPath.size() - 2; i >= 0; i--) {
       X509Certificate checkedCert = pathBuilderCertPath.get(i);
       Optional<ValidationStatus> statusOptional = getStatus(checkedCert);
       if (!statusOptional.isPresent()) {
         log.warn("Validation status is missing for certificate {}", checkedCert.getSubjectX500Principal());
-        return resultBuilder
-          .exception(new RuntimeException("Missing path validation result for " + checkedCert.getSubjectX500Principal()))
-          .build();
+        throw new ExtendedCertPathValidatorException(
+          new RuntimeException("Missing path validation result for " + checkedCert.getSubjectX500Principal()),
+          resultBuilder.build());
       }
       ValidationStatus status = statusOptional.get();
       if (status.getValidity().equals(ValidationStatus.CertificateValidity.VALID) && status.isStatusSignatureValid()) {
@@ -154,23 +153,25 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
       }
       if (status.getValidity().equals(ValidationStatus.CertificateValidity.UNKNOWN)) {
         log.debug("Certificate validity could not be determined for {}", checkedCert.getSubjectX500Principal());
-        return resultBuilder
-          .exception(new RuntimeException("Certificate validity could not be determined for " + checkedCert.getSubjectX500Principal()))
-          .build();
+        throw new ExtendedCertPathValidatorException(
+          new RuntimeException("Certificate validity could not be determined for " + checkedCert.getSubjectX500Principal()),
+          resultBuilder.build()
+        );
       }
       if (status.getValidity().equals(ValidationStatus.CertificateValidity.REVOKED)) {
         log.debug("Certificate REVOKED for {}", checkedCert.getSubjectX500Principal());
-        return resultBuilder
-          .exception(new RuntimeException("Certificate REVOKED for " + checkedCert.getSubjectX500Principal()))
-          .build();
+        throw new ExtendedCertPathValidatorException(
+          new RuntimeException("Certificate REVOKED for " + checkedCert.getSubjectX500Principal()),
+          resultBuilder.build()
+        );
       }
       log.warn("Certificate status checking failed for {}", checkedCert.getSubjectX500Principal());
-      return resultBuilder
-        .exception(new RuntimeException("Certificate status checking failed for " + checkedCert.getSubjectX500Principal()))
-        .build();
+      throw new ExtendedCertPathValidatorException(
+        new RuntimeException("Certificate status checking failed for " + checkedCert.getSubjectX500Principal()),
+        resultBuilder.build()
+      );
     }
-
-    return extendedPathChecks(resultBuilder.validCert(true).build());
+    return extendedPathChecks(resultBuilder.build());
   }
 
   /**
