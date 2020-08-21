@@ -130,8 +130,6 @@ public class CMSVerifyUtils {
       ASN1BitString keyBits = (ASN1BitString) pkSeq.getObjectAt(1);
 
       AlgorithmIdentifier algoId = AlgorithmIdentifier.getInstance(pkSeq.getObjectAt(0));
-      PDFAlgorithmRegistry.PDFSignatureAlgorithmProperties algorithmProperties = PDFAlgorithmRegistry.getAlgorithmProperties("");
-      algorithmProperties.getAlgoType();
       PublicKeyType pkType = PublicKeyType.getTypeFromOid(algoId.getAlgorithm().getId());
       sigResult.setPkType(pkType);
       sigResult.setPkType(pkType);
@@ -156,92 +154,7 @@ public class CMSVerifyUtils {
     }
   }
 
-  public static void verifyPadesProperties(SignerInformation signer, ExtendedPdfSigValResult sigResult) {
-    try {
-      AttributeTable signedAttributes = signer.getSignedAttributes();
-      Attribute essSigningCertV2Attr = signedAttributes.get(new ASN1ObjectIdentifier(PDFObjectIdentifiers.ID_AA_SIGNING_CERTIFICATE_V2));
-      Attribute signingCertAttr = signedAttributes.get(new ASN1ObjectIdentifier(PDFObjectIdentifiers.ID_AA_SIGNING_CERTIFICATE_V1));
 
-      if (essSigningCertV2Attr == null && signingCertAttr == null) {
-        sigResult.setPades(false);
-        sigResult.setInvalidSignCert(false);
-        return;
-      }
-
-      //Start assuming that PAdES validation is non-successful
-      sigResult.setPades(true);
-      sigResult.setInvalidSignCert(true);
-      sigResult.setStatus(SignatureValidationResult.Status.ERROR_SIGNER_INVALID);
-
-      DEROctetString certHashOctStr = null;
-      DigestAlgorithm hashAlgo = null;
-
-      if (essSigningCertV2Attr != null) {
-        ASN1Sequence essCertIDv2Sequence = getESSCertIDSequence(essSigningCertV2Attr);
-        /**
-         * ESSCertIDv2 ::=  SEQUENCE {
-         *   hashAlgorithm           AlgorithmIdentifier
-         *                   DEFAULT {algorithm id-sha256},
-         *   certHash                 Hash,
-         *   issuerSerial             IssuerSerial OPTIONAL
-         * }
-         *
-         */
-        // BUG Fix 190121. Hash algorithm is optional and defaults to SHA256. Fixed from being treated as mandatory.
-        int certHashIndex = 0;
-        if (essCertIDv2Sequence.getObjectAt(0) instanceof ASN1Sequence) {
-          // Hash algo identifier id present. Get specified value and set certHashIndex index to 1.
-          ASN1Sequence algoSeq = (ASN1Sequence) essCertIDv2Sequence.getObjectAt(0); //Holds sequence of OID and algo params
-          ASN1ObjectIdentifier algoOid = (ASN1ObjectIdentifier) algoSeq.getObjectAt(0);
-          hashAlgo = DigestAlgorithmRegistry.get(algoOid);
-          certHashIndex = 1;
-        }
-        else {
-          // Hash algo identifier is not present. Set hash algo to the default SHA-256 value and keep certHashIndex index = 0.
-          hashAlgo = DigestAlgorithmRegistry.get(DigestAlgorithm.ID_SHA256);
-        }
-        certHashOctStr = (DEROctetString) essCertIDv2Sequence.getObjectAt(certHashIndex);
-      }
-      else {
-        if (signingCertAttr != null) {
-          ASN1Sequence essCertIDSequence = getESSCertIDSequence(signingCertAttr);
-          /**
-           * ESSCertID ::=  SEQUENCE {
-           *      certHash                 Hash,
-           *      issuerSerial             IssuerSerial OPTIONAL
-           * }
-           */
-          certHashOctStr = (DEROctetString) essCertIDSequence.getObjectAt(0);
-          hashAlgo = DigestAlgorithmRegistry.get(DigestAlgorithm.ID_SHA1);
-        }
-      }
-
-      if (hashAlgo == null || certHashOctStr == null) {
-        sigResult.setStatusMessage("Unsupported hash algo for ESS-SigningCertAttributeV2");
-        return;
-      }
-
-      MessageDigest md = hashAlgo.getInstance();
-      md.update(sigResult.getSignerCertificate().getEncoded());
-      byte[] certHash = md.digest();
-
-      //            //Debug
-      //            String certHashStr = String.valueOf(Base64Coder.encode(certHash));
-      //            String expectedCertHashStr = String.valueOf(Base64Coder.encode(certHashOctStr.getOctets()));
-      if (!Arrays.equals(certHash, certHashOctStr.getOctets())) {
-        sigResult.setStatusMessage("Cert Hash mismatch");
-        return;
-      }
-
-      //PadES validation was successful
-      sigResult.setInvalidSignCert(false);
-      sigResult.setStatus(SignatureValidationResult.Status.SUCCESS);
-
-    }
-    catch (Exception e) {
-      sigResult.setStatusMessage("Exception while examining Pades signed cert attr: " + e.getMessage());
-    }
-  }
 
 
   /**

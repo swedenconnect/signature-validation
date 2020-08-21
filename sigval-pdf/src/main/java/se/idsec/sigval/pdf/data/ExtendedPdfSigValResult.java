@@ -20,6 +20,7 @@ import com.nimbusds.jwt.SignedJWT;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
+import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.sign.pdf.PDFSignatureValidationResult;
 import se.idsec.sigval.cert.chain.PathValidationResult;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
@@ -47,7 +48,7 @@ public class ExtendedPdfSigValResult implements PDFSignatureValidationResult {
   @Setter private String statusMessage;
   @Setter private Exception exception;
   @Setter private X509Certificate signerCertificate;
-  @Setter private PathValidationResult certificateValidationResult;
+  @Setter private CertificateValidationResult certificateValidationResult;
 
   //Interface getter implementations
   @Override public PDSignature getPdfSignature() {
@@ -90,11 +91,13 @@ public class ExtendedPdfSigValResult implements PDFSignatureValidationResult {
     return signerCertificate;
   }
 
-  @Override public PathValidationResult getCertificateValidationResult() {
+  @Override public CertificateValidationResult getCertificateValidationResult() {
     return certificateValidationResult;
   }
 
   //Aditional data
+  /** The complete list of certificates provided with the signature which may differ from the constructed path to a trust anchor */
+  @Setter @Getter private List<X509Certificate> signatureCertificateChain;
   /** Legacy indicator if the signing certificate matches a present ESSSigningCertificate signed attribute **/
   @Setter @Getter private boolean invalidSignCert = false;
   /** Public key type **/

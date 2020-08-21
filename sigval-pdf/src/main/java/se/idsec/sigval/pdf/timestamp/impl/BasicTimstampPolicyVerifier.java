@@ -2,9 +2,7 @@ package se.idsec.sigval.pdf.timestamp.impl;
 
 import lombok.Setter;
 import org.bouncycastle.asn1.tsp.TSTInfo;
-import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.certificate.CertificateValidator;
-import se.idsec.signservice.security.sign.pdf.configuration.PDFAlgorithmRegistry;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.commons.data.SigValIdentifiers;

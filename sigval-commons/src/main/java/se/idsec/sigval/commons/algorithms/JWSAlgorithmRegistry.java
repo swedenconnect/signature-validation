@@ -20,6 +20,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.xml.security.signature.XMLSignature;
 
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -28,6 +29,7 @@ public class JWSAlgorithmRegistry {
   private static Map<String, JWSAlgorithm> jwsAlgorithmMap;
 
   static {
+    jwsAlgorithmMap = new HashMap<>();
     register(XMLSignature.ALGO_ID_SIGNATURE_RSA_SHA256, JWSAlgorithm.RS256);
     register(XMLSignature.ALGO_ID_SIGNATURE_RSA_SHA384, JWSAlgorithm.RS384);
     register(XMLSignature.ALGO_ID_SIGNATURE_RSA_SHA512, JWSAlgorithm.RS512);

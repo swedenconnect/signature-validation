@@ -19,6 +19,7 @@ package se.idsec.sigval.commons.algorithms;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,6 +28,7 @@ public class DigestAlgorithmRegistry {
   private static Map<String, DigestAlgorithm> digestAlgorithmMap;
 
   static{
+    digestAlgorithmMap = new HashMap<>();
     registerDigestAlgorithm(DigestAlgorithm.ID_SHA1, DigestAlgorithm.OID_SHA1);
     registerDigestAlgorithm(DigestAlgorithm.ID_SHA224, DigestAlgorithm.OID_SHA224);
     registerDigestAlgorithm(DigestAlgorithm.ID_SHA256, DigestAlgorithm.OID_SHA256);

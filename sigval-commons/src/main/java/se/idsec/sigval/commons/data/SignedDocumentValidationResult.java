@@ -17,16 +17,23 @@
 package se.idsec.sigval.commons.data;
 
 import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.Builder;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
 
 import java.util.List;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class SignedDocumentValidationResult<R extends SignatureValidationResult> {
 
-  boolean signed;
-  boolean completeSuccess;
-  int signatureCount;
-  int validSignatureCount;
-  List<R> signatureValidationResults;
+  private boolean signed;
+  private boolean completeSuccess;
+  private int signatureCount;
+  private int validSignatureCount;
+  private String statusMessage;
+  private List<R> signatureValidationResults;
 }

@@ -23,6 +23,7 @@ import org.bouncycastle.asn1.sec.SECObjectIdentifiers;
 import org.bouncycastle.asn1.teletrust.TeleTrusTObjectIdentifiers;
 
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -31,6 +32,7 @@ public class NamedCurveRegistry {
   private static Map<ASN1ObjectIdentifier, NamedCurve> namedCurveMap;
 
   static {
+    namedCurveMap = new HashMap<>();
     registerCurve(DefaultCurve.NIST_P_192);
     registerCurve(DefaultCurve.NIST_P_224);
     registerCurve(DefaultCurve.NIST_P_256);
