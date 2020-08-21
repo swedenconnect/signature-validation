@@ -20,6 +20,7 @@ import com.nimbusds.jwt.SignedJWT;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.sign.pdf.PDFSignatureValidationResult;
 import se.idsec.sigval.cert.chain.PathValidationResult;
@@ -107,9 +108,9 @@ public class ExtendedPdfSigValResult implements PDFSignatureValidationResult {
   /** Length of the signature key used for the  sig algorithm **/
   @Setter @Getter private int keyLength;
   /** Signature algorithm declared in embedded CMS algorithm protection signed attribute **/
-  @Setter @Getter private String cmsapSigAlgo;
+  @Setter @Getter private ASN1ObjectIdentifier cmsapSigAlgo;
   /** Digest algorithm declared in embedded CMS algorithm protection signed attribute **/
-  @Setter @Getter private DigestAlgorithm cmsapDigestAlgo;
+  @Setter @Getter private ASN1ObjectIdentifier cmsapDigestAlgo;
   /** Signature timestamps obtained through PKI validation of the signature **/
   @Setter @Getter private List<PDFTimeStamp> signatureTimeStampList = new ArrayList<>();
   /** The bytes of content info of this signature (The bytes of the PDSignature oject **/

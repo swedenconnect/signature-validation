@@ -3,10 +3,10 @@ package se.idsec.sigval.pdf.utils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.cms.Attribute;
-import org.bouncycastle.asn1.cms.AttributeTable;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cms.CMSException;
@@ -15,17 +15,16 @@ import org.bouncycastle.cms.CMSTypedStream;
 import org.bouncycastle.cms.SignerInformation;
 import org.bouncycastle.operator.bc.BcDigestCalculatorProvider;
 import org.bouncycastle.util.CollectionStore;
-import se.idsec.signservice.security.sign.SignatureValidationResult;
 import se.idsec.signservice.security.sign.pdf.configuration.PDFAlgorithmRegistry;
-import se.idsec.signservice.security.sign.pdf.configuration.PDFObjectIdentifiers;
-import se.idsec.sigval.commons.algorithms.*;
+import se.idsec.sigval.commons.algorithms.NamedCurve;
+import se.idsec.sigval.commons.algorithms.NamedCurveRegistry;
+import se.idsec.sigval.commons.algorithms.PublicKeyType;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
 import se.idsec.sigval.svt.claims.TimeValidationClaims;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.CertificateException;
@@ -35,6 +34,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.*;
 import java.util.logging.Logger;
 
+@Slf4j
 public class CMSVerifyUtils {
 
   /**
@@ -94,8 +94,7 @@ public class CMSVerifyUtils {
 
       //Get Hash algo
       AlgorithmIdentifier hashAlgoId = AlgorithmIdentifier.getInstance(cmsapSeq.getObjectAt(0));
-      DigestAlgorithm digestAlgo = DigestAlgorithmRegistry.get(hashAlgoId.getAlgorithm());
-      sigResult.setCmsapDigestAlgo(digestAlgo);
+      sigResult.setCmsapDigestAlgo(hashAlgoId.getAlgorithm());
 
       //GetSigAlgo
       for (int objIdx = 1; objIdx < cmsapSeq.size(); objIdx++) {
@@ -104,7 +103,7 @@ public class CMSVerifyUtils {
           ASN1TaggedObject taggedObj = ASN1TaggedObject.getInstance(asn1Encodable);
           if (taggedObj.getTagNo() == 1) {
             AlgorithmIdentifier algoId = AlgorithmIdentifier.getInstance(taggedObj, false);
-            sigResult.setCmsapSigAlgo(PDFAlgorithmRegistry.getAlgorithmURI(algoId.getAlgorithm(), digestAlgo.getOid()));
+            sigResult.setCmsapSigAlgo(algoId.getAlgorithm());
           }
         }
       }
@@ -153,9 +152,6 @@ public class CMSVerifyUtils {
       Logger.getLogger(CMSVerifyUtils.class.getName()).fine("Illegal public key parameters: " + e.getMessage());
     }
   }
-
-
-
 
   /**
    * This method extracts the ESSCertID sequence from a SigningCertificate signed CMS attribute. If the signed attribute is of
@@ -213,7 +209,8 @@ public class CMSVerifyUtils {
     try {
       algorithmProperties = PDFAlgorithmRegistry.getAlgorithmProperties(
         sigResult.getSignatureAlgorithm());
-    } catch (NoSuchAlgorithmException e) {
+    }
+    catch (NoSuchAlgorithmException e) {
       return false;
     }
 
@@ -221,14 +218,17 @@ public class CMSVerifyUtils {
     if (!sigResult.isCmsAlgorithmProtection()) {
       return true;
     }
-    if (!sigResult.getSignatureAlgorithm().equals(sigResult.getCmsapSigAlgo())) {
-      return false;
+    try {
+      // Check that the signature algo is equivalent to the algo settings in CMS algo protection
+      String cmsAlgoProtAlgoUri = PDFAlgorithmRegistry.getAlgorithmURI(sigResult.getCmsapSigAlgo(), sigResult.getCmsapDigestAlgo());
+      if (cmsAlgoProtAlgoUri.equals(sigResult.getSignatureAlgorithm())) {
+        return true;
+      }
     }
-    if (!algorithmProperties.getDigestAlgoOID().equals(sigResult.getCmsapDigestAlgo().getOid())) {
-      return false;
+    catch (NoSuchAlgorithmException e) {
+      log.debug("Error while comparing CMS algo protection: ", e);
     }
-
-    return true;
+    return false;
   }
 
   /**
@@ -261,7 +261,8 @@ public class CMSVerifyUtils {
         .filter(verifiedTime -> verifiedTime.getId().equalsIgnoreCase(timeStamp.getTstInfo().getSerialNumber().getValue().toString(16)))
         .findFirst();
       return matchOptional.get();
-    } catch (Exception ex){
+    }
+    catch (Exception ex) {
       return null;
     }
   }
