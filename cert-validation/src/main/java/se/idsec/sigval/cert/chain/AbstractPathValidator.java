@@ -16,10 +16,12 @@
 package se.idsec.sigval.cert.chain;
 
 import lombok.Setter;
+import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.sigval.cert.validity.crl.CRLCache;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.security.cert.CertPathValidatorException;
 import java.security.cert.CertStore;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
@@ -28,6 +30,23 @@ import java.util.List;
 
 /**
  * Abstract class for implementations of a certificate chain validator
+ *
+ * <p>
+ *   This path validator is designed so that it can be used as the underlying path validator for a certificate validator
+ *   that implements the inteface of {@link se.idsec.signservice.security.certificate.CertificateValidator}.
+ *   This is done by 2 factors:
+ * </p>
+ *
+ * <ul>
+ *   <li>Any errors encountered when doing path validation results in en exception ({@link ExtendedCertPathValidatorException}.
+ *   This is an extension of {@link CertPathValidatorException} used by the interface</li>
+ *   <li>The result ({@link PathValidationResult}) is an extension of the inteface result {@link CertificateValidationResult}</li>
+ * </ul>
+ *
+ * <p>Editors note: This library does however not use the {@link se.idsec.signservice.security.certificate.CertificateValidator} interface
+ * as this interface requires implementation of functions where a CRL is provided as input to the validation process. Such procedure
+ * is not relevant for this path validator as it builds on the CRLCache implementation instead. To implement this interface you
+ * need the function provided in this class in addition to code that can make use of a separately provided CRL.</p>
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
