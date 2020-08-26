@@ -31,6 +31,8 @@ public class SigValIdentifiers {
   public static final String SIG_VALIDATION_POLICY_BASIC_VALIDATION = "http://id.swedenconnect.se/svt/sigval-policy/basic/01";
   /** Full PKIX path validation to a trust anchor including revocation checking of all intermediary and end certificates */
   public static final String SIG_VALIDATION_POLICY_PKIX_VALIDATION = "http://id.swedenconnect.se/svt/sigval-policy/pkix/01";
+  /** Full PKIX path validation allowing revoked certificates revoked after time stamped signing time */
+  public static final String SIG_VALIDATION_POLICY_TIMESTAMPED_PKIX_VALIDATION = "http://id.swedenconnect.se/svt/sigval-policy/ts-pkix/01";
   /** Full PKIX path validation to a trust anchor including revocation checking of all intermediary and end certificates */
   public static final String SIG_VALIDATION_POLICY_DIRECT_TRUST = "http://id.swedenconnect.se/svt/sigval-policy/direct-trust/01";
 

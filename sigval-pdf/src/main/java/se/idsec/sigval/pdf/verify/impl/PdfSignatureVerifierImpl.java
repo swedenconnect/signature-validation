@@ -26,16 +26,21 @@ import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
+import se.idsec.sigval.pdf.data.PdfSignatureContext;
 import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
 import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
 import se.idsec.sigval.pdf.timestamp.TimeStampPolicyVerifier;
 import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
 import se.idsec.sigval.pdf.verify.PdfSignatureVerifier;
-import se.idsec.sigval.pdf.verify.policy.PDFSigPolicyVerifier;
+import se.idsec.sigval.pdf.verify.policy.PDFSignaturePolicyValidator;
+import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
+import se.idsec.sigval.pdf.verify.policy.impl.BasicPdfSignaturePolicyValidator;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.TimeValidationClaims;
+import se.idsec.sigval.svt.claims.ValidationConclusion;
 
 import java.security.MessageDigest;
+import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -51,9 +56,9 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
   @Setter
   private TimeStampPolicyVerifier[] timeStampPolicyVerifiers = new TimeStampPolicyVerifier[] {};
 
-  /** List of signature policy verifiers */
+  /** Signature policy verifier */
   @Setter
-  private List<PDFSigPolicyVerifier> sigPolicyVerifiers = new ArrayList<>();
+  private PDFSignaturePolicyValidator sigPolicyVerifier = new BasicPdfSignaturePolicyValidator();
 
   /** The certificate validator performing certificate path validation */
   private final CertificateValidator certificateValidator;
@@ -67,23 +72,20 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
     this.certificateValidator = certificateValidator;
   }
 
-  public PdfSignatureVerifierImpl(CertificateValidator certificateValidator, PDFSigPolicyVerifier pdfSigPolicyVerifier, TimeStampPolicyVerifier... timeStampPolicyVerifiers) {
-    this.sigPolicyVerifiers = Arrays.asList(pdfSigPolicyVerifier);
-    this.timeStampPolicyVerifiers = timeStampPolicyVerifiers;
-    this.certificateValidator = certificateValidator;
-  }
-
-  public PdfSignatureVerifierImpl(CertificateValidator certificateValidator, List<PDFSigPolicyVerifier> pdfSigPolicyVerifiers, TimeStampPolicyVerifier... timeStampPolicyVerifiers) {
-    this.sigPolicyVerifiers = pdfSigPolicyVerifiers;
+  public PdfSignatureVerifierImpl(CertificateValidator certificateValidator, PDFSignaturePolicyValidator pdfSignaturePolicyValidator,
+    TimeStampPolicyVerifier... timeStampPolicyVerifiers) {
+    this.sigPolicyVerifier = pdfSignaturePolicyValidator;
     this.timeStampPolicyVerifiers = timeStampPolicyVerifiers;
     this.certificateValidator = certificateValidator;
   }
 
   @Override public ExtendedPdfSigValResult verifySignature(PDSignature signature, byte[] pdfDocument,
     List<PDFDocTimeStamp> documentTimestamps) throws Exception {
+    PdfSignatureContext signatureContext = new PdfSignatureContext(pdfDocument);
     ExtendedPdfSigValResult sigResult = new ExtendedPdfSigValResult();
     sigResult.setPdfSignature(signature);
     sigResult.setSignedData(signature.getContents(pdfDocument));
+    //sigResult.setCoversAllData(checkCoversDoc(signature, pdfDocument));
     CMSSignedDataParser cmsSignedDataParser = CMSVerifyUtils.getCMSSignedDataParser(signature, pdfDocument);
     CMSTypedStream signedContent = cmsSignedDataParser.getSignedContent();
     signedContent.drain();
@@ -93,23 +95,38 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
     sigResult.setSignatureCertificateChain(pdfSigCerts.getChain());
     X509CertificateHolder certHolder = new X509CertificateHolder(pdfSigCerts.getSigCert().getEncoded());
     SignerInformationVerifier signerInformationVerifier = new JcaSimpleSignerInfoVerifierBuilder().setProvider("BC").build(certHolder);
-    // Verify signature
+
+    // Verify signature value against document data
     try {
       sigResult.setSuccess(signerInformation.verify(signerInformationVerifier));
     }
     catch (Exception ex) {
       sigResult.setSuccess(false);
       sigResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
+      sigResult.setException(ex);
       sigResult.setStatusMessage("Signature validation failure: " + ex.getMessage());
+      log.debug("Signature validation failure {}", ex.getMessage());
+      return sigResult;
     }
 
-    // Get Public key params and other data
+    // Get algorithms and public key related data
     CMSVerifyUtils.getPkParams(sigResult.getSignerCertificate().getPublicKey(), sigResult);
-    //DigestAlgorithm signerInfoHashAlgo = DigestAlgorithmRegistry.get(signerInformation.getDigestAlgOID());
-    //sigResult.setD(signerInfoHashAlgo);
-    String encryptionAlgOID = signerInformation.getEncryptionAlgOID();
-    String algorithmURI = PDFAlgorithmRegistry.getAlgorithmURI(new ASN1ObjectIdentifier(encryptionAlgOID),
-      new ASN1ObjectIdentifier(signerInformation.getDigestAlgOID()));
+    ASN1ObjectIdentifier signAlgoOid = new ASN1ObjectIdentifier(signerInformation.getEncryptionAlgOID());
+    ASN1ObjectIdentifier digestAlgoOid = new ASN1ObjectIdentifier(signerInformation.getDigestAlgOID());
+    sigResult.setCmsSignatureAlgo(signAlgoOid);
+    sigResult.setCmsDigestAlgo(digestAlgoOid);
+    String algorithmURI = null;
+    try {
+      algorithmURI = PDFAlgorithmRegistry.getAlgorithmURI(signAlgoOid, digestAlgoOid);
+    }
+    catch (Exception ex) {
+      sigResult.setSuccess(false);
+      sigResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
+      sigResult.setException(ex);
+      sigResult.setStatusMessage("Signature was signed with unsupported algorithms");
+      log.debug("Signature was signed with unsupported algorithms: Signature algo {}, Digest algo {}", signAlgoOid, digestAlgoOid);
+      return sigResult;
+    }
     sigResult.setSignatureAlgorithm(algorithmURI);
     Attribute cmsAlgoProtAttr = signerInformation.getSignedAttributes()
       .get(new ASN1ObjectIdentifier(PDFObjectIdentifiers.ID_AA_CMS_ALGORITHM_PROTECTION));
@@ -119,7 +136,11 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
     if (!CMSVerifyUtils.checkAlgoritmConsistency(sigResult)) {
       sigResult.setSuccess(false);
       sigResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
-      sigResult.setStatusMessage("Signature was verified but with inconsistent Algoritm declarations or unsupported algoritms");
+      sigResult.setException(new SignatureException("Signature algorithm mismatch in CMS algorithm protection extension"));
+      sigResult.setStatusMessage("Signature algorithm mismatch in CMS algorithm protection extension");
+      log.debug("CMS algo protection mismatch: Signature algo {}, Digest algo {}, CMS-AP Signature algo {}, CMS-AP Digest algo {}",
+        signAlgoOid, digestAlgoOid, sigResult.getCmsAlgoProtectionSigAlgo(), sigResult.getCmsAlgoProtectionDigestAlgo());
+      return sigResult;
     }
 
     // Check Pades properties
@@ -143,25 +164,32 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
       CertificateValidationResult validationResult = certificateValidator.validate(sigResult.getSignerCertificate(),
         sigResult.getSignatureCertificateChain(), null);
       sigResult.setCertificateValidationResult(validationResult);
-    } catch (Exception ex){
-      if (ex instanceof ExtendedCertPathValidatorException){
+    }
+    catch (Exception ex) {
+      if (ex instanceof ExtendedCertPathValidatorException) {
         ExtendedCertPathValidatorException extEx = (ExtendedCertPathValidatorException) ex;
         sigResult.setCertificateValidationResult(extEx.getPathValidationResult());
         sigResult.setStatusMessage(extEx.getMessage());
-      } else {
+      }
+      else {
         sigResult.setStatusMessage("Signer certificate failed path validation");
       }
-      sigResult.setSuccess(false);
-      sigResult.setStatus(SignatureValidationResult.Status.ERROR_SIGNER_INVALID);
+      //sigResult.setSuccess(false);
+      //sigResult.setStatus(SignatureValidationResult.Status.ERROR_SIGNER_INVALID);
       sigResult.setException(ex);
     }
 
-    // Finally perform signature validation policy verification
-    List<PolicyValidationClaims> policyValidationClaimsList = new ArrayList<>();
-    for (PDFSigPolicyVerifier policyVerifier : sigPolicyVerifiers) {
-      policyValidationClaimsList.add(policyVerifier.validatePolicy(sigResult));
+    // Let the signature policy verifier determine the final result path validation
+    // The signature policy verifier may accept a revoked cert if signature is timestamped
+    PolicyValidationResult policyValidationResult = sigPolicyVerifier.validatePolicy(sigResult, signatureContext);
+    PolicyValidationClaims policyValidationClaims = policyValidationResult.getPolicyValidationClaims();
+    if (!policyValidationClaims.getRes().equals(ValidationConclusion.PASSED)){
+      sigResult.setSuccess(false);
+      sigResult.setStatus(policyValidationResult.getStatus());
+      sigResult.setStatusMessage(policyValidationClaims.getMsg());
+      sigResult.setException(new SignatureException(policyValidationClaims.getMsg()));
     }
-    sigResult.setValidationPolicyResultList(policyValidationClaimsList);
+    sigResult.setValidationPolicyResultList(Arrays.asList(policyValidationClaims));
 
     return sigResult;
   }

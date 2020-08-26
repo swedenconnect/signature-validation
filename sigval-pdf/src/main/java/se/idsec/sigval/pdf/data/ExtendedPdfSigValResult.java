@@ -99,6 +99,8 @@ public class ExtendedPdfSigValResult implements PDFSignatureValidationResult {
   //Aditional data
   /** The complete list of certificates provided with the signature which may differ from the constructed path to a trust anchor */
   @Setter @Getter private List<X509Certificate> signatureCertificateChain;
+  /** Indicator if the signature covers the whole PDF document byte range **/
+//  @Setter @Getter private boolean coversAllData = false;
   /** Legacy indicator if the signing certificate matches a present ESSSigningCertificate signed attribute **/
   @Setter @Getter private boolean invalidSignCert = false;
   /** Public key type **/
@@ -107,10 +109,15 @@ public class ExtendedPdfSigValResult implements PDFSignatureValidationResult {
   @Setter @Getter private NamedCurve namedEcCurve;
   /** Length of the signature key used for the  sig algorithm **/
   @Setter @Getter private int keyLength;
+  /** Signature algorithm declared CMS SignerInfo **/
+  @Setter @Getter private ASN1ObjectIdentifier cmsSignatureAlgo;
+  /** Digest algorithm declared in embedded CMS SignerInfo **/
+  @Setter @Getter private ASN1ObjectIdentifier cmsDigestAlgo;
+  /** Signature timestamps obtained through PKI validation of the signature **/
   /** Signature algorithm declared in embedded CMS algorithm protection signed attribute **/
-  @Setter @Getter private ASN1ObjectIdentifier cmsapSigAlgo;
+  @Setter @Getter private ASN1ObjectIdentifier cmsAlgoProtectionSigAlgo;
   /** Digest algorithm declared in embedded CMS algorithm protection signed attribute **/
-  @Setter @Getter private ASN1ObjectIdentifier cmsapDigestAlgo;
+  @Setter @Getter private ASN1ObjectIdentifier cmsAlgoProtectionDigestAlgo;
   /** Signature timestamps obtained through PKI validation of the signature **/
   @Setter @Getter private List<PDFTimeStamp> signatureTimeStampList = new ArrayList<>();
   /** The bytes of content info of this signature (The bytes of the PDSignature oject **/
