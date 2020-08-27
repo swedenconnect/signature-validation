@@ -16,6 +16,7 @@
 
 package se.idsec.sigval.pdf.verify.policy.impl;
 
+import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +25,8 @@ import se.idsec.sigval.cert.chain.PathValidationResult;
 import se.idsec.sigval.cert.validity.ValidationStatus;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
-import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
 import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
-import se.idsec.sigval.pdf.verify.policy.PDFSignaturePolicyValidator;
+import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
@@ -43,8 +43,9 @@ import java.util.stream.Collectors;
  * before the certificate was revoked.
  */
 @NoArgsConstructor
+@AllArgsConstructor
 @Slf4j
-public class PkixPdfSignaturePolicyValidator implements PDFSignaturePolicyValidator {
+public class PkixPdfSignaturePolicyValidator extends AbstractBasicPDFSignaturePolicyChecks {
 
   /**
    * Defines if validation requires a currently unrevoked signing certificate*
@@ -52,12 +53,12 @@ public class PkixPdfSignaturePolicyValidator implements PDFSignaturePolicyValida
    * If set to false, it will allow revoked certificates if there is a trusted time-stamp as evidence to support that the
    * signature was created before revocation time. Default value is false.
    *
-   * @param enforceCurrentTimeValidation true if the signing certificate must be unrevoked at signing time regadless of time stamps (defaut false)
+   * @param enforceCurrentTimeValidation true if the signing certificate must be unrevoked at signing time regardless of time stamps (defaut false)
    */
-  @Setter private boolean enforceCurrentTimeValidation = false;
+  private boolean enforceCurrentTimeValidation = false;
 
   /**
-   * The enforced margin between signing time and revocation time. The time in milliseconds defined by this paramter
+   * The enforced margin between signing time and revocation time. The time in milliseconds defined by this parameter
    * must have passed since signing time before the certificate was revoked for this signature to be considered valid.
    * This parameter is only used if enforceCurrentTimeValidation is set to false;
    * The default value of this parameter is 24 hours.
@@ -67,6 +68,14 @@ public class PkixPdfSignaturePolicyValidator implements PDFSignaturePolicyValida
   @Setter private long revocationGracePeriod = 1000 * 60 * 60 * 24;
 
   /**
+   * Constructor for PKIX policy validator
+   * @param enforceCurrentTimeValidation true if the signing certificate must be unrevoked at signing time regardless of time stamps
+   */
+  public PkixPdfSignaturePolicyValidator(boolean enforceCurrentTimeValidation) {
+    this.enforceCurrentTimeValidation = enforceCurrentTimeValidation;
+  }
+
+  /**
    * Validate the signature according to PKIX path validation and revocation checking.
    *
    * @param verifyResultSignature the verification result of the signature that MUST provide {@link PathValidationResult} data
@@ -74,46 +83,11 @@ public class PkixPdfSignaturePolicyValidator implements PDFSignaturePolicyValida
    * @param signatureContext      pdf signature context data holding data about revisions of the signed document
    * @return {@link PolicyValidationResult} for this signature
    */
-  @Override public PolicyValidationResult validatePolicy(ExtendedPdfSigValResult verifyResultSignature,
+  @Override protected PolicyValidationResult performAdditionalValidityChecks(ExtendedPdfSigValResult verifyResultSignature,
     PdfSignatureContext signatureContext) {
+
     PolicyValidationClaims.PolicyValidationClaimsBuilder builder = PolicyValidationClaims.builder();
-    builder.pol(enforceCurrentTimeValidation
-      ? SigValIdentifiers.SIG_VALIDATION_POLICY_PKIX_VALIDATION
-      : SigValIdentifiers.SIG_VALIDATION_POLICY_TIMESTAMPED_PKIX_VALIDATION);
-
-    // Check if signature validation failed
-    if (!verifyResultSignature.isSuccess()) {
-      //Signature validation has failed. No more checks needed
-      log.debug("Basic signature validation failed");
-      return new PolicyValidationResult(
-        builder.res(ValidationConclusion.FAILED)
-          .msg(verifyResultSignature.getStatusMessage())
-          .build(),
-        SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE
-      );
-    }
-
-    // Check for non signature alterations to the document afters signing
-    if (signatureContext.isSignatureExtendedByNonSignatureUpdates(verifyResultSignature.getPdfSignature())) {
-      log.debug("Signed document has been altered since signed");
-      return new PolicyValidationResult(
-        builder.res(ValidationConclusion.FAILED)
-          .msg("Document content was altered after signing")
-          .build(),
-        SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE
-      );
-    }
-
-    if (!(verifyResultSignature.getCertificateValidationResult() instanceof PathValidationResult)) {
-      log.error(
-        "Illegal combination of certificate validator and signature policy validator. Certificate validator must provide result as instance of PathValidationResult");
-      return new PolicyValidationResult(
-        builder.res(ValidationConclusion.INDETERMINATE)
-          .msg("Insufficient path validation data to perform the required validation checks")
-          .build(),
-        SignatureValidationResult.Status.ERROR_NOT_TRUSTED
-      );
-    }
+    builder.pol(getValidationPolicy());
 
     try {
       PathValidationResult certValResult = (PathValidationResult) verifyResultSignature.getCertificateValidationResult();
@@ -202,6 +176,12 @@ public class PkixPdfSignaturePolicyValidator implements PDFSignaturePolicyValida
         SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE
       );
     }
+  }
+
+  @Override protected String getValidationPolicy() {
+    return enforceCurrentTimeValidation
+      ? SigValIdentifiers.SIG_VALIDATION_POLICY_PKIX_VALIDATION
+      : SigValIdentifiers.SIG_VALIDATION_POLICY_TIMESTAMPED_PKIX_VALIDATION;
   }
 
   /**

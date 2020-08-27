@@ -20,8 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
-import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PDFSignaturePolicyValidator;
+import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
@@ -31,6 +31,14 @@ import java.util.List;
 
 @Slf4j
 public abstract class AbstractBasicPDFSignaturePolicyChecks implements PDFSignaturePolicyValidator {
+
+  /**
+   * Validate the signature according to a defined policy.
+   *
+   * @param verifyResultSignature the verification result of the signature
+   * @param signatureContext      pdf signature context data holding data about revisions of the signed document
+   * @return {@link PolicyValidationResult} for this signature
+   */
   @Override public PolicyValidationResult validatePolicy(ExtendedPdfSigValResult verifyResultSignature,
     PdfSignatureContext signatureContext) {
 
@@ -62,7 +70,7 @@ public abstract class AbstractBasicPDFSignaturePolicyChecks implements PDFSignat
 
     CertificateValidationResult certificateValidationResult = verifyResultSignature.getCertificateValidationResult();
     List<X509Certificate> validatedCertificatePath = certificateValidationResult.getValidatedCertificatePath();
-    if (validatedCertificatePath == null || validatedCertificatePath.isEmpty()){
+    if (validatedCertificatePath == null || validatedCertificatePath.isEmpty()) {
       log.debug("No valid certificate path was found");
       return new PolicyValidationResult(
         builder.res(ValidationConclusion.INDETERMINATE)
@@ -75,7 +83,29 @@ public abstract class AbstractBasicPDFSignaturePolicyChecks implements PDFSignat
     return performAdditionalValidityChecks(verifyResultSignature, signatureContext);
   }
 
-  protected abstract PolicyValidationResult performAdditionalValidityChecks(ExtendedPdfSigValResult verifyResultSignature, PdfSignatureContext signatureContext);
+  /**
+   * This function is called after performing the basic validity checks in the extended abstract superclass. The basic checks done when this
+   * function is called are:
+   *
+   * <ul>
+   *   <li>Verified that basic signature validation succeeded</li>
+   *   <li>Verified that no non-signature alterations was made to the document after this signature was created</li>
+   *   <li>Verified that certificate path validation resulted in a trusted path</li>
+   * </ul>
+   *
+   * <p>This function is responsible for processing any certificate validity results such as results of CRL or OCSP checking</p>
+   *
+   * @param verifyResultSignature
+   * @param signatureContext
+   * @return
+   */
+  protected abstract PolicyValidationResult performAdditionalValidityChecks(ExtendedPdfSigValResult verifyResultSignature,
+    PdfSignatureContext signatureContext);
 
+  /**
+   * Returns the validation policy implemented by this policy validator
+   *
+   * @return validation policy identifier
+   */
   protected abstract String getValidationPolicy();
 }

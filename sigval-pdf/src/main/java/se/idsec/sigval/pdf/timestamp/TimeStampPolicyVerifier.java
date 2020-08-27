@@ -7,5 +7,5 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 
 public interface TimeStampPolicyVerifier {
-  PolicyValidationClaims verifyTsPolicy(byte[] pdfSigBytes, TSTInfo tstInfo, X509Certificate sigCert, List<X509Certificate> certList);
+  TimeStampPolicyVerificationResult verifyTsPolicy(byte[] pdfSigBytes, TSTInfo tstInfo, X509Certificate sigCert, List<X509Certificate> certList);
 }

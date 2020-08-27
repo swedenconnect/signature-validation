@@ -16,14 +16,30 @@
 
 package se.idsec.sigval.pdf.verify.policy.impl;
 
+import se.idsec.signservice.security.sign.SignatureValidationResult;
+import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
-import se.idsec.sigval.pdf.verify.policy.PDFSignaturePolicyValidator;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
+import se.idsec.sigval.svt.claims.PolicyValidationClaims;
+import se.idsec.sigval.svt.claims.ValidationConclusion;
 
-public class BasicPdfSignaturePolicyValidator implements PDFSignaturePolicyValidator {
-  @Override public PolicyValidationResult validatePolicy(ExtendedPdfSigValResult verifyResultSignature,
+public class BasicPdfSignaturePolicyValidator extends AbstractBasicPDFSignaturePolicyChecks {
+  /** {@inheritDoc} */
+  @Override protected PolicyValidationResult performAdditionalValidityChecks(ExtendedPdfSigValResult verifyResultSignature,
     PdfSignatureContext signatureContext) {
-    return null;
+    return new PolicyValidationResult(
+      PolicyValidationClaims.builder()
+        .pol(getValidationPolicy())
+        .res(ValidationConclusion.PASSED)
+        .msg("OK")
+        .build(),
+      SignatureValidationResult.Status.SUCCESS
+    );
+  }
+
+  /** {@inheritDoc} */
+  @Override protected String getValidationPolicy() {
+    return SigValIdentifiers.SIG_VALIDATION_POLICY_BASIC_VALIDATION;
   }
 }

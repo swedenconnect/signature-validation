@@ -26,16 +26,12 @@ import se.idsec.sigval.cert.validity.ValidationStatus;
 
 import se.idsec.sigval.cert.validity.crl.CRLCache;
 import se.idsec.sigval.cert.validity.impl.BasicCertificateValidityChecker;
+import sun.security.provider.certpath.X509CertPath;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.security.cert.CertStore;
-import java.security.cert.PKIXCertPathBuilderResult;
-import java.security.cert.TrustAnchor;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.security.cert.*;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -91,6 +87,31 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
   }
 
   @Override public PathValidationResult validateCertificatePath() throws ExtendedCertPathValidatorException {
+
+    // Check if the target certificate is a trust anchor
+    try {
+      Optional<TrustAnchor> taMatchOptional = trustAnchors.stream()
+        .filter(ta -> ta.getTrustedCert().equals(targetCert))
+        .findFirst();
+      if (taMatchOptional.isPresent()){
+        //Target certificate is found among the trust anchors
+        CertPath certPath= new X509CertPath(Arrays.asList(targetCert));
+        return PathValidationResult.builder()
+          .pkixCertPathBuilderResult(new PKIXCertPathBuilderResult(certPath, taMatchOptional.get(), null, targetCert.getPublicKey()))
+          .targetCertificate(targetCert)
+          .validatedCertificatePath(Arrays.asList(targetCert))
+          .validationStatusList(Arrays.asList(ValidationStatus.builder()
+            .certificate(targetCert)
+            .sourceType(ValidationStatus.ValidatorSourceType.SELF_SIGNED)
+            .validity(ValidationStatus.CertificateValidity.VALID)
+            .issuer(targetCert)
+            .validationTime(new Date())
+            .build()))
+          .build();
+      }
+    } catch (Exception ex){
+      log.error("Unexpected error while validating directly trusted cert", ex);
+    }
 
     //First step is to construct a valid path to a trusted root
     try {

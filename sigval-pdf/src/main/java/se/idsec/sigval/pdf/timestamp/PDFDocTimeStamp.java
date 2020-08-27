@@ -12,7 +12,7 @@ public class PDFDocTimeStamp extends PDFTimeStamp {
 
   protected PDSignature documentTimestampSig;
 
-  public PDFDocTimeStamp(PDSignature documentTimestampSig, byte[] pdfDoc, TimeStampPolicyVerifier... tsPolicyVerifier) throws Exception {
+  public PDFDocTimeStamp(PDSignature documentTimestampSig, byte[] pdfDoc, TimeStampPolicyVerifier tsPolicyVerifier) throws Exception {
     super(documentTimestampSig.getContents(pdfDoc), documentTimestampSig.getSignedContent(pdfDoc), tsPolicyVerifier);
     this.documentTimestampSig = documentTimestampSig;
   }

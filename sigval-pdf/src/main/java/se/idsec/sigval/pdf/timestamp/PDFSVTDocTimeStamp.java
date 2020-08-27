@@ -6,12 +6,15 @@ import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.Getter;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.signservice.security.sign.pdf.configuration.PDFAlgorithmRegistry;
+import se.idsec.sigval.cert.chain.ExtendedCertPathValidatorException;
+import se.idsec.sigval.cert.chain.PathValidationResult;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.commons.algorithms.JWSAlgorithmRegistry;
@@ -33,7 +36,7 @@ import java.util.Date;
 import java.util.List;
 
 @Getter
-@Log
+@Slf4j
 public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
 
   private SignedJWT signedJWT;
@@ -42,10 +45,11 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
   private List<X509Certificate> svaChain;
   private boolean svaSignatureValid;
   private CertificateValidator svaTokenCertVerifier;
+  private CertificateValidationResult svaCertValidationResult;
 
   public PDFSVTDocTimeStamp(PDSignature documentTimestampSig, byte[] pdfDoc,
-    CertificateValidator svaTokenCertVerifier, TimeStampPolicyVerifier... tsPolicyVerifiers) throws Exception {
-    super(documentTimestampSig, pdfDoc, tsPolicyVerifiers);
+    CertificateValidator svaTokenCertVerifier, TimeStampPolicyVerifier tsPolicyVerifier) throws Exception {
+    super(documentTimestampSig, pdfDoc, tsPolicyVerifier);
     this.svaTokenCertVerifier = svaTokenCertVerifier;
   }
 
@@ -70,17 +74,27 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
     getSvaSigningCertificate(certificates);
 
     // Verify cert and signature of SVA
-    try {
-      svaTokenCertVerifier.validate(svaSigCert, svaChain, null);
-    }
-    catch (Exception ex) {
-      throw new RuntimeException("SVT signature certificate fails validation: " + ex.getMessage());
-    }
+    svaCertValidationResult = new PathValidationResult();
     try {
       verifySVA(svaSigCert.getPublicKey());
+      log.debug("SVA signature verification succeeded");
     }
     catch (Exception ex) {
-      log.warning("Error validating the SVT signature: " + ex.getMessage());
+      log.warn("Error validating the SVT signature: {}", ex.getMessage());
+    }
+    if (svaSignatureValid){
+      try {
+        svaCertValidationResult = svaTokenCertVerifier.validate(svaSigCert, svaChain, null);
+        log.debug("SVT signature certificate validation succeeded");
+      }
+      catch (Exception ex) {
+        // This means that certificate validation according to certificate verifier failed
+        svaSignatureValid = false;
+        if (ex instanceof ExtendedCertPathValidatorException){
+          svaCertValidationResult = ((ExtendedCertPathValidatorException)ex).getPathValidationResult();
+        }
+        log.debug("SVT signature certificate fails validation: {}", ex.getMessage());
+      }
     }
   }
 

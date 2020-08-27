@@ -11,6 +11,7 @@ import org.bouncycastle.cms.CMSSignedDataParser;
 import org.bouncycastle.cms.SignerInformationVerifier;
 import org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder;
 import org.bouncycastle.tsp.TimeStampToken;
+import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
 import se.idsec.sigval.pdf.utils.PDFSVAUtils;
@@ -36,12 +37,13 @@ public class PDFTimeStamp {
   protected X509Certificate sigCert;
   protected TSTInfo tstInfo;
   /** List of policy verifiers determining if the signing certificate is trusted and the time stamp meets all defined policy requirements **/
-  protected List<TimeStampPolicyVerifier> tsPolicyVerifiers = new ArrayList<>();
+  protected final TimeStampPolicyVerifier tsPolicyVerifier;
   protected List<PolicyValidationClaims> policyValidationClaimsList = new ArrayList<>();
+  protected CertificateValidationResult certificateValidationResult;
 
-  public PDFTimeStamp(byte[] timeStampSigBytes, byte[] timestampedData, TimeStampPolicyVerifier... tsPolicyVerifier) throws Exception {
+  public PDFTimeStamp(byte[] timeStampSigBytes, byte[] timestampedData, TimeStampPolicyVerifier tsPolicyVerifier) throws Exception {
     this.timestampedData = timestampedData;
-    this.tsPolicyVerifiers = Arrays.asList(tsPolicyVerifier);
+    this.tsPolicyVerifier = tsPolicyVerifier;
     this.timeStampSigBytes = timeStampSigBytes;
     init();
   }
@@ -72,8 +74,12 @@ public class PDFTimeStamp {
       tstInfo = PDFSVAUtils.getPdfDocTSTInfo(timeStampSigBytes);
       verifyTsMessageImprint(cmsSignedDataParser);
       sigValid = true;
-      for (TimeStampPolicyVerifier tsPolicyVerifier : tsPolicyVerifiers) {
-        policyValidationClaimsList.add(tsPolicyVerifier.verifyTsPolicy(timeStampSigBytes, tstInfo, sigCert, certList));
+      TimeStampPolicyVerificationResult policyVerificationResult = tsPolicyVerifier.verifyTsPolicy(timeStampSigBytes, tstInfo,
+        sigCert, certList);
+      policyValidationClaimsList.add(policyVerificationResult.getPolicyValidationClaims());
+      certificateValidationResult = policyVerificationResult.getCertificateValidationResult();
+      if (!policyVerificationResult.isValidTimestamp()){
+        sigValid=false;
       }
     }
     catch (Exception ex) {

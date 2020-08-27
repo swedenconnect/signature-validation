@@ -26,6 +26,7 @@ import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
+import se.idsec.sigval.pdf.timestamp.impl.BasicTimstampPolicyVerifier;
 import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
 import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
 import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
@@ -54,29 +55,31 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
    * If no policy verifiers are provided, then all timestamps issued by a trusted key are regarded as valid
    **/
   @Setter
-  private TimeStampPolicyVerifier[] timeStampPolicyVerifiers = new TimeStampPolicyVerifier[] {};
+  private TimeStampPolicyVerifier timeStampPolicyVerifier;
 
   /** Signature policy verifier */
-  @Setter
-  private PDFSignaturePolicyValidator sigPolicyVerifier = new BasicPdfSignaturePolicyValidator();
+  private final PDFSignaturePolicyValidator sigPolicyVerifier;
 
   /** The certificate validator performing certificate path validation */
   private final CertificateValidator certificateValidator;
 
   public PdfSignatureVerifierImpl(CertificateValidator certificateValidator) {
     this.certificateValidator = certificateValidator;
+    this.timeStampPolicyVerifier = new BasicTimstampPolicyVerifier(certificateValidator);
+    this.sigPolicyVerifier = new BasicPdfSignaturePolicyValidator();
   }
 
-  public PdfSignatureVerifierImpl(CertificateValidator certificateValidator, TimeStampPolicyVerifier... timeStampPolicyVerifiers) {
-    this.timeStampPolicyVerifiers = timeStampPolicyVerifiers;
+  public PdfSignatureVerifierImpl(CertificateValidator certificateValidator, TimeStampPolicyVerifier timeStampPolicyVerifier) {
+    this.timeStampPolicyVerifier = timeStampPolicyVerifier;
     this.certificateValidator = certificateValidator;
+    this.sigPolicyVerifier = new BasicPdfSignaturePolicyValidator();
   }
 
   public PdfSignatureVerifierImpl(CertificateValidator certificateValidator, PDFSignaturePolicyValidator pdfSignaturePolicyValidator,
-    TimeStampPolicyVerifier... timeStampPolicyVerifiers) {
-    this.sigPolicyVerifier = pdfSignaturePolicyValidator;
-    this.timeStampPolicyVerifiers = timeStampPolicyVerifiers;
+    TimeStampPolicyVerifier timeStampPolicyVerifier) {
     this.certificateValidator = certificateValidator;
+    this.sigPolicyVerifier = pdfSignaturePolicyValidator;
+    this.timeStampPolicyVerifier = timeStampPolicyVerifier;
   }
 
   @Override public ExtendedPdfSigValResult verifySignature(PDSignature signature, byte[] pdfDocument,
@@ -198,7 +201,7 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
     List<PDFDocTimeStamp> docTimeStampList = new ArrayList<>();
     for (PDSignature sig : documentTimestampSignatures) {
       try {
-        PDFDocTimeStamp docTs = new PDFDocTimeStamp(sig, pdfDocument, timeStampPolicyVerifiers);
+        PDFDocTimeStamp docTs = new PDFDocTimeStamp(sig, pdfDocument, timeStampPolicyVerifier);
         docTimeStampList.add(docTs);
       }
       catch (Exception e) {
@@ -226,7 +229,7 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
     for (int i = 0; i < timeStampsASN1.size(); i++) {
       Attribute tsAttribute = Attribute.getInstance(timeStampsASN1.get(i));
       byte[] tsContentInfoBytes = ContentInfo.getInstance(tsAttribute.getAttrValues().getObjectAt(0).toASN1Primitive()).getEncoded("DER");
-      PDFTimeStamp timeStamp = new PDFTimeStamp(tsContentInfoBytes, signerInformation.getSignature(), timeStampPolicyVerifiers);
+      PDFTimeStamp timeStamp = new PDFTimeStamp(tsContentInfoBytes, signerInformation.getSignature(), timeStampPolicyVerifier);
       timeStampList.add(timeStamp);
     }
     return timeStampList;

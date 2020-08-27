@@ -1,7 +1,6 @@
 package se.idsec.sigval.pdf.svt;
 
 import com.nimbusds.jwt.SignedJWT;
-import lombok.Setter;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
@@ -32,8 +31,7 @@ public class PDFSVTValidator extends SVTValidator {
    * Array of document timestamp policy verifiers. A timestamp is regarded as trusted if all present policy validators returns a positive result
    * If no policy verifiers are provided, then all timestamps issued by a trusted key is regarded as valid
    **/
-  @Setter
-  private TimeStampPolicyVerifier[] timeStampPolicyVerifiers = new TimeStampPolicyVerifier[] {};
+  private final TimeStampPolicyVerifier timeStampPolicyVerifier;
   private List<PDFSVTDocTimeStamp> svtTsList;
 
   /**
@@ -41,13 +39,13 @@ public class PDFSVTValidator extends SVTValidator {
    *
    * @param pdfSignatureVerifier     The verifier used to verify signatures not supported by SVA
    * @param svaCertVerifier          Certificate verifier for the certificate used to sign SVA tokens
-   * @param timeStampPolicyVerifiers Time stamp policy verifiers to verify Document time stamps
+   * @param timeStampPolicyVerifier Time stamp policy verifiers to verify Document time stamps
    */
   public PDFSVTValidator(PdfSignatureVerifier pdfSignatureVerifier, CertificateValidator svaCertVerifier,
-    TimeStampPolicyVerifier... timeStampPolicyVerifiers) {
+    TimeStampPolicyVerifier timeStampPolicyVerifier) {
     this.pdfSignatureVerifier = pdfSignatureVerifier;
     this.svaCertVerifier = svaCertVerifier;
-    this.timeStampPolicyVerifiers = timeStampPolicyVerifiers;
+    this.timeStampPolicyVerifier = timeStampPolicyVerifier;
   }
 
   @Override protected List<SignatureSVTData> getSignatureSVTData(byte[] pdfDocBytes) throws Exception {
@@ -164,7 +162,7 @@ public class PDFSVTValidator extends SVTValidator {
     List<PDFSVTDocTimeStamp> validSvaTsList = new ArrayList<>();
     for (PDSignature svaTsSig : svaSigList) {
       try {
-        PDFSVTDocTimeStamp svaTs = new PDFSVTDocTimeStamp(svaTsSig, pdfDocBytes, svaCertVerifier, timeStampPolicyVerifiers);
+        PDFSVTDocTimeStamp svaTs = new PDFSVTDocTimeStamp(svaTsSig, pdfDocBytes, svaCertVerifier, timeStampPolicyVerifier);
         svtTsList.add(svaTs);
         if (!svaTs.isSigValid()) {
           //SVA TS was not signed correctly by trusted authority
