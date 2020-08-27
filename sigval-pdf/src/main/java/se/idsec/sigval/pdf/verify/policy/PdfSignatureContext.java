@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.pdf.data;
+package se.idsec.sigval.pdf.verify.policy;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
