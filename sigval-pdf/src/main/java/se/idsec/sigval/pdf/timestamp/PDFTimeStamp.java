@@ -1,6 +1,7 @@
 package se.idsec.sigval.pdf.timestamp;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.cms.ContentInfo;
 import org.bouncycastle.asn1.tsp.MessageImprint;
@@ -28,6 +29,7 @@ import java.util.List;
  * This class parse validates and holds the essential information about a PDF timestamp.
  */
 @Getter
+@Slf4j
 public class PDFTimeStamp {
 
   protected byte[] timeStampSigBytes;
@@ -40,6 +42,7 @@ public class PDFTimeStamp {
   protected final TimeStampPolicyVerifier tsPolicyVerifier;
   protected List<PolicyValidationClaims> policyValidationClaimsList = new ArrayList<>();
   protected CertificateValidationResult certificateValidationResult;
+  protected Exception exception;
 
   public PDFTimeStamp(byte[] timeStampSigBytes, byte[] timestampedData, TimeStampPolicyVerifier tsPolicyVerifier) throws Exception {
     this.timestampedData = timestampedData;
@@ -78,11 +81,14 @@ public class PDFTimeStamp {
         sigCert, certList);
       policyValidationClaimsList.add(policyVerificationResult.getPolicyValidationClaims());
       certificateValidationResult = policyVerificationResult.getCertificateValidationResult();
+      exception = policyVerificationResult.getException();
       if (!policyVerificationResult.isValidTimestamp()){
         sigValid=false;
       }
     }
     catch (Exception ex) {
+      log.debug("Exception while parsing timestamp", ex);
+      exception = ex;
       sigValid = false;
       return;
     }

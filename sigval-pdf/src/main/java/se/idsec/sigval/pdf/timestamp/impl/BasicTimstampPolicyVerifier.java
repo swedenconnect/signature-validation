@@ -4,6 +4,7 @@ import lombok.Setter;
 import org.bouncycastle.asn1.tsp.TSTInfo;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.certificate.CertificateValidator;
+import se.idsec.sigval.cert.chain.ExtendedCertPathValidatorException;
 import se.idsec.sigval.cert.chain.PathValidationResult;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
@@ -80,6 +81,9 @@ public class BasicTimstampPolicyVerifier implements TimeStampPolicyVerifier {
     } catch (Exception ex) {
       result.setRes(ValidationConclusion.FAILED);
       result.setMsg("Time Stamp signing certificate is not trusted");
+      if (ex instanceof ExtendedCertPathValidatorException){
+        return new TimeStampPolicyVerificationResult(result, ((ExtendedCertPathValidatorException) ex).getPathValidationResult(), false, ex);
+      }
       return new TimeStampPolicyVerificationResult(result, ex);
     }
 
