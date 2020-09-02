@@ -24,6 +24,12 @@ import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
 
+/**
+ * Implements a basic signature policy checker
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public class BasicPdfSignaturePolicyValidator extends AbstractBasicPDFSignaturePolicyChecks {
   /** {@inheritDoc} */
   @Override protected PolicyValidationResult performAdditionalValidityChecks(ExtendedPdfSigValResult verifyResultSignature,

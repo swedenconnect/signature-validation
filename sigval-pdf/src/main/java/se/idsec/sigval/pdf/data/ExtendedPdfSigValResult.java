@@ -23,8 +23,6 @@ import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.sign.pdf.PDFSignatureValidationResult;
-import se.idsec.sigval.cert.chain.PathValidationResult;
-import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.NamedCurve;
 import se.idsec.sigval.commons.algorithms.PublicKeyType;
 import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
@@ -36,6 +34,11 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public class ExtendedPdfSigValResult implements PDFSignatureValidationResult {
 
   //Data required by interfaces
@@ -99,8 +102,10 @@ public class ExtendedPdfSigValResult implements PDFSignatureValidationResult {
   //Aditional data
   /** The complete list of certificates provided with the signature which may differ from the constructed path to a trust anchor */
   @Setter @Getter private List<X509Certificate> signatureCertificateChain;
-  /** Indicator if the signature covers the whole PDF document byte range **/
-//  @Setter @Getter private boolean coversAllData = false;
+  /** Indicator if the signature covers the visible PDF document. False value indicates that there may be visual content changes added after signing **/
+  @Setter @Getter private boolean coversDocument = false;
+  /** The pdf document in the form it was before being signed by this signature */
+  @Setter @Getter private byte[] signedDocument;
   /** Legacy indicator if the signing certificate matches a present ESSSigningCertificate signed attribute **/
   @Setter @Getter private boolean invalidSignCert = false;
   /** Public key type **/

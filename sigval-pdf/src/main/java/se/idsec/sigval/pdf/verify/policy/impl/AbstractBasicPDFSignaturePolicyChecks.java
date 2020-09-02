@@ -29,6 +29,12 @@ import se.idsec.sigval.svt.claims.ValidationConclusion;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
+/**
+ * Abstract implementation of a PDF signature policy checker
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Slf4j
 public abstract class AbstractBasicPDFSignaturePolicyChecks implements PDFSignaturePolicyValidator {
 

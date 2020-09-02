@@ -16,6 +16,12 @@
 
 package se.idsec.sigval.pdf.data;
 
+/**
+ * Constants used in this project
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public class PDFConstants {
   public static final String SUBFILTER_ETSI_RFC3161 = "ETSI.RFC3161";
 }

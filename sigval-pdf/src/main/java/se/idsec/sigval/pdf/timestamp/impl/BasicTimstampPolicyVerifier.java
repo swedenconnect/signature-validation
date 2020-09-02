@@ -19,6 +19,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Validates a timestamp according to a defined policy, determined by the certificate chain validator.
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public class BasicTimstampPolicyVerifier implements TimeStampPolicyVerifier {
 
   /** Verifier for certificate chains used to sign a timestamp **/
@@ -47,6 +53,7 @@ public class BasicTimstampPolicyVerifier implements TimeStampPolicyVerifier {
     this.policy = policy;
   }
 
+  /** {@inheritDoc} */
   @Override public TimeStampPolicyVerificationResult verifyTsPolicy(byte[] pdfSigBytes, TSTInfo tstInfo, X509Certificate sigCert,
     List<X509Certificate> certList) {
 

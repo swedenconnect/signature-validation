@@ -33,6 +33,12 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.*;
 import java.util.logging.Logger;
 
+/**
+ * Utility methods for CMS verification
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Slf4j
 public class CMSVerifyUtils {
 
@@ -273,86 +279,6 @@ public class CMSVerifyUtils {
   public static class PDFSigCerts {
     private X509Certificate sigCert;
     private List<X509Certificate> chain;
-  }
-
-  private static byte[] retrieveLastPDFRevision(PDSignature signature, byte[] pdfDocumentBytes) throws IOException {
-    final byte[] eof = new byte[] { '%', '%', 'E', 'O', 'F' };
-
-    InputStream is = getFirstByteRangePart(signature, pdfDocumentBytes);
-    BufferedInputStream bis = new BufferedInputStream(is);
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-    ByteArrayOutputStream tempLine = new ByteArrayOutputStream();
-    ByteArrayOutputStream tempRevision = new ByteArrayOutputStream();
-    int b;
-    while ((b = bis.read()) != -1) {
-
-      tempLine.write(b);
-      byte[] stringBytes = tempLine.toByteArray();
-
-      if (Arrays.equals(stringBytes, eof)) {
-        tempLine.close();
-        tempLine = new ByteArrayOutputStream();
-
-        tempRevision.write(stringBytes);
-        int c = bis.read();
-        // if \n
-        if (c == 0x0a) {
-          tempRevision.write(c);
-        }
-        // if \r
-        else if (c == 0x0d) {
-          int d = bis.read();
-          // if \r\n
-          if (d == 0x0a) {
-            tempRevision.write(c);
-            tempRevision.write(d);
-          }
-          else {
-            tempLine.write(c);
-            tempLine.write(d);
-          }
-        }
-        else {
-          tempLine.write(c);
-        }
-        baos.write(tempRevision.toByteArray());
-        tempRevision.close();
-        tempRevision = new ByteArrayOutputStream();
-      }
-      else if (b == 0x0a || stringBytes.length > eof.length) {
-        tempRevision.write(tempLine.toByteArray());
-        tempLine.close();
-        tempLine = new ByteArrayOutputStream();
-      }
-    }
-    tempLine.close();
-    tempRevision.close();
-
-    baos.flush();
-    return baos.toByteArray();
-  }
-
-  private static InputStream getFirstByteRangePart(PDSignature signature, byte[] pdfDocumentBytes) throws IOException {
-    try {
-      int[] byteRange = signature.getByteRange();
-      byte[] firstByteRangePart = Arrays.copyOfRange(pdfDocumentBytes, byteRange[0], byteRange[0] + byteRange[1]);
-      return new ByteArrayInputStream(firstByteRangePart);
-    } catch (Exception ex) {
-      throw new IOException("Error copying PDF byte range", ex);
-    }
-  }
-
-  private static boolean checkCoversDoc(PDSignature sig, byte[] pdfDocBytes) throws IOException {
-    try {
-      int[] byteRange = sig.getByteRange();
-      // Length before signature + signature data length + length after signature
-      int sigDocLen = byteRange[1] + (byteRange[2] - byteRange[1]) + byteRange[3];
-      int actualDocLen = pdfDocBytes.length;
-      return  byteRange[0] == 0 && sigDocLen == actualDocLen;
-    } catch (Exception ex){
-      throw new IOException("Unable to parse byte range data", ex);
-    }
   }
 
 }

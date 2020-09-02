@@ -35,6 +35,12 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Object class holding a SVT document timestamp
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Getter
 @Slf4j
 public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {

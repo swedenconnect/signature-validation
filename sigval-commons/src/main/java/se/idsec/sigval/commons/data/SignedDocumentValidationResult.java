@@ -32,6 +32,7 @@ public class SignedDocumentValidationResult<R extends SignatureValidationResult>
 
   private boolean signed;
   private boolean completeSuccess;
+  private boolean validSignatureSignsWholeDocument;
   private int signatureCount;
   private int validSignatureCount;
   private String statusMessage;

@@ -21,6 +21,12 @@ import java.security.MessageDigest;
 import java.text.ParseException;
 import java.util.*;
 
+/**
+ * Implements a validator of Signature Validation Tokens issued to a signed PDF document
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public class PDFSVTValidator extends SVTValidator {
 
   /** Certificate chain validator for SVA tokens **/

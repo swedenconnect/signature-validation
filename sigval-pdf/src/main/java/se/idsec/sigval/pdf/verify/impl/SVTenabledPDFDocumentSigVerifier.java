@@ -20,6 +20,7 @@ import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
 import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
 import se.idsec.sigval.pdf.utils.PDFSVAUtils;
 import se.idsec.sigval.pdf.verify.PdfSignatureVerifier;
+import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
 import se.idsec.sigval.svt.algorithms.SVTAlgoRegistry;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.SignatureClaims;
@@ -48,14 +49,27 @@ import java.util.stream.Collectors;
  * This class provides the functionality to validate signatures on a PDF where the signature validation process is enhanced with validation
  * based on SVA (Signature Validation Assertions). The latest valid SVA that can be verified given the provided trust validation resources is selected.
  * Signatures covered by this SVA is validated based on SVA. Any other signatures are validated through traditional signature validation methods.
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
  */
 public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
 
   public static Logger LOG = Logger.getLogger(SVTenabledPDFDocumentSigVerifier.class.getName());
   /** SVT token validator **/
-  private PDFSVTValidator pdfsvtValidator;
+  private final PDFSVTValidator pdfsvtValidator;
   /** Signature verifier for signatures not supported by SVT. This verifier is also performing validation of signature timestamps **/
-  private PdfSignatureVerifier pdfSignatureVerifier;
+  private final PdfSignatureVerifier pdfSignatureVerifier;
+
+  /**
+   * Constructor if no SVT validation is supported
+   *
+   * @param pdfSignatureVerifier The verifier used to verify signatures not supported by SVA
+   */
+  public SVTenabledPDFDocumentSigVerifier(PdfSignatureVerifier pdfSignatureVerifier) {
+    this.pdfSignatureVerifier = pdfSignatureVerifier;
+    this.pdfsvtValidator = null;
+  }
 
   /**
    * Constructor
@@ -79,7 +93,8 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
     byte[] docBytes = null;
     try {
       docBytes = IOUtils.toByteArray(new FileInputStream(pdfDoc));
-    } catch (IOException ex){
+    }
+    catch (IOException ex) {
       throw new SignatureException("Unable to read signed file", ex);
     }
     return validate(docBytes);
@@ -94,9 +109,8 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
    */
   @Override public List<SignatureValidationResult> validate(byte[] pdfDocBytes) throws SignatureException {
     try {
-      PDDocument pdfDocument = PDDocument.load(pdfDocBytes);
-      List<PDSignature> allSignatureList = pdfDocument.getSignatureDictionaries();
-      pdfDocument.close();
+      PdfSignatureContext signatureContext = new PdfSignatureContext(pdfDocBytes);
+      List<PDSignature> allSignatureList = signatureContext.getSignatures();
       List<PDSignature> docTsSigList = new ArrayList<>();
       List<PDSignature> signatureList = new ArrayList<>();
 
@@ -112,13 +126,6 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
         }
       }
 
-      /**
-       * 1) Check that signature is covered by a valid SVA token. If not - perform regular signature verification
-       * 2) If signature is covered by SVA token, do validation based on SVA only.
-       */
-
-      // Do SVT validation
-      List<SignatureSVTValidationResult> svtValidationResults = pdfsvtValidator.validate(pdfDocBytes);
       // Create empty result list
       List<SignatureValidationResult> sigVerifyResultList = new ArrayList<>();
       // This list starts empty. It is only filled with objects if there is a signature that is validated without SVT.
@@ -126,10 +133,15 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
       boolean docTsVerified = false;
 
       for (PDSignature signature : signatureList) {
-        SignatureSVTValidationResult svtValResult = getMatchingSvtValidation(
-          PDFSVAUtils.getSignatureValueBytes(signature, pdfDocBytes), svtValidationResults);
+        SignatureSVTValidationResult svtValResult = null;
+        if (pdfsvtValidator != null) {
+          // Do SVT validation if we have an SVT validator
+          List<SignatureSVTValidationResult> svtValidationResults = pdfsvtValidator.validate(pdfDocBytes);
+          svtValResult = getMatchingSvtValidation(
+            PDFSVAUtils.getSignatureValueBytes(signature, pdfDocBytes), svtValidationResults);
+        }
         if (svtValResult == null) {
-          // This signature is not covered by the SVA. Perform normal signature verification
+          // This signature is not covered by a valid SVA. Perform normal signature verification
           try {
             //Get verified documentTimestamps if not previously loaded
             if (!docTsVerified) {
@@ -137,20 +149,23 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
               docTsVerified = true;
             }
 
-            SignatureValidationResult directVerifyResult = pdfSignatureVerifier.verifySignature(signature, pdfDocBytes, docTimeStampList);
+            SignatureValidationResult directVerifyResult = pdfSignatureVerifier.verifySignature(signature, pdfDocBytes, docTimeStampList,
+              signatureContext);
             sigVerifyResultList.add(directVerifyResult);
           }
           catch (Exception e) {
             LOG.warning("Error parsing the PDF signature: " + e.getMessage());
             sigVerifyResultList.add(getErrorResult(signature, e.getMessage()));
           }
-          // Skip SVA validation
-          continue;
         }
-        sigVerifyResultList.add(compliePDFSigValResultsFromSvtValidation(svtValResult, signature, pdfDocBytes));
+        else {
+          // There is SVT validation results. Use them.
+          sigVerifyResultList.add(compliePDFSigValResultsFromSvtValidation(svtValResult, signature, pdfDocBytes, signatureContext));
+        }
       }
       return sigVerifyResultList;
-    } catch (Exception ex){
+    }
+    catch (Exception ex) {
       throw new SignatureException("Error validating signatures on PDF document", ex);
     }
   }
@@ -178,18 +193,30 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
 
   /**
    * This implementation allways perform PKIX validation and returns an empty list for this function
+   *
    * @return empty list
    */
   @Override public List<X509Certificate> getRequiredSignerCertificates() {
     return new ArrayList<>();
   }
 
+  /** {@inheritDoc} */
   @Override public CertificateValidator getCertificateValidator() {
     return pdfSignatureVerifier.getCertificateValidator();
   }
 
+  /**
+   * Use the results obtained from SVT validation to produce general signature validation result as if the signature was validated using
+   * complete validation.
+   *
+   * @param svtValResult     results from SVT validation
+   * @param signature        the signature being validated
+   * @param pdfDocBytes      the bytes of the PDF document
+   * @param signatureContext the context of the signature in the PDF document
+   * @return {@link ExtendedPdfSigValResult} signature results
+   */
   private ExtendedPdfSigValResult compliePDFSigValResultsFromSvtValidation(SignatureSVTValidationResult svtValResult,
-    PDSignature signature, byte[] pdfDocBytes) {
+    PDSignature signature, byte[] pdfDocBytes, PdfSignatureContext signatureContext) {
     ExtendedPdfSigValResult cmsSVResult = new ExtendedPdfSigValResult();
     cmsSVResult.setPdfSignature(signature);
 
@@ -202,6 +229,8 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
       cmsSVResult.setPades(signature.getSubFilter().equalsIgnoreCase(PDFSVAUtils.CADES_SIG_SUBFILETER_LC));
       cmsSVResult.setInvalidSignCert(false);
       cmsSVResult.setClaimedSigningTime(PDFSVAUtils.getClaimedSigningTime(signature.getSignDate(), signedData).getTime());
+      cmsSVResult.setCoversDocument(signatureContext.isCoversWholeDocument(signature));
+      cmsSVResult.setSignedDocument(signatureContext.getSignedDocument(signature));
 
       //Get algorithms and public key type. Note that the source of these values is the SVA signature which is regarded as the algorithm
       //That is effectively protecting the integrity of the signature, superseding the use of the original algorithms.
@@ -220,9 +249,10 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
       cmsSVResult.setSignerCertificate(getCert(svtValResult.getSignerCertificate()));
       cmsSVResult.setSignatureCertificateChain(getCertList(svtValResult.getCertificateChain()));
       cmsSVResult.setSuccess(svtValResult.isSvtValidationSuccess());
-      if (cmsSVResult.isSuccess()){
+      if (cmsSVResult.isSuccess()) {
         cmsSVResult.setStatus(SignatureValidationResult.Status.SUCCESS);
-      } else {
+      }
+      else {
         cmsSVResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
         cmsSVResult.setStatusMessage("Unable to verify SVT signature");
       }
@@ -323,10 +353,22 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
   /**
    * Compile a complete PDF signature verification result object from the list of individual signature results
    *
+   * @param pdfDocBytes validate the complete PDF document and return concluding validation results for the complete document.
+   * @return PDF signature validation result objects
+   */
+  public SignedDocumentValidationResult<ExtendedPdfSigValResult> validateWithConcludingSigVerifyResult(byte[] pdfDocBytes) throws SignatureException{
+    List<SignatureValidationResult> validationResults = validate(pdfDocBytes);
+    return getConcludingSigVerifyResult(validationResults);
+  }
+
+  /**
+   * Compile a complete PDF signature verification result object from the list of individual signature results
+   *
    * @param sigVerifyResultList list of individual signature validation results. Each result must be of type {@link ExtendedPdfSigValResult}
    * @return PDF signature validation result objects
    */
-  public static SignedDocumentValidationResult<ExtendedPdfSigValResult> getConcludingSigVerifyResult(List<SignatureValidationResult> sigVerifyResultList) {
+  public static SignedDocumentValidationResult<ExtendedPdfSigValResult> getConcludingSigVerifyResult(
+    List<SignatureValidationResult> sigVerifyResultList) {
     SignedDocumentValidationResult<ExtendedPdfSigValResult> sigVerifyResult = new SignedDocumentValidationResult<>();
     List<ExtendedPdfSigValResult> extendedPdfSigValResults = new ArrayList<>();
     try {
@@ -334,7 +376,8 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
         .map(signatureValidationResult -> (ExtendedPdfSigValResult) signatureValidationResult)
         .collect(Collectors.toList());
       sigVerifyResult.setSignatureValidationResults(extendedPdfSigValResults);
-    } catch (Exception ex){
+    }
+    catch (Exception ex) {
       throw new IllegalArgumentException("Provided results are not instances of ExtendedPdfSigValResult");
     }
     //sigVerifyResult.setDocTimeStampList(docTimeStampList);
@@ -364,13 +407,22 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
     }
 
     //Reaching this point means that there are valid signatures.
-    if (sigVerifyResult.getSignatureCount() == validSignatureResultList.size()){
+    if (sigVerifyResult.getSignatureCount() == validSignatureResultList.size()) {
       sigVerifyResult.setStatusMessage("OK");
       sigVerifyResult.setCompleteSuccess(true);
-    } else {
+    }
+    else {
       sigVerifyResult.setStatusMessage("Some signatures are valid and some are invalid");
       sigVerifyResult.setCompleteSuccess(false);
     }
+
+    //Check if any valid signature signs the whole document
+    boolean validSigSignsWholeDoc = validSignatureResultList.stream()
+      .filter(signatureValidationResult -> signatureValidationResult.isCoversDocument())
+      .findFirst().isPresent();
+
+    sigVerifyResult.setValidSignatureSignsWholeDocument(validSigSignsWholeDoc);
+
     return sigVerifyResult;
   }
 

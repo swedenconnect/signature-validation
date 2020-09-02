@@ -41,6 +41,9 @@ import java.util.stream.Collectors;
  * <p>
  * This policy allows a certificate that was revoked if the signature was timestamped by a trusted timestamp
  * before the certificate was revoked.
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
  */
 @NoArgsConstructor
 @AllArgsConstructor

@@ -3,6 +3,12 @@ package se.idsec.sigval.pdf.verify.policy;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 
+/**
+ * Interface for PDF signature policy validator
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public interface PDFSignaturePolicyValidator {
 
   /**

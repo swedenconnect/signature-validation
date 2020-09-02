@@ -3,13 +3,11 @@ package se.idsec.sigval.pdf.verify.impl;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
-import org.bouncycastle.asn1.ASN1EncodableVector;
-import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.ASN1Sequence;
-import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.cms.Attribute;
 import org.bouncycastle.asn1.cms.AttributeTable;
 import org.bouncycastle.asn1.cms.ContentInfo;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cms.CMSSignedDataParser;
 import org.bouncycastle.cms.CMSTypedStream;
@@ -26,14 +24,14 @@ import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
-import se.idsec.sigval.pdf.timestamp.impl.BasicTimstampPolicyVerifier;
-import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
 import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
 import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
 import se.idsec.sigval.pdf.timestamp.TimeStampPolicyVerifier;
+import se.idsec.sigval.pdf.timestamp.impl.BasicTimstampPolicyVerifier;
 import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
 import se.idsec.sigval.pdf.verify.PdfSignatureVerifier;
 import se.idsec.sigval.pdf.verify.policy.PDFSignaturePolicyValidator;
+import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
 import se.idsec.sigval.pdf.verify.policy.impl.BasicPdfSignaturePolicyValidator;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
@@ -44,9 +42,16 @@ import java.security.MessageDigest;
 import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.List;
 import java.util.logging.Logger;
 
+/**
+ * Implements verification of a PDF signature, validating the actual signature and signing certificates
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Slf4j
 public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
 
@@ -63,18 +68,35 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
   /** The certificate validator performing certificate path validation */
   private final CertificateValidator certificateValidator;
 
+  /**
+   * Constructor
+   * @param certificateValidator the validator used to verify signing certificate chains
+   */
   public PdfSignatureVerifierImpl(CertificateValidator certificateValidator) {
     this.certificateValidator = certificateValidator;
     this.timeStampPolicyVerifier = new BasicTimstampPolicyVerifier(certificateValidator);
     this.sigPolicyVerifier = new BasicPdfSignaturePolicyValidator();
   }
 
+  /**
+   * Constructor
+   *
+   * @param certificateValidator the validator used to verify signing certificate chains
+   * @param timeStampPolicyVerifier verifier validating time stamps to a defined policy
+   */
   public PdfSignatureVerifierImpl(CertificateValidator certificateValidator, TimeStampPolicyVerifier timeStampPolicyVerifier) {
     this.timeStampPolicyVerifier = timeStampPolicyVerifier;
     this.certificateValidator = certificateValidator;
     this.sigPolicyVerifier = new BasicPdfSignaturePolicyValidator();
   }
 
+  /**
+   * Constructor
+   *
+   * @param certificateValidator the validator used to verify signing certificate chains
+   * @param timeStampPolicyVerifier verifier validating time stamps to a defined policy
+   * @param pdfSignaturePolicyValidator verifier of the signature results according to a defined policy
+   */
   public PdfSignatureVerifierImpl(CertificateValidator certificateValidator, PDFSignaturePolicyValidator pdfSignaturePolicyValidator,
     TimeStampPolicyVerifier timeStampPolicyVerifier) {
     this.certificateValidator = certificateValidator;
@@ -82,13 +104,21 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
     this.timeStampPolicyVerifier = timeStampPolicyVerifier;
   }
 
-  @Override public ExtendedPdfSigValResult verifySignature(PDSignature signature, byte[] pdfDocument,
-    List<PDFDocTimeStamp> documentTimestamps) throws Exception {
-    PdfSignatureContext signatureContext = new PdfSignatureContext(pdfDocument);
+  /** {@inheritDoc} */
+  @Override
+  public ExtendedPdfSigValResult verifySignature(PDSignature signature, byte[] pdfDocument,
+    List<PDFDocTimeStamp> documentTimestamps, PdfSignatureContext signatureContext) throws Exception {
     ExtendedPdfSigValResult sigResult = new ExtendedPdfSigValResult();
     sigResult.setPdfSignature(signature);
     sigResult.setSignedData(signature.getContents(pdfDocument));
-    //sigResult.setCoversAllData(checkCoversDoc(signature, pdfDocument));
+    sigResult.setCoversDocument(signatureContext.isCoversWholeDocument(signature));
+    byte[] unsignedDocument = null;
+    try {
+      unsignedDocument = signatureContext.getSignedDocument(signature);
+    } catch (Exception ex){
+      log.debug("The document signed by this signature is not available");
+    }
+    sigResult.setSignedDocument(unsignedDocument);
     CMSSignedDataParser cmsSignedDataParser = CMSVerifyUtils.getCMSSignedDataParser(signature, pdfDocument);
     CMSTypedStream signedContent = cmsSignedDataParser.getSignedContent();
     signedContent.drain();
@@ -131,8 +161,9 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
       return sigResult;
     }
     sigResult.setSignatureAlgorithm(algorithmURI);
-    Attribute cmsAlgoProtAttr = signerInformation.getSignedAttributes()
-      .get(new ASN1ObjectIdentifier(PDFObjectIdentifiers.ID_AA_CMS_ALGORITHM_PROTECTION));
+    AttributeTable signedAttributes = signerInformation.getSignedAttributes();
+    Attribute cmsAlgoProtAttr = signedAttributes.get(PKCSObjectIdentifiers.id_aa_cmsAlgorithmProtect);
+//    Attribute cmsAlgoProtAttr = signedAttributes.get(new ASN1ObjectIdentifier(PDFObjectIdentifiers.ID_AA_CMS_ALGORITHM_PROTECTION));
     CMSVerifyUtils.getCMSAlgoritmProtectionData(cmsAlgoProtAttr, sigResult);
 
     // Check algorithm consistency
@@ -150,6 +181,9 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
     if (sigResult.isSuccess()) {
       verifyPadesProperties(signerInformation, sigResult);
     }
+
+    //Check claimed signing time
+    sigResult.setClaimedSigningTime(getClaimedSigningTime(signature.getSignDate(), signedAttributes.get(PKCSObjectIdentifiers.pkcs_9_at_signingTime)));
 
     // Verify timestamps
     try {
@@ -197,6 +231,40 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
     return sigResult;
   }
 
+  /**
+   * Extracts the claimed signing time from a PDF signature
+   * @param dictionalyDignDate the signing time obtained from the signature dictionary or null of no such time exist
+   * @param signedAttrSigningTime the signing time attribute from signed attributes
+   * @return signing time in milliseconds from epoc time
+   */
+  private Long getClaimedSigningTime(Calendar dictionalyDignDate, Attribute signedAttrSigningTime) {
+    if (signedAttrSigningTime == null && dictionalyDignDate == null){
+      log.debug("No time information available as claimed signing time");
+      return null;
+    }
+    if (signedAttrSigningTime == null){
+      log.debug("No claimed signing time in signed attributes. Using time from signature dictionary");
+      return dictionalyDignDate.getTimeInMillis();
+    }
+    ASN1Encodable[] attributeValues = signedAttrSigningTime.getAttributeValues();
+    try {
+      ASN1UTCTime signingTime = ASN1UTCTime.getInstance(attributeValues[0]);
+      log.debug("Found UTC claimed signing time in signed attributes");
+      return signingTime.getAdjustedDate().getTime();
+    } catch (Exception ex){
+      log.debug("Unable to extract UTCTime from signing time signed attributes. Attempting Generalized time");
+    }
+    try {
+      ASN1GeneralizedTime signingTime = ASN1GeneralizedTime.getInstance(attributeValues[0]);
+      log.debug("Found Generalized time claimed signing time in signed attributes");
+      return signingTime.getDate().getTime();
+    } catch (Exception ex){
+      log.debug("Unable to extract time information from signing time signed attributes.");
+    }
+    return null;
+  }
+
+  /** {@inheritDoc} */
   @Override public List<PDFDocTimeStamp> verifyDocumentTimestamps(List<PDSignature> documentTimestampSignatures, byte[] pdfDocument) {
     List<PDFDocTimeStamp> docTimeStampList = new ArrayList<>();
     for (PDSignature sig : documentTimestampSignatures) {
@@ -211,11 +279,18 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
     return docTimeStampList;
   }
 
+  /** {@inheritDoc} */
   @Override public CertificateValidator getCertificateValidator() {
     return certificateValidator;
   }
 
-  private List<PDFTimeStamp> checkTimeStamps(SignerInformation signerInformation)
+  /**
+   * Validates the timestamp embedded inside the target signature
+   * @param signerInformation signerInformation holding the timestamp
+   * @return a list of timestamps found in the signature data
+   * @throws Exception on errors
+   */
+  private List<PDFTimeStamp> checkTimeStamps(final SignerInformation signerInformation)
     throws Exception {
     AttributeTable unsignedAttributes = signerInformation.getUnsignedAttributes();
     if (unsignedAttributes == null) {
@@ -235,7 +310,12 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
     return timeStampList;
   }
 
-  private void addVerifiedTimes(ExtendedPdfSigValResult directVerifyResult, List<PDFDocTimeStamp> docTimeStampList) {
+  /**
+   * Add verified timestamps to the signature validation results
+   * @param directVerifyResult the verification results including result data from time stamps embedded in the signature
+   * @param docTimeStampList list of document timestamps provided with this signed PDF document
+   */
+  private void addVerifiedTimes(ExtendedPdfSigValResult directVerifyResult, final List<PDFDocTimeStamp> docTimeStampList) {
     List<TimeValidationClaims> timeValidationClaimsList = directVerifyResult.getTimeValidationClaimsList();
     directVerifyResult.getSignatureTimeStampList().stream()
       //Only if timestamp is valid
@@ -257,7 +337,7 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
       .forEach(verifiedTime -> timeValidationClaimsList.add(verifiedTime));
   }
 
-  private TimeValidationClaims getVerifiedTimeFromTimeStamp(PDFTimeStamp pdfTimeStamp, String type) {
+  private TimeValidationClaims getVerifiedTimeFromTimeStamp(final PDFTimeStamp pdfTimeStamp, final String type) {
     try {
       TimeValidationClaims timeValidationClaims = TimeValidationClaims.builder()
         .id(pdfTimeStamp.getTstInfo().getSerialNumber().getValue().toString(16))
@@ -273,7 +353,12 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
     }
   }
 
-  public void verifyPadesProperties(SignerInformation signer, ExtendedPdfSigValResult sigResult) {
+  /**
+   * Verifies the PAdES properties of this signature
+   * @param signer SignerInformation of this signature
+   * @param sigResult signature result object for this signature
+   */
+  public void verifyPadesProperties(final SignerInformation signer, ExtendedPdfSigValResult sigResult) {
     try {
       AttributeTable signedAttributes = signer.getSignedAttributes();
       Attribute essSigningCertV2Attr = signedAttributes.get(new ASN1ObjectIdentifier(PDFObjectIdentifiers.ID_AA_SIGNING_CERTIFICATE_V2));

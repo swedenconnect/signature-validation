@@ -6,6 +6,9 @@ import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 /**
  * This class parse validates and holds the essential information about a PDF document timestamp.
  * This class may be extended to handle specialized forms of document timestamps such as a SVA document timestamp
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
  */
 @Getter
 public class PDFDocTimeStamp extends PDFTimeStamp {

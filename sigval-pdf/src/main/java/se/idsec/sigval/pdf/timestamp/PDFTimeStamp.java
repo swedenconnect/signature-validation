@@ -27,6 +27,9 @@ import java.util.List;
 
 /**
  * This class parse validates and holds the essential information about a PDF timestamp.
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
  */
 @Getter
 @Slf4j

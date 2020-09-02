@@ -28,6 +28,12 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.*;
 
+/**
+ * Utility methods for SVT processing
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public class PDFSVAUtils {
 
   public static final String SIGNATURE_TYPE = "sig";

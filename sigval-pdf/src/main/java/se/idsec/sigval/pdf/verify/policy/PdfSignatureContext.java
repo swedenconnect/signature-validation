@@ -17,6 +17,7 @@
 package se.idsec.sigval.pdf.verify.policy;
 
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.cos.*;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
@@ -27,6 +28,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Examines a PDF document and gathers context data used to determine document revisions and if any of those
+ * revisions may alter the document appearance with respect to document signatures.
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
+@Slf4j
 public class PdfSignatureContext {
 
   /** The characters indicating end of a PDF document revision */
