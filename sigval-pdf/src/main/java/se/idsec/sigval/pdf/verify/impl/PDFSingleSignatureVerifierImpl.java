@@ -29,7 +29,7 @@ import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
 import se.idsec.sigval.pdf.timestamp.TimeStampPolicyVerifier;
 import se.idsec.sigval.pdf.timestamp.impl.BasicTimstampPolicyVerifier;
 import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
-import se.idsec.sigval.pdf.verify.PdfSignatureVerifier;
+import se.idsec.sigval.pdf.verify.PDFSingleSignatureVerifier;
 import se.idsec.sigval.pdf.verify.policy.PDFSignaturePolicyValidator;
 import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
@@ -53,7 +53,7 @@ import java.util.logging.Logger;
  * @author Stefan Santesson (stefan@idsec.se)
  */
 @Slf4j
-public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
+public class PDFSingleSignatureVerifierImpl implements PDFSingleSignatureVerifier {
 
   /**
    * List of timestamp policy verifiers. A timestamp is regarded as trusted if all present policy validators returns a positive result
@@ -72,7 +72,7 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
    * Constructor
    * @param certificateValidator the validator used to verify signing certificate chains
    */
-  public PdfSignatureVerifierImpl(CertificateValidator certificateValidator) {
+  public PDFSingleSignatureVerifierImpl(CertificateValidator certificateValidator) {
     this.certificateValidator = certificateValidator;
     this.timeStampPolicyVerifier = new BasicTimstampPolicyVerifier(certificateValidator);
     this.sigPolicyVerifier = new BasicPdfSignaturePolicyValidator();
@@ -84,7 +84,7 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
    * @param certificateValidator the validator used to verify signing certificate chains
    * @param timeStampPolicyVerifier verifier validating time stamps to a defined policy
    */
-  public PdfSignatureVerifierImpl(CertificateValidator certificateValidator, TimeStampPolicyVerifier timeStampPolicyVerifier) {
+  public PDFSingleSignatureVerifierImpl(CertificateValidator certificateValidator, TimeStampPolicyVerifier timeStampPolicyVerifier) {
     this.timeStampPolicyVerifier = timeStampPolicyVerifier;
     this.certificateValidator = certificateValidator;
     this.sigPolicyVerifier = new BasicPdfSignaturePolicyValidator();
@@ -97,7 +97,7 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
    * @param timeStampPolicyVerifier verifier validating time stamps to a defined policy
    * @param pdfSignaturePolicyValidator verifier of the signature results according to a defined policy
    */
-  public PdfSignatureVerifierImpl(CertificateValidator certificateValidator, PDFSignaturePolicyValidator pdfSignaturePolicyValidator,
+  public PDFSingleSignatureVerifierImpl(CertificateValidator certificateValidator, PDFSignaturePolicyValidator pdfSignaturePolicyValidator,
     TimeStampPolicyVerifier timeStampPolicyVerifier) {
     this.certificateValidator = certificateValidator;
     this.sigPolicyVerifier = pdfSignaturePolicyValidator;
@@ -191,7 +191,7 @@ public class PdfSignatureVerifierImpl implements PdfSignatureVerifier {
     }
     catch (Exception ex) {
       sigResult.setSignatureTimeStampList(new ArrayList<>());
-      Logger.getLogger(PdfSignatureVerifier.class.getName()).warning("Error parsing signature timestamps: " + ex.getMessage());
+      Logger.getLogger(PDFSingleSignatureVerifier.class.getName()).warning("Error parsing signature timestamps: " + ex.getMessage());
     }
 
     // Add timestamp results

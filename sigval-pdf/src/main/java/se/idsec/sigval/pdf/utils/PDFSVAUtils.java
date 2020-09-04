@@ -27,6 +27,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Utility methods for SVT processing
@@ -272,6 +273,59 @@ public class PDFSVAUtils {
     catch (Exception ex) {
       return null;
     }
+  }
+
+  public static List<X509Certificate> getOrderedCertList(byte[] signerCertificate, List<byte[]> certificateChain) {
+
+    if (signerCertificate == null){
+      return null;
+    }
+
+    if (certificateChain == null || certificateChain.size()<2){
+      return Arrays.asList(getCertOrNull(signerCertificate));
+    }
+
+    List<X509Certificate> orderedList = new ArrayList<>();
+    try {
+      List<X509Certificate> chain = certificateChain.stream()
+        .map(bytes -> getCertOrNull(bytes))
+        .filter(x509Certificate -> x509Certificate != null)
+        .collect(Collectors.toList());
+      X509Certificate sigCert = getCertificate(signerCertificate);
+      orderedList.add(sigCert);
+      boolean more = true;
+      while (more){
+        X509Certificate parentCert = getParentCert(sigCert, chain);
+        if (parentCert != null) {
+          orderedList.add(parentCert);
+          try {
+            // Slef issued. End here
+            parentCert.verify(parentCert.getPublicKey());
+            more = false;
+          } catch (Exception ex){
+            // Not self issued. Continue
+            sigCert = parentCert;
+          }
+        } else {
+          more = false;
+        }
+      }
+      return orderedList;
+    } catch (Exception ex) {
+      return null;
+    }
+  }
+
+  private static X509Certificate getParentCert(X509Certificate sigCert, List<X509Certificate> chain) {
+    for (X509Certificate certFromChain: chain){
+      try {
+        sigCert.verify(certFromChain.getPublicKey());
+        return certFromChain;
+      } catch (Exception ex){
+        continue;
+      }
+    }
+    return null;
   }
 
 }

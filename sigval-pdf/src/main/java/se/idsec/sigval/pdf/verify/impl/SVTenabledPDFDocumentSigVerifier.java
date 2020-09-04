@@ -8,9 +8,13 @@ import org.apache.pdfbox.io.IOUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.asn1.cms.SignedData;
+import org.bouncycastle.cms.CMSSignedDataParser;
+import org.bouncycastle.cms.CMSTypedStream;
+import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.certificate.CertificateValidator;
+import se.idsec.signservice.security.certificate.impl.DefaultCertificateValidationResult;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
-import se.idsec.signservice.security.sign.pdf.PDFSignatureValidator;
+import se.idsec.sigval.cert.chain.PathValidationResult;
 import se.idsec.sigval.commons.algorithms.JWSAlgorithmRegistry;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.commons.data.SignedDocumentValidationResult;
@@ -19,7 +23,8 @@ import se.idsec.sigval.pdf.svt.PDFSVTValidator;
 import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
 import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
 import se.idsec.sigval.pdf.utils.PDFSVAUtils;
-import se.idsec.sigval.pdf.verify.PdfSignatureVerifier;
+import se.idsec.sigval.pdf.verify.ExtendedPDFSignatureValidator;
+import se.idsec.sigval.pdf.verify.PDFSingleSignatureVerifier;
 import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
 import se.idsec.sigval.svt.algorithms.SVTAlgoRegistry;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
@@ -37,6 +42,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.PKIXCertPathValidatorResult;
 import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -53,32 +59,32 @@ import java.util.stream.Collectors;
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
+public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureValidator {
 
   public static Logger LOG = Logger.getLogger(SVTenabledPDFDocumentSigVerifier.class.getName());
   /** SVT token validator **/
   private final PDFSVTValidator pdfsvtValidator;
   /** Signature verifier for signatures not supported by SVT. This verifier is also performing validation of signature timestamps **/
-  private final PdfSignatureVerifier pdfSignatureVerifier;
+  private final PDFSingleSignatureVerifier pdfSingleSignatureVerifier;
 
   /**
    * Constructor if no SVT validation is supported
    *
-   * @param pdfSignatureVerifier The verifier used to verify signatures not supported by SVA
+   * @param pdfSingleSignatureVerifier The verifier used to verify signatures not supported by SVA
    */
-  public SVTenabledPDFDocumentSigVerifier(PdfSignatureVerifier pdfSignatureVerifier) {
-    this.pdfSignatureVerifier = pdfSignatureVerifier;
+  public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureVerifier pdfSingleSignatureVerifier) {
+    this.pdfSingleSignatureVerifier = pdfSingleSignatureVerifier;
     this.pdfsvtValidator = null;
   }
 
   /**
    * Constructor
    *
-   * @param pdfSignatureVerifier The verifier used to verify signatures not supported by SVA
+   * @param pdfSingleSignatureVerifier The verifier used to verify signatures not supported by SVA
    * @param pdfsvtValidator      Certificate verifier for the certificate used to sign SVA tokens
    */
-  public SVTenabledPDFDocumentSigVerifier(PdfSignatureVerifier pdfSignatureVerifier, PDFSVTValidator pdfsvtValidator) {
-    this.pdfSignatureVerifier = pdfSignatureVerifier;
+  public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureVerifier pdfSingleSignatureVerifier, PDFSVTValidator pdfsvtValidator) {
+    this.pdfSingleSignatureVerifier = pdfSingleSignatureVerifier;
     this.pdfsvtValidator = pdfsvtValidator;
   }
 
@@ -145,11 +151,11 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
           try {
             //Get verified documentTimestamps if not previously loaded
             if (!docTsVerified) {
-              docTimeStampList = pdfSignatureVerifier.verifyDocumentTimestamps(docTsSigList, pdfDocBytes);
+              docTimeStampList = pdfSingleSignatureVerifier.verifyDocumentTimestamps(docTsSigList, pdfDocBytes);
               docTsVerified = true;
             }
 
-            SignatureValidationResult directVerifyResult = pdfSignatureVerifier.verifySignature(signature, pdfDocBytes, docTimeStampList,
+            SignatureValidationResult directVerifyResult = pdfSingleSignatureVerifier.verifySignature(signature, pdfDocBytes, docTimeStampList,
               signatureContext);
             sigVerifyResultList.add(directVerifyResult);
           }
@@ -202,7 +208,7 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
 
   /** {@inheritDoc} */
   @Override public CertificateValidator getCertificateValidator() {
-    return pdfSignatureVerifier.getCertificateValidator();
+    return pdfSingleSignatureVerifier.getCertificateValidator();
   }
 
   /**
@@ -244,10 +250,25 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
       //Set signed SVT JWT
       cmsSVResult.setSvtJWT(signedJWT);
 
+      /**
+       * Set the signature certs as the result certs and set the validated certs as the validated path in cert validation results
+       * The reason for this is that the SVT issuer must decide whether to just include a hash of the certs in the signature
+       * or to include all explicit certs of the validated path. The certificates in the CertificateValidationResult represents the
+       * validated path. If the validation was done by SVT, then the certificates obtained from SVT validation represents the validated path
+       */
+      // Get the signature certificates
+      CMSSignedDataParser cmsSignedDataParser = CMSVerifyUtils.getCMSSignedDataParser(signature, pdfDocBytes);
+      CMSTypedStream signedContent = cmsSignedDataParser.getSignedContent();
+      signedContent.drain();
+      CMSVerifyUtils.PDFSigCerts pdfSigCerts = CMSVerifyUtils.extractCertificates(cmsSignedDataParser);
+      cmsSVResult.setSignerCertificate(pdfSigCerts.getSigCert());
+      cmsSVResult.setSignatureCertificateChain(pdfSigCerts.getChain());
+      // Store the svt validated certificates as path of certificate validation results
+      CertificateValidationResult cvr = new DefaultCertificateValidationResult(PDFSVAUtils.getOrderedCertList(svtValResult.getSignerCertificate(), svtValResult.getCertificateChain()));
+      cmsSVResult.setCertificateValidationResult(cvr);
+
       // Finalize
       SignatureClaims signatureClaims = svtValResult.getSignatureClaims();
-      cmsSVResult.setSignerCertificate(getCert(svtValResult.getSignerCertificate()));
-      cmsSVResult.setSignatureCertificateChain(getCertList(svtValResult.getCertificateChain()));
       cmsSVResult.setSuccess(svtValResult.isSvtValidationSuccess());
       if (cmsSVResult.isSuccess()) {
         cmsSVResult.setStatus(SignatureValidationResult.Status.SUCCESS);
@@ -288,6 +309,7 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
     return cmsSVResult;
   }
 
+
   /**
    * This verifies and returns the validated document timestamp holding the current SVT token used to validate signatures
    *
@@ -300,7 +322,7 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
    */
   private PDFDocTimeStamp getCurrentSvtTimestamp(List<PDSignature> svtTsSigList, JWTClaimsSet jwtClaimsSet, byte[] pdfDocBytes)
     throws IOException, ParseException {
-    List<PDFDocTimeStamp> docTimeStampList = pdfSignatureVerifier.verifyDocumentTimestamps(svtTsSigList, pdfDocBytes);
+    List<PDFDocTimeStamp> docTimeStampList = pdfSingleSignatureVerifier.verifyDocumentTimestamps(svtTsSigList, pdfDocBytes);
     for (PDFDocTimeStamp docTimeStamp : docTimeStampList) {
       String svajwt = PDFSVAUtils.getSVAJWT(docTimeStamp.getTstInfo());
       SignedJWT signedJWT = SignedJWT.parse(svajwt);
@@ -356,7 +378,8 @@ public class SVTenabledPDFDocumentSigVerifier implements PDFSignatureValidator {
    * @param pdfDocBytes validate the complete PDF document and return concluding validation results for the complete document.
    * @return PDF signature validation result objects
    */
-  public SignedDocumentValidationResult<ExtendedPdfSigValResult> validateWithConcludingSigVerifyResult(byte[] pdfDocBytes) throws SignatureException{
+  @Override
+  public SignedDocumentValidationResult<ExtendedPdfSigValResult> extendedResultValidation(byte[] pdfDocBytes) throws SignatureException{
     List<SignatureValidationResult> validationResults = validate(pdfDocBytes);
     return getConcludingSigVerifyResult(validationResults);
   }

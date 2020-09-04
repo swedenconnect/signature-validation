@@ -12,7 +12,7 @@ import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.pdf.timestamp.PDFSVTDocTimeStamp;
 import se.idsec.sigval.pdf.timestamp.TimeStampPolicyVerifier;
 import se.idsec.sigval.pdf.utils.PDFSVAUtils;
-import se.idsec.sigval.pdf.verify.PdfSignatureVerifier;
+import se.idsec.sigval.pdf.verify.PDFSingleSignatureVerifier;
 import se.idsec.sigval.svt.claims.*;
 import se.idsec.sigval.svt.validation.SVTValidator;
 import se.idsec.sigval.svt.validation.SignatureSVTData;
@@ -32,7 +32,7 @@ public class PDFSVTValidator extends SVTValidator {
   /** Certificate chain validator for SVA tokens **/
   private CertificateValidator svaCertVerifier;
   /** Signature verifier for signatures not supported by SVA. This verifier is also performing validation of signature timestamps **/
-  private PdfSignatureVerifier pdfSignatureVerifier;
+  private PDFSingleSignatureVerifier pdfSingleSignatureVerifier;
   /**
    * Array of document timestamp policy verifiers. A timestamp is regarded as trusted if all present policy validators returns a positive result
    * If no policy verifiers are provided, then all timestamps issued by a trusted key is regarded as valid
@@ -43,13 +43,13 @@ public class PDFSVTValidator extends SVTValidator {
   /**
    * Constructor
    *
-   * @param pdfSignatureVerifier     The verifier used to verify signatures not supported by SVA
+   * @param pdfSingleSignatureVerifier     The verifier used to verify signatures not supported by SVA
    * @param svaCertVerifier          Certificate verifier for the certificate used to sign SVA tokens
    * @param timeStampPolicyVerifier Time stamp policy verifiers to verify Document time stamps
    */
-  public PDFSVTValidator(PdfSignatureVerifier pdfSignatureVerifier, CertificateValidator svaCertVerifier,
+  public PDFSVTValidator(se.idsec.sigval.pdf.verify.PDFSingleSignatureVerifier pdfSingleSignatureVerifier, CertificateValidator svaCertVerifier,
     TimeStampPolicyVerifier timeStampPolicyVerifier) {
-    this.pdfSignatureVerifier = pdfSignatureVerifier;
+    this.pdfSingleSignatureVerifier = pdfSingleSignatureVerifier;
     this.svaCertVerifier = svaCertVerifier;
     this.timeStampPolicyVerifier = timeStampPolicyVerifier;
   }
