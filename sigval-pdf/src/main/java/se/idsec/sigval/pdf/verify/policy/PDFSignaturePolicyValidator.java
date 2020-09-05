@@ -1,6 +1,7 @@
 package se.idsec.sigval.pdf.verify.policy;
 
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
+import se.idsec.sigval.pdf.pdfstruct.PdfSignatureContext;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 
 /**

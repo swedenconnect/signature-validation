@@ -31,7 +31,7 @@ import se.idsec.sigval.pdf.timestamp.impl.BasicTimstampPolicyVerifier;
 import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
 import se.idsec.sigval.pdf.verify.PDFSingleSignatureVerifier;
 import se.idsec.sigval.pdf.verify.policy.PDFSignaturePolicyValidator;
-import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
+import se.idsec.sigval.pdf.pdfstruct.PdfSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
 import se.idsec.sigval.pdf.verify.policy.impl.BasicPdfSignaturePolicyValidator;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;

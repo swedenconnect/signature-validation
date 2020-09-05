@@ -26,7 +26,7 @@ import se.idsec.sigval.cert.validity.ValidationStatus;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
-import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
+import se.idsec.sigval.pdf.pdfstruct.PdfSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;

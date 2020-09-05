@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.pdf.verify.policy;
+package se.idsec.sigval.pdf.pdfstruct;
 
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -197,6 +197,7 @@ public class PdfSignatureContext {
         PDDocument revDoc = PDDocument.load(revBytes);
         pdDocumentList.add(revDoc);
         COSDocument cosDocument = revDoc.getDocument();
+        rev.setCosDocument(cosDocument);
         List<COSObject> objects = cosDocument.getObjects();
         COSDictionary trailer = cosDocument.getTrailer();
         long rootObjectId = getRootObjectId(trailer);
@@ -324,8 +325,14 @@ public class PdfSignatureContext {
       }
     });
 
+    // Check which root dictionaly items that are actually changed and which items in the root that has been added
+    // This change check is limited to known COSNames. If any other COSName appear in the root, it is treated as an illegal root dictionary.
+    // Illegal doesn't necessary mean that is is illegal, but it is not trusted to provide non visual changes.
     List<COSName> changedRootItems = new ArrayList<>();
     List<COSName> addedRootItems = new ArrayList<>();
+    // We will also detect objects referenced from safe COSName in the root. We will allow updates to these objects.
+    // These are /AcroForm /OpenAction and /Font. We will allow updates to referenced objects if the update is signature or timestamp.
+    List<Long> safeObjects = new ArrayList<>();
     if (revData.isRootUpdate()) {
       COSBase baseObject = revData.getRootObject().getObject();
       if (baseObject instanceof COSDictionary) {
@@ -334,10 +341,11 @@ public class PdfSignatureContext {
         COSDictionary rootDic = (COSDictionary) baseObject;
         rootDic.entrySet().stream().forEach(cosNameCOSBaseEntry -> {
           COSName key = cosNameCOSBaseEntry.getKey();
-          DictionaryBaseValue value = new DictionaryBaseValue(cosNameCOSBaseEntry.getValue());
-          DictionaryBaseValue lastValue = new DictionaryBaseValue(lastRoot.getItem(key));
-          if (lastValue.getValueType() != null) {
-            if (lastValue.getValueType().equals(ValueType.Other)) {
+          ObjectValue value = new ObjectValue(cosNameCOSBaseEntry.getValue());
+          ObjectValue lastValue = new ObjectValue(lastRoot.getItem(key));
+          // Detect changes in root item values
+          if (lastValue.getType() != null) {
+            if (lastValue.getType().equals(ObjectValueType.Other)) {
               revData.setLegalRootObject(false);
             }
             else {
@@ -349,6 +357,8 @@ public class PdfSignatureContext {
           else {
             addedRootItems.add(key);
           }
+          // Look for safe objects
+          addSafeObjects(key, cosNameCOSBaseEntry.getValue(), safeObjects, revData.getCosDocument());
 
         });
       }
@@ -358,6 +368,21 @@ public class PdfSignatureContext {
     }
     revData.setChangedRootItems(changedRootItems);
     revData.setAddedRootItems(addedRootItems);
+    revData.setSafeObjects(safeObjects);
+
+    //Check changed root items
+    boolean unsupportedRootItemUpdate = revData.getChangedRootItems().stream()
+      .filter(name -> !name.equals(COSName.ACRO_FORM))
+      .findFirst().isPresent();
+
+    // Check changed cross references against safe objects
+    boolean unsafeRefupdate = revData.getChangedXref().keySet().stream()
+      .map(cosObjectKey -> cosObjectKey.getNumber())
+      .filter(id ->
+        id != revData.getRootObjectId() &&
+          !safeObjects.contains(id)
+      )
+      .findFirst().isPresent();
 
     revData.setValidDSS(
       revData.isRootUpdate()
@@ -368,21 +393,47 @@ public class PdfSignatureContext {
         && revData.getAddedRootItems().get(0).getName().equals("DSS")
     );
 
+/*
     boolean nonDssOrAcroformUpdate = revData.getAddedRootItems().stream()
       .filter(name -> !name.equals(COSName.ACRO_FORM) && !name.getName().equals("DSS"))
       .findFirst().isPresent();
+*/
 
     revData.setSafeUpdate(
-      !revData.isNonRootUpdate()
+      !revData.isNonRootUpdate() || (!unsupportedRootItemUpdate && !unsafeRefupdate)
         && revData.isLegalRootObject()
-        && revData.getChangedRootItems().size() == 0
         && (revData.isSignature() || revData.isDocumentTimestamp() || revData.isValidDSS())
-        && !nonDssOrAcroformUpdate
     );
 
   }
 
-  @Data
+  private static void addSafeObjects(COSName key, COSBase value, List<Long> safeObjects, COSDocument cosDocument) {
+    if (key == null || value == null){
+      return;
+    }
+    if (key.equals(COSName.ACRO_FORM)){
+      if (value instanceof COSObject) {
+        safeObjects.add(((COSObject)value).getObjectNumber());
+      }
+      AcroForm acroForm = new AcroForm(value, cosDocument);
+      long acroFormFont = acroForm.getObjectRef("DR", "Font");
+      if (acroFormFont > -1) safeObjects.add(acroFormFont);
+
+    }
+    if (key.equals(COSName.OPEN_ACTION)){
+      if (value instanceof COSArray) {
+        ObjectArray cosArray = new ObjectArray((COSArray)value);
+        List<ObjectValue> objectList = cosArray.getValues().stream()
+          .filter(objectValue -> objectValue.getType().equals(ObjectValueType.COSObject))
+          .collect(Collectors.toList());
+        if (objectList.size()==1){
+          safeObjects.add((long)objectList.get(0).getValue());
+        }
+      }
+    }
+  }
+
+/*  @Data
   public static class DictionaryBaseValue {
     private ValueType valueType;
     private Object value;
@@ -472,7 +523,7 @@ public class PdfSignatureContext {
 
   public static enum ValueType {
     COSObject, COSDictionary, COSName, COSString, COSArray, Other
-  }
+  }*/
 
   @NoArgsConstructor
   @AllArgsConstructor
@@ -485,6 +536,7 @@ public class PdfSignatureContext {
     private boolean validDSS;
     private boolean safeUpdate;
     private long rootObjectId;
+    private COSDocument cosDocument;
     private COSObject rootObject;
     private COSDictionary trailer;
     private Map<COSObjectKey, Long> xrefTable;
@@ -495,11 +547,13 @@ public class PdfSignatureContext {
     private boolean legalRootObject;
     private List<COSName> changedRootItems;
     private List<COSName> addedRootItems;
+    private List<Long> safeObjects;
 
     public PdfDocRevision(PdfDocRevision pdfDocRevision) {
       this.length = pdfDocRevision.getLength();
       this.signature = pdfDocRevision.isSignature();
       this.documentTimestamp = pdfDocRevision.isDocumentTimestamp();
+      this.cosDocument = pdfDocRevision.getCosDocument();
     }
   }
 

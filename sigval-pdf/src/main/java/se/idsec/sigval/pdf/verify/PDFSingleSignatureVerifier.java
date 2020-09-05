@@ -4,7 +4,7 @@ import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
-import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
+import se.idsec.sigval.pdf.pdfstruct.PdfSignatureContext;
 
 import java.util.List;
 

@@ -19,7 +19,7 @@ package se.idsec.sigval.pdf.verify.policy.impl;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
-import se.idsec.sigval.pdf.verify.policy.PdfSignatureContext;
+import se.idsec.sigval.pdf.pdfstruct.PdfSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
