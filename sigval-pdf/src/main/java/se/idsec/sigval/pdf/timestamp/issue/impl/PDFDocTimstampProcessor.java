@@ -53,21 +53,25 @@ import java.util.List;
 public class PDFDocTimstampProcessor {
 
   /**
-   * Signs the supplied PDF document. The document is closed by this method (in all cases).
+   * Add a document timestamp with an SVT token to the supplied PDF document.
    *
-   * @param pdfDocument          the document to sign
+   * @param pdfDocumentBytes          the document to sign
    * @param pdfSignatureProvider the PDFBox signature provider
    * @return a result
    * @throws SignatureException for signature errors
    */
-  public static Result signPdfDocument(
-    final PDDocument pdfDocument,
+  public static Result createSVTSealedPDF(
+    final byte[] pdfDocumentBytes,
+    final String svt,
     final PDFDocTimestampSignatureInterface pdfSignatureProvider
   ) throws SignatureException {
 
+    PDDocument pdfDocument = null;
+
     try {
+      pdfDocument = PDDocument.load(pdfDocumentBytes);
+      pdfSignatureProvider.setSvt(svt);
       // Create signature dictionary
-      //
       PDSignature signature = new PDSignature();
       signature.setType(COSName.DOC_TIME_STAMP);
       signature.setFilter(PDSignature.FILTER_ADOBE_PPKLITE);

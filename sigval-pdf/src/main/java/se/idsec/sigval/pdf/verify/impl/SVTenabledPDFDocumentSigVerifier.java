@@ -3,6 +3,7 @@ package se.idsec.sigval.pdf.verify.impl;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.pdfbox.io.IOUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -57,6 +58,7 @@ import java.util.stream.Collectors;
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
+@Slf4j
 public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureValidator {
 
   public static Logger LOG = Logger.getLogger(SVTenabledPDFDocumentSigVerifier.class.getName());
@@ -234,7 +236,13 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       cmsSVResult.setInvalidSignCert(false);
       cmsSVResult.setClaimedSigningTime(PDFSVAUtils.getClaimedSigningTime(signature.getSignDate(), signedData).getTime());
       cmsSVResult.setCoversDocument(signatureContext.isCoversWholeDocument(signature));
-      cmsSVResult.setSignedDocument(signatureContext.getSignedDocument(signature));
+      byte[] signedDocumentBytes = null;
+      try {
+        signedDocumentBytes = signatureContext.getSignedDocument(signature);
+      } catch (Exception ex){
+        log.warn("Error extracting the document version signed by this signature: {}", ex.getMessage());
+      }
+      cmsSVResult.setSignedDocument(signedDocumentBytes);
 
       //Get algorithms and public key type. Note that the source of these values is the SVA signature which is regarded as the algorithm
       //That is effectively protecting the integrity of the signature, superseding the use of the original algorithms.

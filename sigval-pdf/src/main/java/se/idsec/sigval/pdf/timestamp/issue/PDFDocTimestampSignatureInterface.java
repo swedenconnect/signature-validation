@@ -25,6 +25,8 @@ public interface PDFDocTimestampSignatureInterface extends PDFBoxSignatureInterf
 
   List<X509Certificate> getCertificateChain();
 
+  void setSvt(String svt);
+
   String getSvt();
 
 }

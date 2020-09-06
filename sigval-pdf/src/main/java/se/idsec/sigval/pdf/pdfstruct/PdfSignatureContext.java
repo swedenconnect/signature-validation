@@ -32,6 +32,8 @@ import java.util.stream.Collectors;
  * Examines a PDF document and gathers context data used to determine document revisions and if any of those
  * revisions may alter the document appearance with respect to document signatures.
  *
+ * //TODO Extract Interface
+ *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
@@ -344,7 +346,7 @@ public class PdfSignatureContext {
           ObjectValue value = new ObjectValue(cosNameCOSBaseEntry.getValue());
           ObjectValue lastValue = new ObjectValue(lastRoot.getItem(key));
           // Detect changes in root item values
-          if (lastValue.getType() != null) {
+          if (lastValue.getType() != ObjectValueType.Null) {
             if (lastValue.getType().equals(ObjectValueType.Other)) {
               revData.setLegalRootObject(false);
             }
@@ -384,6 +386,16 @@ public class PdfSignatureContext {
       )
       .findFirst().isPresent();
 
+    /**
+     * A revision is considered a valid DSS update if:
+     *
+     *   - There is an update to the root object
+     *   - There is no change to any other pre-existing xref other than to the root object
+     *   - The updated root object has legal content
+     *   - There are no changed root items
+     *   - There is exactly 1 new root item
+     *   - The new item in the root is a pointer to a DSS object
+     */
     revData.setValidDSS(
       revData.isRootUpdate()
         && !revData.isNonRootUpdate()
@@ -393,6 +405,18 @@ public class PdfSignatureContext {
         && revData.getAddedRootItems().get(0).getName().equals("DSS")
     );
 
+    /**
+     * A new revision is considered safe with regard to not containing visual data changes when added after a signature if:
+     *
+     *   - Changes to objects in the xref list is only applied to objects references in the root that are considered safe. These are:
+     *     o Objects containing the content of AcroForms
+     *     o Objects holding Font inside DR dictionary inside Acroform
+     *     o Objects referenced under OpenAction in the root
+     *   - The update is on of the following:
+     *     o A signature
+     *     o A document timestamp
+     *     o A DSS store
+     */
     revData.setSafeUpdate(
       !unsupportedRootItemUpdate
         && !unsafeRefupdate
@@ -428,98 +452,6 @@ public class PdfSignatureContext {
       }
     }
   }
-
-/*  @Data
-  public static class DictionaryBaseValue {
-    private ValueType valueType;
-    private Object value;
-
-    public DictionaryBaseValue(COSBase baseObject) {
-      if (baseObject == null) {
-        valueType = null;
-        value = null;
-        return;
-      }
-      if (baseObject instanceof COSObject) {
-        valueType = ValueType.COSObject;
-        value = ((COSObject) baseObject).getObjectNumber();
-        return;
-      }
-      if (baseObject instanceof COSDictionary) {
-        valueType = ValueType.COSDictionary;
-        value = null;
-        return;
-      }
-      if (baseObject instanceof COSString) {
-        valueType = ValueType.COSString;
-        value = ((COSString)baseObject).getString();
-        return;
-      }
-      if (baseObject instanceof COSArray) {
-
-        List<DictionaryBaseValue> baseValues = ((COSArray) baseObject).toList().stream()
-          .map(cosBase -> new DictionaryBaseValue(cosBase))
-          .collect(Collectors.toList());
-        boolean nonSupportedValue = baseValues.stream()
-          .filter(dictionaryBaseValue -> dictionaryBaseValue.getValueType().equals(ValueType.Other))
-          .findFirst().isPresent();
-        if (nonSupportedValue){
-          valueType = ValueType.Other;
-          value = null;
-          return;
-        }
-        valueType = ValueType.COSArray;
-        value = baseValues;
-        return;
-      }
-      if (baseObject instanceof COSName) {
-        valueType = ValueType.COSDictionary;
-        value = baseObject;
-        return;
-      }
-      valueType = ValueType.Other;
-      value = null;
-    }
-
-    public boolean matches(DictionaryBaseValue compareValue) {
-      if (!valueType.equals(compareValue.getValueType())) {
-        return false;
-      }
-      try {
-        switch (valueType) {
-        case COSObject:
-          return (long) compareValue.getValue() == (long) value;
-        case COSDictionary:
-          return true;
-        case COSName:
-          return compareValue.getValue().equals(value);
-        case COSString:
-          return ((String)compareValue.getValue()).equalsIgnoreCase((String) value);
-        case COSArray:
-          boolean match=true;
-          List<DictionaryBaseValue> valueObjList = (List<DictionaryBaseValue>) value;
-          List<DictionaryBaseValue> compareObjectLIst = (List<DictionaryBaseValue>) compareValue.getValue();
-
-          for (int i = 0 ; i<valueObjList.size(); i++){
-            if (!valueObjList.get(i).matches(compareObjectLIst.get(i))){
-              match = false;
-            }
-          }
-          return match;
-        case Other:
-          return false;
-        }
-      }
-      catch (Exception ex) {
-        return false;
-      }
-      return false;
-    }
-  }
-
-  public static enum ValueType {
-    COSObject, COSDictionary, COSName, COSString, COSArray, Other
-  }*/
 
   @NoArgsConstructor
   @AllArgsConstructor

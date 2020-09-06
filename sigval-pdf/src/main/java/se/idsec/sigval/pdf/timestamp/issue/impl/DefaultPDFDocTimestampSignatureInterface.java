@@ -15,6 +15,7 @@
  */
 package se.idsec.sigval.pdf.timestamp.issue.impl;
 
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.io.IOUtils;
 import org.bouncycastle.asn1.ASN1Encoding;
@@ -37,6 +38,7 @@ import org.bouncycastle.tsp.TimeStampToken;
 import org.bouncycastle.tsp.TimeStampTokenGenerator;
 import org.bouncycastle.util.Store;
 import se.idsec.signservice.security.sign.pdf.configuration.PDFAlgorithmRegistry;
+import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.timestamp.issue.PDFDocTimestampSignatureInterface;
 
 import java.io.IOException;
@@ -50,7 +52,11 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Implementation of the PDF box signing interface.
+ * Implementation of the PDF box signing interface used to add a document timestamp to a PDF document
+ * which includes a SVT token.
+ *
+ * This implementation generates the timestamp as part of this service.
+ * Another implementation of this interface could allow an external time stamp service to provide the timestamp.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -70,9 +76,14 @@ public class DefaultPDFDocTimestampSignatureInterface implements PDFDocTimestamp
   /** The signature algorithm to used, specified as a URI identifier. */
   private final String algorithm;
 
-  private final String svt;
+  /** The Signature Validation Token to be included in an extension to the timestamp */
+  private String svt;
 
-  private final String timeStampPolicyOid;
+  /**
+   * AN identifier of the time stamp policy
+   * @param timeStampPolicyOid the OID declaring the time stamp policy
+   */
+  @Setter private ASN1ObjectIdentifier timeStampPolicyOid;
 
   /** CMS Signed data result. */
   private byte[] cmsSignedData;
@@ -88,12 +99,11 @@ public class DefaultPDFDocTimestampSignatureInterface implements PDFDocTimestamp
    * @param algorithm    signing algorithm
    */
   public DefaultPDFDocTimestampSignatureInterface(final PrivateKey privateKey, final List<X509Certificate> certificates,
-    final String algorithm, final String svt, final String timeStampPolicyOid) {
+    final String algorithm) {
     this.privateKey = privateKey;
     this.certificates = certificates;
     this.algorithm = algorithm;
-    this.svt = svt;
-    this.timeStampPolicyOid = timeStampPolicyOid;
+    this.timeStampPolicyOid = SigValIdentifiers.ID_SVT_TS_POLICY;
   }
 
   /** {@inheritDoc} */
@@ -108,10 +118,17 @@ public class DefaultPDFDocTimestampSignatureInterface implements PDFDocTimestamp
     return this.cmsSignedAttributes;
   }
 
+  /** {@inheritDoc} */
   @Override public List<X509Certificate> getCertificateChain() {
     return certificates;
   }
 
+  /** {@inheritDoc} */
+  @Override public void setSvt(String svt) {
+    this.svt = svt;
+  }
+
+  /** {@inheritDoc} */
   @Override public String getSvt() {
     return svt;
   }
@@ -129,6 +146,9 @@ public class DefaultPDFDocTimestampSignatureInterface implements PDFDocTimestamp
    */
   @Override
   public byte[] sign(final InputStream content) throws IOException {
+
+    if (svt == null || svt.length() ==0) throw new IOException("The SVT must not be null or empty");
+
     try {
       // Get the digest algorithm OID
       ASN1ObjectIdentifier digestAlgoOID = PDFAlgorithmRegistry.getAlgorithmProperties(algorithm).getDigestAlgoOID();
@@ -148,7 +168,7 @@ public class DefaultPDFDocTimestampSignatureInterface implements PDFDocTimestamp
         false,
         svt.getBytes(StandardCharsets.UTF_8)
       );
-      tsReqGen.setReqPolicy(new ASN1ObjectIdentifier(timeStampPolicyOid));
+      tsReqGen.setReqPolicy(timeStampPolicyOid);
       TimeStampRequest tsReq = tsReqGen.generate(digestAlgoOID, digest);
 
       //Time Stamp token generation
@@ -174,6 +194,9 @@ public class DefaultPDFDocTimestampSignatureInterface implements PDFDocTimestamp
             itself.
           */
       byte[] tstBytes = tst.toCMSSignedData().toASN1Structure().getEncoded(ASN1Encoding.DL);
+
+      // Clear the SVT in case this interface implementation is re-used. Forcing the svt to be set each time
+      svt = null;
 
       return tstBytes;
     }

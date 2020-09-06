@@ -26,6 +26,11 @@ public class ObjectValue {
   private Object value;
 
   public ObjectValue(COSBase objectValue) {
+    if (objectValue == null){
+      type = ObjectValueType.Null;
+      value = null;
+      return;
+    }
     if (objectValue instanceof COSString){
       type = ObjectValueType.COSString;
     }
@@ -56,6 +61,7 @@ public class ObjectValue {
   }
 
   public boolean matches(ObjectValue matchValue){
+    if (matchValue == null) return false;
     // Require types to match
     if (!type.equals(matchValue.getType())) return false;
     Object matchValueValue = matchValue.getValue();
@@ -75,6 +81,7 @@ public class ObjectValue {
     case Other:
       return true;
     case Error:
+    case Null:
       return false;
     case COSBoolean:
       return Boolean.compare((boolean)value, (boolean)matchValueValue) == 0;

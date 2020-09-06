@@ -17,5 +17,5 @@
 package se.idsec.sigval.pdf.pdfstruct;
 
 public enum ObjectValueType {
-  COSObject, COSDictionary, COSName, COSString, COSArray, Other, Error, COSBoolean, COSInteger, COSNumber;
+  COSObject, COSDictionary, COSName, COSString, COSArray, Other, Error, COSBoolean, COSInteger, COSNumber, Null;
 }
