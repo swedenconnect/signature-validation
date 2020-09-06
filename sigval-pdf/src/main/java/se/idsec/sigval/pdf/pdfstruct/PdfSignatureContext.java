@@ -152,17 +152,17 @@ public class PdfSignatureContext {
    */
   public boolean isCoversWholeDocument(PDSignature signature) throws IllegalArgumentException {
     int revisionIndex = getSignatureRevisionIndex(signature);
-    if (revisionIndex == -1){
+    if (revisionIndex == -1) {
       throw new IllegalArgumentException("The specified signature was not found in the document");
     }
-    if (revisionIndex == pdfDocRevisions.size() -1){
+    if (revisionIndex == pdfDocRevisions.size() - 1) {
       // The signature is the last revision
       return true;
     }
 
-    for (int i = revisionIndex + 1 ; i < pdfDocRevisions.size() ;i++){
+    for (int i = revisionIndex + 1; i < pdfDocRevisions.size(); i++) {
       PdfDocRevision nextRevision = pdfDocRevisions.get(i);
-      if (!nextRevision.isSafeUpdate()){
+      if (!nextRevision.isSafeUpdate()) {
         return false;
       }
     }
@@ -393,14 +393,9 @@ public class PdfSignatureContext {
         && revData.getAddedRootItems().get(0).getName().equals("DSS")
     );
 
-/*
-    boolean nonDssOrAcroformUpdate = revData.getAddedRootItems().stream()
-      .filter(name -> !name.equals(COSName.ACRO_FORM) && !name.getName().equals("DSS"))
-      .findFirst().isPresent();
-*/
-
     revData.setSafeUpdate(
-      !revData.isNonRootUpdate() || (!unsupportedRootItemUpdate && !unsafeRefupdate)
+      !unsupportedRootItemUpdate
+        && !unsafeRefupdate
         && revData.isLegalRootObject()
         && (revData.isSignature() || revData.isDocumentTimestamp() || revData.isValidDSS())
     );
@@ -408,26 +403,27 @@ public class PdfSignatureContext {
   }
 
   private static void addSafeObjects(COSName key, COSBase value, List<Long> safeObjects, COSDocument cosDocument) {
-    if (key == null || value == null){
+    if (key == null || value == null) {
       return;
     }
-    if (key.equals(COSName.ACRO_FORM)){
+    if (key.equals(COSName.ACRO_FORM)) {
       if (value instanceof COSObject) {
-        safeObjects.add(((COSObject)value).getObjectNumber());
+        safeObjects.add(((COSObject) value).getObjectNumber());
       }
       AcroForm acroForm = new AcroForm(value, cosDocument);
       long acroFormFont = acroForm.getObjectRef("DR", "Font");
-      if (acroFormFont > -1) safeObjects.add(acroFormFont);
+      if (acroFormFont > -1)
+        safeObjects.add(acroFormFont);
 
     }
-    if (key.equals(COSName.OPEN_ACTION)){
+    if (key.equals(COSName.OPEN_ACTION)) {
       if (value instanceof COSArray) {
-        ObjectArray cosArray = new ObjectArray((COSArray)value);
+        ObjectArray cosArray = new ObjectArray((COSArray) value);
         List<ObjectValue> objectList = cosArray.getValues().stream()
           .filter(objectValue -> objectValue.getType().equals(ObjectValueType.COSObject))
           .collect(Collectors.toList());
-        if (objectList.size()==1){
-          safeObjects.add((long)objectList.get(0).getValue());
+        if (objectList.size() == 1) {
+          safeObjects.add((long) objectList.get(0).getValue());
         }
       }
     }
