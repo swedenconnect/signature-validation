@@ -276,8 +276,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
 
       // Finalize
       SignatureClaims signatureClaims = svtValResult.getSignatureClaims();
-      cmsSVResult.setSuccess(svtValResult.isSvtValidationSuccess());
-      if (cmsSVResult.isSuccess()) {
+      if (svtValResult.isSvtValidationSuccess()) {
         cmsSVResult.setStatus(SignatureValidationResult.Status.SUCCESS);
       }
       else {
@@ -312,7 +311,6 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
 
     }
     catch (Exception ex) {
-      cmsSVResult.setSuccess(false);
       cmsSVResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
       cmsSVResult.setStatusMessage("Unable to process SVA token or signature data");
       return cmsSVResult;
@@ -363,7 +361,6 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
 
   private ExtendedPdfSigValResult getErrorResult(PDSignature signature, String message) {
     ExtendedPdfSigValResult sigResult = new ExtendedPdfSigValResult();
-    sigResult.setSuccess(false);
     sigResult.setPdfSignature(signature);
     sigResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
     sigResult.setStatusMessage("Failed to process signature: " + message);

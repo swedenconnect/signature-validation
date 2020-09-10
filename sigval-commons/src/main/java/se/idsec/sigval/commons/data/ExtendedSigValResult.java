@@ -17,7 +17,9 @@
 package se.idsec.sigval.commons.data;
 
 import com.nimbusds.jwt.SignedJWT;
+import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import se.idsec.signservice.security.sign.impl.DefaultSignatureValidationResult;
 import se.idsec.sigval.commons.algorithms.NamedCurve;
@@ -34,32 +36,31 @@ import java.util.List;
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
+@Data
+@NoArgsConstructor
 public class ExtendedSigValResult extends DefaultSignatureValidationResult {
 
-  //Aditional data
-  /** The overall concluding indicator whether the signature validation process was successful */
-  @Setter @Getter boolean success;
   /** The complete list of certificates provided with the signature which may differ from the constructed path to a trust anchor */
-  @Setter @Getter private List<X509Certificate> signatureCertificateChain;
+  private List<X509Certificate> signatureCertificateChain;
   /** Indicator if the signature covers the visible PDF document. False value indicates that there may be visual content changes added after signing **/
-  @Setter @Getter private boolean coversDocument = false;
+  private boolean coversDocument = false;
   /** The pdf document in the form it was before being signed by this signature */
-  @Setter @Getter private byte[] signedDocument;
+  private byte[] signedDocument;
   /** Legacy indicator if the signing certificate matches a present ESSSigningCertificate signed attribute **/
-  @Setter @Getter private boolean invalidSignCert = false;
+  private boolean invalidSignCert = false;
   /** Public key type **/
-  @Setter @Getter private PublicKeyType pkType;
+  private PublicKeyType pkType;
   /** The ECC curve if the signature is signed with ECDSA **/
-  @Setter @Getter private NamedCurve namedEcCurve;
+  private NamedCurve namedEcCurve;
   /** Length of the signature key used for the  sig algorithm **/
-  @Setter @Getter private int keyLength;
+  private int keyLength;
   /** List of validation policies applied to the validation process and if they succeeded or failed **/
-  @Setter @Getter private List<PolicyValidationClaims> validationPolicyResultList = new ArrayList<>();
+  private List<PolicyValidationClaims> validationPolicyResultList = new ArrayList<>();
   /** List of verified times and information about how time verification was done **/
-  @Setter @Getter private List<? extends TimeValidationResult> timeValidationResults = new ArrayList<>();
+  private List<? extends TimeValidationResult> timeValidationResults = new ArrayList<>();
   /** The signature SVA claims of this signature **/
-  @Setter @Getter private SignatureClaims signatureClaims;
+  private SignatureClaims signatureClaims;
   /** The signed SVT JWT. Null content if the verification is not SVT verified **/
-  @Setter @Getter private SignedJWT svtJWT;
+  private SignedJWT svtJWT;
 
 }
