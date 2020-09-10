@@ -1,7 +1,7 @@
 package se.idsec.sigval.pdf.verify.policy;
 
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
-import se.idsec.sigval.pdf.pdfstruct.PdfSignatureContext;
+import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 
 /**
@@ -22,6 +22,6 @@ public interface PDFSignaturePolicyValidator {
    * @param verifyResultSignature The result of signature validation
    * @return {@link PolicyValidationClaims} result
    */
-  PolicyValidationResult validatePolicy(ExtendedPdfSigValResult verifyResultSignature, PdfSignatureContext signatureContext);
+  PolicyValidationResult validatePolicy(ExtendedPdfSigValResult verifyResultSignature, PDFSignatureContext signatureContext);
 
 }

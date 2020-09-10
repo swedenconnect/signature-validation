@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.pdf.pdfstruct;
+package se.idsec.sigval.pdf.pdfstruct.impl;
 
-import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.cos.*;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import se.idsec.sigval.pdf.data.PDFConstants;
+import se.idsec.sigval.pdf.pdfstruct.*;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -32,22 +32,20 @@ import java.util.stream.Collectors;
  * Examines a PDF document and gathers context data used to determine document revisions and if any of those
  * revisions may alter the document appearance with respect to document signatures.
  *
- * //TODO Extract Interface
- *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
 @Slf4j
-public class PdfSignatureContext {
+public class DefaultPDFSignatureContext implements PDFSignatureContext {
 
   /** The characters indicating end of a PDF document revision */
   private final static String EOF = "%%EOF";
-  /** The bytes of a PDF document */
-  @Getter byte[] pdfBytes;
+  /** The bytes of the examined PDF document */
+  final byte[] pdfBytes;
   /** Document revisions */
-  @Getter List<PdfDocRevision> pdfDocRevisions;
+  List<PDFDocRevision> PDFDocRevisions;
   /** Document signatures */
-  @Getter List<PDSignature> signatures = new ArrayList<>();
+  List<PDSignature> signatures = new ArrayList<>();
 
   /**
    * Constructor
@@ -55,19 +53,13 @@ public class PdfSignatureContext {
    * @param pdfBytes the bytes of a PDF document
    * @throws IOException if theis docuemnt is not a well formed PDF document
    */
-  public PdfSignatureContext(byte[] pdfBytes) throws IOException {
+  public DefaultPDFSignatureContext(final byte[] pdfBytes) throws IOException {
     this.pdfBytes = pdfBytes;
-    getDocRevisions();
+    extractPdfRevisionData();
   }
 
-  /**
-   * Extracts the bytes of the PDF document that was signed by the provided signature
-   *
-   * @param signature pdf signature
-   * @return the byes signed by the provided signature
-   * @throws IllegalArgumentException if the signature is not found or no signed data can be located
-   */
-  public byte[] getSignedDocument(PDSignature signature) throws IllegalArgumentException {
+  /** {@inheritDoc} */
+  @Override public byte[] getSignedDocument(final PDSignature signature) throws IllegalArgumentException {
     try {
       int idx = getSignatureRevisionIndex(signature);
       if (idx == -1) {
@@ -76,36 +68,23 @@ public class PdfSignatureContext {
       if (idx < 1) {
         throw new IllegalArgumentException("No revision found before the signature was added");
       }
-      return Arrays.copyOf(pdfBytes, pdfDocRevisions.get(idx - 1).getLength());
+      return Arrays.copyOf(pdfBytes, PDFDocRevisions.get(idx - 1).getLength());
     }
     catch (Exception ex) {
       throw new IllegalArgumentException("Error extracting signed version", ex);
     }
   }
 
-  /**
-   * Check if the pdf docuement was updated after this signature was added to the document, where the new update is not
-   * a new signature or document timestamp or is a valid DSS store.
-   *
-   * <p>An update to a PDF docuemtn applied after the PDF document was signed invalidates any existing signture unless the
-   * update is not a new signature, document timestamp or a DSS store</p>
-   *
-   * <p>Some validation policies may require that any new signatures or document timestamps must be trusted and verified
-   * for it to be an acceptable update to a signed document</p>
-   *
-   * @param signature the PDF signature
-   * @return true if the provided signature was updated by a non signature update
-   * @throws IllegalArgumentException on failure to test if the signature was updated by a non signature update
-   */
-  public boolean isSignatureExtendedByNonSignatureUpdates(PDSignature signature) throws IllegalArgumentException {
+  /** {@inheritDoc} */
+  @Override public boolean isSignatureExtendedByNonSignatureUpdates(final PDSignature signature) throws IllegalArgumentException {
     try {
       int idx = getSignatureRevisionIndex(signature);
       if (idx == -1) {
         throw new IllegalArgumentException("Signature not found");
       }
-      for (int i = idx; i < pdfDocRevisions.size() - 1; i++) {
+      for (int i = idx; i < PDFDocRevisions.size() - 1; i++) {
         // Loop as long as index indicates that there is a later revision (index < revisions -1)
-        PdfDocRevision pdfDocRevision = pdfDocRevisions.get(i + 1);
+        PDFDocRevision pdfDocRevision = PDFDocRevisions.get(i + 1);
         if (!pdfDocRevision.isSignature() && !pdfDocRevision.isValidDSS()) {
           //A later revsion exist that is NOT a signature, document timestamp or valid DSS (Digital Signature Store)
           return true;
@@ -119,13 +98,13 @@ public class PdfSignatureContext {
     }
   }
 
-  private int getSignatureRevisionIndex(PDSignature signature) throws IllegalArgumentException {
+  private int getSignatureRevisionIndex(final PDSignature signature) throws IllegalArgumentException {
     try {
       int[] byteRange = signature.getByteRange();
       int len = byteRange[2] + byteRange[3];
 
-      for (int i = 0; i < pdfDocRevisions.size(); i++) {
-        PdfDocRevision revision = pdfDocRevisions.get(i);
+      for (int i = 0; i < PDFDocRevisions.size(); i++) {
+        PDFDocRevision revision = PDFDocRevisions.get(i);
         if (revision.getLength() == len) {
           // Get the bytes of the prior revision
           return i;
@@ -138,32 +117,19 @@ public class PdfSignatureContext {
     }
   }
 
-  /**
-   * Test if this signature covers the whole document.
-   *
-   * <p>Signature is considered to cover the whole document if it is the last update to the PDF document (byte range covers the whole document) or:</p>
-   * <ul>
-   *   <li>All new updates are signature, doc timstamp or DSS updates, and</li>
-   *   <li>Updates to existing objects is limited to the root object, and</li>
-   *   <li>Root objects contains no changes but allows added items, and</li>
-   *   <li>Where added items to the root object is limited to "DSS" and "AcroForm</li>
-   * </ul>
-   *
-   * @param signature The signature tested if it covers the whole document
-   * @return true if the signature covers the whole document
-   */
-  public boolean isCoversWholeDocument(PDSignature signature) throws IllegalArgumentException {
+  /** {@inheritDoc} */
+  @Override public boolean isCoversWholeDocument(final PDSignature signature) throws IllegalArgumentException {
     int revisionIndex = getSignatureRevisionIndex(signature);
     if (revisionIndex == -1) {
       throw new IllegalArgumentException("The specified signature was not found in the document");
     }
-    if (revisionIndex == pdfDocRevisions.size() - 1) {
+    if (revisionIndex == PDFDocRevisions.size() - 1) {
       // The signature is the last revision
       return true;
     }
 
-    for (int i = revisionIndex + 1; i < pdfDocRevisions.size(); i++) {
-      PdfDocRevision nextRevision = pdfDocRevisions.get(i);
+    for (int i = revisionIndex + 1; i < PDFDocRevisions.size(); i++) {
+      PDFDocRevision nextRevision = PDFDocRevisions.get(i);
       if (!nextRevision.isSafeUpdate()) {
         return false;
       }
@@ -171,29 +137,39 @@ public class PdfSignatureContext {
     return true;
   }
 
+  /** {@inheritDoc} */
+  @Override public List<PDFDocRevision> getPdfDocRevisions() {
+    return PDFDocRevisions;
+  }
+
+  /** {@inheritDoc} */
+  @Override public List<PDSignature> getSignatures() {
+    return signatures;
+  }
+
   /**
    * Internal function used to extract data about all document revisions of the current PDF document
    *
    * @throws IOException on error loading PDF document data
    */
-  private void getDocRevisions() throws IOException {
+  private void extractPdfRevisionData() throws IOException {
 
     // Get all pdf document signatures and document timestamps
     PDDocument pdfDoc = PDDocument.load(pdfBytes);
     signatures = pdfDoc.getSignatureDictionaries();
     pdfDoc.close();
-    pdfDocRevisions = new ArrayList<>();
-    PdfDocRevision lastRevision = getRevision(null);
+    PDFDocRevisions = new ArrayList<>();
+    PDFDocRevision lastRevision = getRevision(null);
     while (lastRevision != null) {
-      PdfDocRevision lastRevisionClone = new PdfDocRevision(lastRevision);
-      pdfDocRevisions.add(lastRevisionClone);
+      PDFDocRevision lastRevisionClone = new PDFDocRevision(lastRevision);
+      PDFDocRevisions.add(lastRevisionClone);
       lastRevision = getRevision(lastRevisionClone);
     }
 
     List<PDDocument> pdDocumentList = new ArrayList<>();
 
-    List<PdfDocRevision> consolidatedList = new ArrayList<>();
-    for (PdfDocRevision rev : pdfDocRevisions) {
+    List<PDFDocRevision> consolidatedList = new ArrayList<>();
+    for (PDFDocRevision rev : PDFDocRevisions) {
       byte[] revBytes = Arrays.copyOf(pdfBytes, rev.getLength());
       try {
         PDDocument revDoc = PDDocument.load(revBytes);
@@ -221,12 +197,12 @@ public class PdfSignatureContext {
     }
 
     // Get consolidated and sorted list of PDF revisions
-    pdfDocRevisions = consolidatedList.stream()
+    PDFDocRevisions = consolidatedList.stream()
       .sorted(Comparator.comparingInt(value -> value.getLength()))
       .collect(Collectors.toList());
 
-    PdfDocRevision lastRevData = null;
-    for (PdfDocRevision revData : pdfDocRevisions) {
+    PDFDocRevision lastRevData = null;
+    for (PDFDocRevision revData : PDFDocRevisions) {
       getXrefUpdates(revData, lastRevData);
       lastRevData = revData;
     }
@@ -250,9 +226,9 @@ public class PdfSignatureContext {
    * @param priorRevision Data obtained from the revision after this revision.
    * @return
    */
-  private PdfDocRevision getRevision(PdfDocRevision priorRevision) {
-    PdfDocRevision docRevision = new PdfDocRevision();
-    int len = priorRevision == null ? pdfBytes.length : priorRevision.length - 5;
+  private PDFDocRevision getRevision(final PDFDocRevision priorRevision) {
+    PDFDocRevision docRevision = new PDFDocRevision();
+    int len = priorRevision == null ? pdfBytes.length : priorRevision.getLength() - 5;
 
     String pdfString = new String(Arrays.copyOf(pdfBytes, len), StandardCharsets.ISO_8859_1);
     int lastIndexOfEoF = pdfString.lastIndexOf(EOF);
@@ -281,19 +257,25 @@ public class PdfSignatureContext {
       }
     }
 
-    return PdfDocRevision.builder()
+    return PDFDocRevision.builder()
       .length(revisionLen)
       .signature(revIsSignature)
       .documentTimestamp(revIsDocTs)
       .build();
   }
 
+  /**
+   * Obtain the
+   * @param trailer
+   * @return
+   * @throws Exception
+   */
   private static long getRootObjectId(COSDictionary trailer) throws Exception {
     COSObject root = trailer.getCOSObject(COSName.ROOT);
     return root.getObjectNumber();
   }
 
-  private static void getXrefUpdates(PdfDocRevision revData, PdfDocRevision lastRevData) {
+  private static void getXrefUpdates(PDFDocRevision revData, PDFDocRevision lastRevData) {
     revData.setLegalRootObject(true);
     revData.setRootUpdate(false);
     revData.setNonRootUpdate(false);
@@ -450,38 +432,6 @@ public class PdfSignatureContext {
           safeObjects.add((long) objectList.get(0).getValue());
         }
       }
-    }
-  }
-
-  @NoArgsConstructor
-  @AllArgsConstructor
-  @Data
-  @Builder
-  public static class PdfDocRevision {
-    private int length;
-    private boolean signature;
-    private boolean documentTimestamp;
-    private boolean validDSS;
-    private boolean safeUpdate;
-    private long rootObjectId;
-    private COSDocument cosDocument;
-    private COSObject rootObject;
-    private COSDictionary trailer;
-    private Map<COSObjectKey, Long> xrefTable;
-    private Map<COSObjectKey, Long[]> changedXref;
-    private Map<COSObjectKey, Long> addedXref;
-    private boolean rootUpdate;
-    private boolean nonRootUpdate;
-    private boolean legalRootObject;
-    private List<COSName> changedRootItems;
-    private List<COSName> addedRootItems;
-    private List<Long> safeObjects;
-
-    public PdfDocRevision(PdfDocRevision pdfDocRevision) {
-      this.length = pdfDocRevision.getLength();
-      this.signature = pdfDocRevision.isSignature();
-      this.documentTimestamp = pdfDocRevision.isDocumentTimestamp();
-      this.cosDocument = pdfDocRevision.getCosDocument();
     }
   }
 

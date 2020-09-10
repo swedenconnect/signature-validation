@@ -19,12 +19,25 @@ package se.idsec.sigval.pdf.pdfstruct;
 import lombok.Getter;
 import org.apache.pdfbox.cos.*;
 
+/**
+ * PDF object value class used to store and compare object values. Object values stored in this class are not exhaustive.
+ * They are limited to values relevant for the function of {@link PDFSignatureContext} implementations.
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Getter
 public class ObjectValue {
 
+  /** The type of the object value */
   private ObjectValueType type;
+  /** The value of the object */
   private Object value;
 
+  /**
+   * Constructor
+   * @param objectValue the value being stored and compared
+   */
   public ObjectValue(COSBase objectValue) {
     if (objectValue == null){
       type = ObjectValueType.Null;
@@ -60,6 +73,11 @@ public class ObjectValue {
     getObjectValue(objectValue);
   }
 
+  /**
+   * Compare values
+   * @param matchValue the value to compare with
+   * @return true on match
+   */
   public boolean matches(ObjectValue matchValue){
     if (matchValue == null) return false;
     // Require types to match
@@ -89,6 +107,10 @@ public class ObjectValue {
     return false;
   }
 
+  /**
+   * Extracts the value form a {@link COSBase} object
+   * @param objectValue object value source
+   */
   private void getObjectValue(COSBase objectValue) {
     try {
       switch (type){

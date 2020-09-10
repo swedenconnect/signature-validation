@@ -25,11 +25,21 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Utility class for a PDF Dictionary used to compare and extract values from the Dictionary
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Getter
 public class Dictionary {
   Map<COSName, ObjectValue> valueMap;
   COSDictionary dictionary;
 
+  /**
+   * Constructor
+   * @param dictionary the dictionary object holding the dictionary data
+   */
   public Dictionary(COSDictionary dictionary) {
     this.dictionary = dictionary;
     valueMap = new HashMap<>();
@@ -37,6 +47,11 @@ public class Dictionary {
       .forEach(entry -> valueMap.put(entry.getKey(), new ObjectValue(entry.getValue())));
   }
 
+  /**
+   * Compare this dictionary with the values of another dictionary
+   * @param matchDictionary the dictionary to match
+   * @return true on match
+   */
   public boolean matches(Object matchDictionary){
     if (!(matchDictionary instanceof Dictionary)) return false;
     Map<COSName, ObjectValue> matchDictionaryValueMap = ((Dictionary)matchDictionary).getValueMap();
@@ -53,6 +68,11 @@ public class Dictionary {
     return true;
   }
 
+  /**
+   * Gets the value of an item inside this dictionary
+   * @param name the key used to locate the value
+   * @return the value under the specified key
+   */
   public ObjectValue getValueByName(String name) {
     // Check if a value by the target name is in the value map
     COSName cosName = COSName.getPDFName(name);

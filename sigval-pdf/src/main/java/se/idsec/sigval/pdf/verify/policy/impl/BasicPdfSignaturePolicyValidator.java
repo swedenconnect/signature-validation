@@ -19,7 +19,7 @@ package se.idsec.sigval.pdf.verify.policy.impl;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
-import se.idsec.sigval.pdf.pdfstruct.PdfSignatureContext;
+import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
@@ -33,7 +33,7 @@ import se.idsec.sigval.svt.claims.ValidationConclusion;
 public class BasicPdfSignaturePolicyValidator extends AbstractBasicPDFSignaturePolicyChecks {
   /** {@inheritDoc} */
   @Override protected PolicyValidationResult performAdditionalValidityChecks(ExtendedPdfSigValResult verifyResultSignature,
-    PdfSignatureContext signatureContext) {
+    PDFSignatureContext signatureContext) {
     return new PolicyValidationResult(
       PolicyValidationClaims.builder()
         .pol(getValidationPolicy())

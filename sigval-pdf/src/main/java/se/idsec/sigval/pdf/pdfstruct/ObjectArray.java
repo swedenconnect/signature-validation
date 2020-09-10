@@ -22,17 +22,33 @@ import org.apache.pdfbox.cos.COSArray;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Utility class for an Array of PDF object values
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Getter
 public class ObjectArray {
 
+  /** object values */
   List<ObjectValue> values;
 
+  /**
+   * Constructor
+   * @param cosArray an object holding the object value array
+   */
   public ObjectArray(COSArray cosArray) {
     values = cosArray.toList().stream()
       .map(cosBase -> new ObjectValue(cosBase))
       .collect(Collectors.toList());
   }
 
+  /**
+   * Compare two object value arrays
+   * @param matchArray the array to match
+   * @return true on match
+   */
   public boolean matches(Object matchArray) {
     if(!(matchArray instanceof ObjectArray)) return false;
     List<ObjectValue> matchArrayValues = ((ObjectArray)matchArray).getValues();

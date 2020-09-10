@@ -27,7 +27,7 @@ import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.idsec.sigval.pdf.data.PdfTimeValidationResult;
 import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
-import se.idsec.sigval.pdf.pdfstruct.PdfSignatureContext;
+import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
@@ -88,7 +88,7 @@ public class PkixPdfSignaturePolicyValidator extends AbstractBasicPDFSignaturePo
    * @return {@link PolicyValidationResult} for this signature
    */
   @Override protected PolicyValidationResult performAdditionalValidityChecks(ExtendedPdfSigValResult verifyResultSignature,
-    PdfSignatureContext signatureContext) {
+    PDFSignatureContext signatureContext) {
 
     PolicyValidationClaims.PolicyValidationClaimsBuilder builder = PolicyValidationClaims.builder();
     builder.pol(getValidationPolicy());

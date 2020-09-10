@@ -32,7 +32,7 @@ import se.idsec.sigval.pdf.timestamp.impl.BasicTimstampPolicyVerifier;
 import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
 import se.idsec.sigval.pdf.verify.PDFSingleSignatureVerifier;
 import se.idsec.sigval.pdf.verify.policy.PDFSignaturePolicyValidator;
-import se.idsec.sigval.pdf.pdfstruct.PdfSignatureContext;
+import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
 import se.idsec.sigval.pdf.verify.policy.impl.BasicPdfSignaturePolicyValidator;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
@@ -106,7 +106,7 @@ public class PDFSingleSignatureVerifierImpl implements PDFSingleSignatureVerifie
   /** {@inheritDoc} */
   @Override
   public ExtendedPdfSigValResult verifySignature(PDSignature signature, byte[] pdfDocument,
-    List<PDFDocTimeStamp> documentTimestamps, PdfSignatureContext signatureContext) throws Exception {
+    List<PDFDocTimeStamp> documentTimestamps, PDFSignatureContext signatureContext) throws Exception {
     ExtendedPdfSigValResult sigResult = new ExtendedPdfSigValResult();
     sigResult.setPdfSignature(signature);
     sigResult.setSignedData(signature.getContents(pdfDocument));

@@ -21,7 +21,7 @@ import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.idsec.sigval.pdf.verify.policy.PDFSignaturePolicyValidator;
-import se.idsec.sigval.pdf.pdfstruct.PdfSignatureContext;
+import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
@@ -46,7 +46,7 @@ public abstract class AbstractBasicPDFSignaturePolicyChecks implements PDFSignat
    * @return {@link PolicyValidationResult} for this signature
    */
   @Override public PolicyValidationResult validatePolicy(ExtendedPdfSigValResult verifyResultSignature,
-    PdfSignatureContext signatureContext) {
+    PDFSignatureContext signatureContext) {
 
     PolicyValidationClaims.PolicyValidationClaimsBuilder builder = PolicyValidationClaims.builder();
     builder.pol(getValidationPolicy());
@@ -106,7 +106,7 @@ public abstract class AbstractBasicPDFSignaturePolicyChecks implements PDFSignat
    * @return
    */
   protected abstract PolicyValidationResult performAdditionalValidityChecks(ExtendedPdfSigValResult verifyResultSignature,
-    PdfSignatureContext signatureContext);
+    PDFSignatureContext signatureContext);
 
   /**
    * Returns the validation policy implemented by this policy validator

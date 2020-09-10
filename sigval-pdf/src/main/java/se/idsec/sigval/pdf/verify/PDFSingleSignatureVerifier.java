@@ -4,7 +4,7 @@ import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
-import se.idsec.sigval.pdf.pdfstruct.PdfSignatureContext;
+import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
 
 import java.util.List;
 
@@ -24,7 +24,7 @@ public interface PDFSingleSignatureVerifier {
    * @return
    * @throws Exception
    */
-  ExtendedPdfSigValResult verifySignature (PDSignature signature, byte[] pdfDocument, List<PDFDocTimeStamp> documentTimestamps, PdfSignatureContext signatureContext) throws Exception;
+  ExtendedPdfSigValResult verifySignature (PDSignature signature, byte[] pdfDocument, List<PDFDocTimeStamp> documentTimestamps, PDFSignatureContext signatureContext) throws Exception;
 
   /**
    * Verifies document timestamps

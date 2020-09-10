@@ -16,6 +16,12 @@
 
 package se.idsec.sigval.pdf.pdfstruct;
 
+/**
+ * Enumeration of PDF object value types
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public enum ObjectValueType {
   COSObject, COSDictionary, COSName, COSString, COSArray, Other, Error, COSBoolean, COSInteger, COSNumber, Null;
 }

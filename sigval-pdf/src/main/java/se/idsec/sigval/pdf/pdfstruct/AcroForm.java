@@ -21,9 +21,21 @@ import org.apache.pdfbox.cos.*;
 
 import java.io.IOException;
 
+/**
+ * Utility class for an AcroForm used to compare and extract values from the AcroForm
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public class AcroForm {
   @Getter private Dictionary dictionary;
 
+  /**
+   * Constructor
+   *
+   * @param objectValue the object holding the AcroForm data or reference to AcroForm data
+   * @param cosDocument the {@link COSDocument} holding information about the document containing the AcroForm
+   */
   public AcroForm(COSBase objectValue, COSDocument cosDocument) {
     ObjectValue value = new ObjectValue(objectValue);
     if (value.getType().equals(ObjectValueType.COSDictionary)) {
@@ -41,11 +53,25 @@ public class AcroForm {
     }
   }
 
+  /**
+   * Math the content with this Acroform with another AcroForm
+   * @param matchForm the AcroForm to match agains
+   * @return true on match
+   */
   public boolean matches (AcroForm matchForm) {
     if (dictionary == null || matchForm.getDictionary() == null) return false;
     return dictionary.matches(matchForm.getDictionary());
   }
 
+  /**
+   * Get the object identifier value referenced by an inner dictionary inside the AcroForm
+   * <p>Example: if the path "DS" and "Font" is provided, this function looks for a dictionary under key "DS"
+   * containing an object under the key "Font"</p>
+   *
+   * @param path the COSName identifying sub dictionaries and finally the key
+   *             of the target object inside the AcroFrom
+   * @return the object identifier value of the target
+   */
   public long getObjectRef(String... path){
     if (path == null || path.length ==0) return -1;
 
