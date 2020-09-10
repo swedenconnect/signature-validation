@@ -25,6 +25,7 @@ import se.idsec.sigval.cert.chain.PathValidationResult;
 import se.idsec.sigval.cert.validity.ValidationStatus;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
+import se.idsec.sigval.pdf.data.PdfTimeValidationResult;
 import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
 import se.idsec.sigval.pdf.pdfstruct.PdfSignatureContext;
 import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
@@ -132,7 +133,7 @@ public class PkixPdfSignaturePolicyValidator extends AbstractBasicPDFSignaturePo
           log.debug("Found {} revoked certificates in the cert path", revokedStatusList.size());
           // There is at least one revoked cert
           for (ValidationStatus status : revokedStatusList) {
-            if (!checkRevocationTime(status, verifyResultSignature.getSignatureTimeStampList())) {
+            if (!checkRevocationTime(status, verifyResultSignature.getTimeValidationResults())) {
               // This cert was revoked before timestamp date
               log.debug("certificate was revoked before signing time or within graceperiod of signing time");
               return new PolicyValidationResult(
@@ -191,11 +192,11 @@ public class PkixPdfSignaturePolicyValidator extends AbstractBasicPDFSignaturePo
    * Checks if the revoked status was applied sufficiently after signing time
    *
    * @param validationStatus       information about revocation status
-   * @param signatureTimeStampList list of timestamps relevant for this signature
+   * @param pdfTimeValidationResults list of timestamps relevant for this signature
    * @return true if revocation was sufficiently after signing time
    */
-  private boolean checkRevocationTime(ValidationStatus validationStatus, List<PDFTimeStamp> signatureTimeStampList) {
-    if (signatureTimeStampList == null) {
+  private boolean checkRevocationTime(ValidationStatus validationStatus, List<PdfTimeValidationResult> pdfTimeValidationResults) {
+    if (pdfTimeValidationResults == null) {
       log.debug("No timestamps available for this signature");
       return false;
     }
@@ -205,7 +206,8 @@ public class PkixPdfSignaturePolicyValidator extends AbstractBasicPDFSignaturePo
       return false;
     }
 
-    List<PDFTimeStamp> validTimestamps = signatureTimeStampList.stream()
+    List<PDFTimeStamp> validTimestamps = pdfTimeValidationResults.stream()
+      .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeStamp())
       .filter(pdfTimeStamp -> pdfTimeStamp.hasVerifiedTimestamp())
       .collect(Collectors.toList());
 

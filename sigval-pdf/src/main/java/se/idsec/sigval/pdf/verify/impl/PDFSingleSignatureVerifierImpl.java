@@ -24,6 +24,7 @@ import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
+import se.idsec.sigval.pdf.data.PdfTimeValidationResult;
 import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
 import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
 import se.idsec.sigval.pdf.timestamp.TimeStampPolicyVerifier;
@@ -40,10 +41,7 @@ import se.idsec.sigval.svt.claims.ValidationConclusion;
 
 import java.security.MessageDigest;
 import java.security.SignatureException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Logger;
 
 /**
@@ -187,10 +185,10 @@ public class PDFSingleSignatureVerifierImpl implements PDFSingleSignatureVerifie
 
     // Verify timestamps
     try {
-      sigResult.setSignatureTimeStampList(checkTimeStamps(signerInformation));
+      sigResult.setTimeValidationResults(checkTimeStamps(signerInformation));
     }
     catch (Exception ex) {
-      sigResult.setSignatureTimeStampList(new ArrayList<>());
+      sigResult.setTimeValidationResults(new ArrayList<>());
       Logger.getLogger(PDFSingleSignatureVerifier.class.getName()).warning("Error parsing signature timestamps: " + ex.getMessage());
     }
 
@@ -237,27 +235,27 @@ public class PDFSingleSignatureVerifierImpl implements PDFSingleSignatureVerifie
    * @param signedAttrSigningTime the signing time attribute from signed attributes
    * @return signing time in milliseconds from epoc time
    */
-  private Long getClaimedSigningTime(Calendar dictionalyDignDate, Attribute signedAttrSigningTime) {
+  private Date getClaimedSigningTime(Calendar dictionalyDignDate, Attribute signedAttrSigningTime) {
     if (signedAttrSigningTime == null && dictionalyDignDate == null){
       log.debug("No time information available as claimed signing time");
       return null;
     }
     if (signedAttrSigningTime == null){
       log.debug("No claimed signing time in signed attributes. Using time from signature dictionary");
-      return dictionalyDignDate.getTimeInMillis();
+      return dictionalyDignDate.getTime();
     }
     ASN1Encodable[] attributeValues = signedAttrSigningTime.getAttributeValues();
     try {
       ASN1UTCTime signingTime = ASN1UTCTime.getInstance(attributeValues[0]);
       log.debug("Found UTC claimed signing time in signed attributes");
-      return signingTime.getAdjustedDate().getTime();
+      return signingTime.getAdjustedDate();
     } catch (Exception ex){
       log.debug("Unable to extract UTCTime from signing time signed attributes. Attempting Generalized time");
     }
     try {
       ASN1GeneralizedTime signingTime = ASN1GeneralizedTime.getInstance(attributeValues[0]);
       log.debug("Found Generalized time claimed signing time in signed attributes");
-      return signingTime.getDate().getTime();
+      return signingTime.getDate();
     } catch (Exception ex){
       log.debug("Unable to extract time information from signing time signed attributes.");
     }
@@ -290,7 +288,7 @@ public class PDFSingleSignatureVerifierImpl implements PDFSingleSignatureVerifie
    * @return a list of timestamps found in the signature data
    * @throws Exception on errors
    */
-  private List<PDFTimeStamp> checkTimeStamps(final SignerInformation signerInformation)
+  private List<PdfTimeValidationResult> checkTimeStamps(final SignerInformation signerInformation)
     throws Exception {
     AttributeTable unsignedAttributes = signerInformation.getUnsignedAttributes();
     if (unsignedAttributes == null) {
@@ -300,12 +298,12 @@ public class PDFSingleSignatureVerifierImpl implements PDFSingleSignatureVerifie
     if (timeStampsASN1.size() == 0) {
       return new ArrayList<>();
     }
-    List<PDFTimeStamp> timeStampList = new ArrayList<>();
+    List<PdfTimeValidationResult> timeStampList = new ArrayList<>();
     for (int i = 0; i < timeStampsASN1.size(); i++) {
       Attribute tsAttribute = Attribute.getInstance(timeStampsASN1.get(i));
       byte[] tsContentInfoBytes = ContentInfo.getInstance(tsAttribute.getAttrValues().getObjectAt(0).toASN1Primitive()).getEncoded("DER");
       PDFTimeStamp timeStamp = new PDFTimeStamp(tsContentInfoBytes, signerInformation.getSignature(), timeStampPolicyVerifier);
-      timeStampList.add(timeStamp);
+      timeStampList.add(new PdfTimeValidationResult(null, timeStamp.getCertificateValidationResult(), timeStamp));
     }
     return timeStampList;
   }
@@ -316,15 +314,46 @@ public class PDFSingleSignatureVerifierImpl implements PDFSingleSignatureVerifie
    * @param docTimeStampList list of document timestamps provided with this signed PDF document
    */
   private void addVerifiedTimes(ExtendedPdfSigValResult directVerifyResult, final List<PDFDocTimeStamp> docTimeStampList) {
-    List<TimeValidationClaims> timeValidationClaimsList = directVerifyResult.getTimeValidationClaimsList();
-    directVerifyResult.getSignatureTimeStampList().stream()
+    List<PdfTimeValidationResult> timeValidationResults = new ArrayList<>();
+
+    // Loop through direct validation results and add signature timestamp results
+    for (PdfTimeValidationResult result: directVerifyResult.getTimeValidationResults()){
+      PDFTimeStamp timeStamp = result.getTimeStamp();
+//      if (timeStamp != null && timeStamp.hasVerifiedTimestamp()){
+        TimeValidationClaims timeValidationClaims = getVerifiedTimeFromTimeStamp(timeStamp,
+          SigValIdentifiers.TIME_VERIFICATION_TYPE_PDF_SIG_TIMESTAMP);
+        if (timeValidationClaims != null){
+          timeValidationResults.add(new PdfTimeValidationResult(
+            timeValidationClaims, timeStamp.getCertificateValidationResult(), timeStamp));
+        }
+//      }
+    }
+
+/*
+    List<TimeValidationClaims> timeValidationClaimsList = directVerifyResult.getTimeValidationResults();
+    directVerifyResult.getTimeValidationResults().stream()
+      .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeStamp())
       //Only if timestamp is valid
-      .filter(pdfTimeStamp -> pdfTimeStamp.hasVerifiedTimestamp())
+      .filter(pdfTimeStamp -> pdfTimeStamp != null && pdfTimeStamp.hasVerifiedTimestamp())
       .map(pdfTimeStamp -> getVerifiedTimeFromTimeStamp(pdfTimeStamp, SigValIdentifiers.TIME_VERIFICATION_TYPE_PDF_SIG_TIMESTAMP))
       //Remove null results
       .filter(verifiedTime -> verifiedTime != null)
       .forEach(verifiedTime -> timeValidationClaimsList.add(verifiedTime));
+*/
 
+    // Loop through document timestamps
+    for (PDFDocTimeStamp docTimeStamp: docTimeStampList){
+//      if (docTimeStamp != null && docTimeStamp.hasVerifiedTimestamp()){
+        TimeValidationClaims timeValidationClaims = getVerifiedTimeFromTimeStamp(docTimeStamp,
+          SigValIdentifiers.TIME_VERIFICATION_TYPE_PDF_DOC_TIMESTAMP);
+        if (timeValidationClaims != null){
+          timeValidationResults.add(new PdfTimeValidationResult(
+            timeValidationClaims, docTimeStamp.getCertificateValidationResult(), docTimeStamp));
+        }
+//      }
+    }
+
+/*
     // Add document timestamp
     docTimeStampList.stream()
       //Only if signature is covered by timestamp
@@ -335,6 +364,8 @@ public class PDFSingleSignatureVerifierImpl implements PDFSingleSignatureVerifie
       //Remove null results
       .filter(verifiedTime -> verifiedTime != null)
       .forEach(verifiedTime -> timeValidationClaimsList.add(verifiedTime));
+*/
+    directVerifyResult.setTimeValidationResults(timeValidationResults);
   }
 
   private TimeValidationClaims getVerifiedTimeFromTimeStamp(final PDFTimeStamp pdfTimeStamp, final String type) {
@@ -365,13 +396,13 @@ public class PDFSingleSignatureVerifierImpl implements PDFSingleSignatureVerifie
       Attribute signingCertAttr = signedAttributes.get(new ASN1ObjectIdentifier(PDFObjectIdentifiers.ID_AA_SIGNING_CERTIFICATE_V1));
 
       if (essSigningCertV2Attr == null && signingCertAttr == null) {
-        sigResult.setPades(false);
+        sigResult.setEtsiAdes(false);
         sigResult.setInvalidSignCert(false);
         return;
       }
 
       //Start assuming that PAdES validation is non-successful
-      sigResult.setPades(true);
+      sigResult.setEtsiAdes(true);
       sigResult.setInvalidSignCert(true);
       sigResult.setStatus(SignatureValidationResult.Status.ERROR_SIGNER_INVALID);
       sigResult.setSuccess(false);

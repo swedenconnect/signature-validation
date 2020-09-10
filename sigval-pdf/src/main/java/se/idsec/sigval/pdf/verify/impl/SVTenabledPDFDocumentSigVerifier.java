@@ -19,6 +19,7 @@ import se.idsec.sigval.commons.algorithms.JWSAlgorithmRegistry;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.commons.data.SignedDocumentValidationResult;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
+import se.idsec.sigval.pdf.data.PdfTimeValidationResult;
 import se.idsec.sigval.pdf.svt.PDFSVTValidator;
 import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
 import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
@@ -232,9 +233,9 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
 
       //Reaching this point means that the signature is valid and verified through the SVA.
       SignedData signedData = PDFSVAUtils.getSignedDataFromSignature(sigBytes);
-      cmsSVResult.setPades(signature.getSubFilter().equalsIgnoreCase(PDFSVAUtils.CADES_SIG_SUBFILETER_LC));
+      cmsSVResult.setEtsiAdes(signature.getSubFilter().equalsIgnoreCase(PDFSVAUtils.CADES_SIG_SUBFILETER_LC));
       cmsSVResult.setInvalidSignCert(false);
-      cmsSVResult.setClaimedSigningTime(PDFSVAUtils.getClaimedSigningTime(signature.getSignDate(), signedData).getTime());
+      cmsSVResult.setClaimedSigningTime(PDFSVAUtils.getClaimedSigningTime(signature.getSignDate(), signedData));
       cmsSVResult.setCoversDocument(signatureContext.isCoversWholeDocument(signature));
       byte[] signedDocumentBytes = null;
       try {
@@ -286,7 +287,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       cmsSVResult.setSignatureClaims(signatureClaims);
       cmsSVResult.setValidationPolicyResultList(signatureClaims.getSig_val());
       // Since we verify with SVA. We ignore any present signature timestamps.
-      cmsSVResult.setSignatureTimeStampList(new ArrayList<>());
+      // cmsSVResult.setSignatureTimeStampList(new ArrayList<>());
 
       //Add SVT document timestamp that was used to perform this SVT validation to verified times
       //This ensures that this time stamp gets added when SVT issuance is based on a previous SVT.
@@ -303,7 +304,11 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
           .res(ValidationConclusion.PASSED)
           .build()))
         .build());
-      cmsSVResult.setTimeValidationClaimsList(timeValidationClaimsList);
+      cmsSVResult.setTimeValidationResults(timeValidationClaimsList.stream()
+        .map(timeValidationClaims -> new PdfTimeValidationResult(
+          timeValidationClaims, null, null))
+        .collect(Collectors.toList())
+      );
 
     }
     catch (Exception ex) {

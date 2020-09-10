@@ -19,7 +19,7 @@
         <dependency>
             <groupId>se.idsec.signservice.commons</groupId>
             <artifactId>signservice-commons</artifactId>
-            <version>1.0.3</version>
+            <version>1.0.4-SNAPSHOT</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.opensaml</groupId>

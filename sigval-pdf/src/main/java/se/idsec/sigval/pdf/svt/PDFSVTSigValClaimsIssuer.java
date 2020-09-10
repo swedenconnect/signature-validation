@@ -31,6 +31,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
@@ -78,7 +79,12 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
           .sig_ref(getSigRefData(sigResult.getSignedData(), hashAlgoUri))
           .sig_val(getSignaturePolicyValidations(sigResult))
           .sig_data_ref(getDecRefHashes(sigResult, signedDocument, hashAlgoUri))
-          .time_val(sigResult.getTimeValidationClaimsList())
+          .time_val(
+            sigResult.getTimeValidationResults().stream()
+            .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeValidationClaims())
+              .filter(timeValidationClaims -> isVerifiedTime(timeValidationClaims))
+            .collect(Collectors.toList())
+          )
           .signer_cert_ref(getCertRef(sigResult, hashAlgoUri))
           .build();
         claimsResultsList.add(claimsData);
@@ -88,6 +94,20 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
       }
     }
     return claimsResultsList;
+  }
+
+  /**
+   * Test if the time validation claims represent a verified time
+   * @param timeValidationClaims time verification claims
+   * @return true if the time validation claims represents verified time
+   */
+  private boolean isVerifiedTime(TimeValidationClaims timeValidationClaims) {
+    if (timeValidationClaims == null) return false;
+    List<PolicyValidationClaims> policyValidationClaims = timeValidationClaims.getVal();
+    if (policyValidationClaims == null || policyValidationClaims.isEmpty()) return false;
+    return policyValidationClaims.stream()
+      .filter(validation -> validation.getRes().equals(ValidationConclusion.PASSED))
+      .findFirst().isPresent();
   }
 
   @Override protected SVTProfile getSvtProfile() {
