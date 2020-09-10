@@ -21,6 +21,7 @@ import se.idsec.sigval.cert.validity.ValidationStatus;
 import sun.security.provider.certpath.X509CertPath;
 
 import java.security.cert.*;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -44,7 +45,7 @@ public class ExtendedCertPathValidatorException extends CertPathValidatorExcepti
    * @param pathValidationResult the path validation result obtained when path validation failed
    */
   public ExtendedCertPathValidatorException(String msg, Throwable cause, PathValidationResult pathValidationResult) {
-    super(msg, cause, getPath(pathValidationResult), getIntex(pathValidationResult), getFailure(pathValidationResult));
+    super(msg, cause, getPath(pathValidationResult), getIndex(pathValidationResult), getFailure(pathValidationResult));
     this.pathValidationResult = pathValidationResult;
   }
 
@@ -55,7 +56,7 @@ public class ExtendedCertPathValidatorException extends CertPathValidatorExcepti
    * @param pathValidationResult the path validation result obtained when path validation failed
    */
   public ExtendedCertPathValidatorException(Throwable cause, PathValidationResult pathValidationResult) {
-    super(cause.getMessage(), cause, getPath(pathValidationResult), getIntex(pathValidationResult), getFailure(pathValidationResult));
+    super(cause.getMessage(), cause, getPath(pathValidationResult), getIndex(pathValidationResult), getFailure(pathValidationResult));
     this.pathValidationResult = pathValidationResult;
   }
 
@@ -85,7 +86,7 @@ public class ExtendedCertPathValidatorException extends CertPathValidatorExcepti
     return BasicReason.UNSPECIFIED;
   }
 
-  private static int getIntex(PathValidationResult pathValidationResult) {
+  private static int getIndex(PathValidationResult pathValidationResult) {
     PKIXCertPathBuilderResult pkixCertPathBuilderResult = pathValidationResult.getPkixCertPathBuilderResult();
     if (pkixCertPathBuilderResult == null) {
       return -1;
@@ -101,9 +102,7 @@ public class ExtendedCertPathValidatorException extends CertPathValidatorExcepti
 
   private static CertPath getPath(PathValidationResult pathValidationResult) {
     List<X509Certificate> validatedCertificatePath = pathValidationResult.getValidatedCertificatePath();
-    if (validatedCertificatePath == null) {
-      return null;
-    }
+    if (validatedCertificatePath == null) validatedCertificatePath = new ArrayList<>();
     try {
       return new X509CertPath(validatedCertificatePath);
     }

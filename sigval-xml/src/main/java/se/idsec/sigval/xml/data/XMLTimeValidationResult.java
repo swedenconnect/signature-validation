@@ -14,30 +14,28 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.pdf.data;
+package se.idsec.sigval.xml.data;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.sigval.commons.data.TimeValidationResult;
-import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
 import se.idsec.sigval.svt.claims.TimeValidationClaims;
+import se.idsec.sigval.xml.timestamp.XMLTimeStamp;
 
 /**
- * Time validation result for PDF time stamps
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
  */
-@Data
-@NoArgsConstructor
-public class PdfTimeValidationResult extends TimeValidationResult {
+public class XMLTimeValidationResult extends TimeValidationResult {
 
-  public PdfTimeValidationResult(TimeValidationClaims timeValidationClaims,
+  public XMLTimeValidationResult(TimeValidationClaims timeValidationClaims,
     CertificateValidationResult certificateValidationResult,
-    PDFTimeStamp timeStamp) {
+    XMLTimeStamp timeStamp) {
     super(timeValidationClaims, certificateValidationResult);
     this.timeStamp = timeStamp;
   }
 
   /** Signature timestamps obtained through PKI validation of the signature **/
-  private PDFTimeStamp timeStamp;
+  private XMLTimeStamp timeStamp;
 
 }

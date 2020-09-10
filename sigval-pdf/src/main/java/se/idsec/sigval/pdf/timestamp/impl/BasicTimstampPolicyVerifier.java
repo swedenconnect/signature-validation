@@ -9,8 +9,8 @@ import se.idsec.sigval.cert.chain.PathValidationResult;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
-import se.idsec.sigval.pdf.timestamp.TimeStampPolicyVerificationResult;
-import se.idsec.sigval.pdf.timestamp.TimeStampPolicyVerifier;
+import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerificationResult;
+import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
 

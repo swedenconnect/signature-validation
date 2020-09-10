@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.pdf.timestamp;
+package se.idsec.sigval.commons.timestamp;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
-import se.idsec.sigval.cert.chain.PathValidationResult;
+import se.idsec.signservice.security.certificate.impl.DefaultCertificateValidationResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
+
+import java.util.ArrayList;
 
 /**
  * Holds the result of PDF time stamp policy validation
@@ -55,6 +57,6 @@ public class TimeStampPolicyVerificationResult {
     this.policyValidationClaims = policyValidationClaims;
     this.exception = exception;
     this.validTimestamp = false;
-    this.certificateValidationResult = new PathValidationResult();
+    this.certificateValidationResult = new DefaultCertificateValidationResult(new ArrayList<>());
   }
 }

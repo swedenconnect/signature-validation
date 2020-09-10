@@ -1,0 +1,64 @@
+/*
+ * Copyright (c) 2020. IDsec Solutions AB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package se.idsec.sigval.xml.data;
+
+import lombok.Setter;
+import org.w3c.dom.Element;
+import se.idsec.signservice.security.sign.xml.XMLSignatureValidationResult;
+import se.idsec.sigval.commons.data.ExtendedSigValResult;
+import se.idsec.sigval.commons.data.TimeValidationResult;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
+public class ExtendedXmlSigvalResult extends ExtendedSigValResult implements XMLSignatureValidationResult {
+
+  @Setter private Element signatureElement;
+
+  /** {@inheritDoc} */
+  @Override public Element getSignatureElement() {
+    return null;
+  }
+
+  @Override public List<XMLTimeValidationResult> getTimeValidationResults() {
+    return (List<XMLTimeValidationResult>) super.getTimeValidationResults();
+  }
+
+  @Override public void setTimeValidationResults(List<? extends TimeValidationResult> timeValidationResults) {
+    super.setTimeValidationResults(
+      timeValidationResults.stream()
+        .map(timeValidationResult -> getXmlTimeResults(timeValidationResult))
+        .collect(Collectors.toList())
+    );
+  }
+
+  private XMLTimeValidationResult getXmlTimeResults(TimeValidationResult timeValidationResult) {
+    if (timeValidationResult instanceof XMLTimeValidationResult) return (XMLTimeValidationResult) timeValidationResult;
+    return new XMLTimeValidationResult(
+      timeValidationResult.getTimeValidationClaims(),
+      timeValidationResult.getCertificateValidationResult(),
+      null
+    );
+  }
+
+
+}

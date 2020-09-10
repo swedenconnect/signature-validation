@@ -110,6 +110,7 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
       .findFirst().isPresent();
   }
 
+  /** {@inheritDoc} */
   @Override protected SVTProfile getSvtProfile() {
     return SVTProfile.PDF;
   }

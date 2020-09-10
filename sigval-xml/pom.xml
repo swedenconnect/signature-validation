@@ -9,7 +9,55 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
+    <name>Signature Validation Base XML</name>
+    <description>XML signature validation implementation</description>
+
     <artifactId>sigval-xml</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>se.idsec.sigval.base</groupId>
+            <artifactId>sigval-commons</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>se.idsec.sigval.base</groupId>
+            <artifactId>cert-validation</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>se.idsec.signservice.commons</groupId>
+            <artifactId>signservice-xml-commons</artifactId>
+            <version>1.0.3</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>se.idsec.signservice.commons</groupId>
+                    <artifactId>signservice-commons</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>commons-codec</groupId>
+                    <artifactId>commons-codec</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.santuario</groupId>
+                    <artifactId>xmlsec</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
 
 </project>

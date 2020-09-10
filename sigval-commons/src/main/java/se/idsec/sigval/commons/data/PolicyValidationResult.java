@@ -16,25 +16,26 @@
 
 package se.idsec.sigval.commons.data;
 
-import lombok.Data;
 import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
+import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 
-import java.util.List;
-
+/**
+ * Data class holding signature policy validation result data
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
-public class SignedDocumentValidationResult<R extends ExtendedSigValResult> {
-
-  private boolean signed;
-  private boolean completeSuccess;
-  private boolean validSignatureSignsWholeDocument;
-  private int signatureCount;
-  private int validSignatureCount;
-  private String statusMessage;
-  private List<R> signatureValidationResults;
+public class PolicyValidationResult {
+  /** The concluding SVT policy validation claims */
+  private PolicyValidationClaims policyValidationClaims;
+  /** The resulting signature status */
+  private SignatureValidationResult.Status status;
 }

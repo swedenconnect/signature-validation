@@ -23,13 +23,11 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import se.idsec.signservice.security.sign.pdf.PDFSignatureValidationResult;
 import se.idsec.sigval.commons.data.ExtendedSigValResult;
 import se.idsec.sigval.commons.data.TimeValidationResult;
-import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
+ * Data class holding the extended signature validation result data from PDF signature validation
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)

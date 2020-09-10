@@ -14,27 +14,17 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.commons.data;
+package se.idsec.sigval.xml.svt;
 
-import lombok.Data;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.Builder;
-import se.idsec.signservice.security.sign.SignatureValidationResult;
+import se.idsec.sigval.svt.validation.SVTValidator;
+import se.idsec.sigval.svt.validation.SignatureSVTData;
 
 import java.util.List;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class SignedDocumentValidationResult<R extends ExtendedSigValResult> {
+public class XMLSVTValidator extends SVTValidator {
 
-  private boolean signed;
-  private boolean completeSuccess;
-  private boolean validSignatureSignsWholeDocument;
-  private int signatureCount;
-  private int validSignatureCount;
-  private String statusMessage;
-  private List<R> signatureValidationResults;
+  /** {@inheritDoc} */
+  @Override protected List<SignatureSVTData> getSignatureSVTData(byte[] signedDocument) throws Exception {
+    return null;
+  }
 }

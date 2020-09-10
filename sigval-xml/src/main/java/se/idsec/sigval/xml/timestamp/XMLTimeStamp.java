@@ -14,28 +14,12 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.pdf.verify.policy;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import se.idsec.signservice.security.sign.SignatureValidationResult;
-import se.idsec.sigval.svt.claims.PolicyValidationClaims;
+package se.idsec.sigval.xml.timestamp;
 
 /**
- * Data class holding signature policy validation result data
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
-public class PolicyValidationResult {
-  /** The concluding SVT policy validation claims */
-  private PolicyValidationClaims policyValidationClaims;
-  /** The resulting signature status */
-  private SignatureValidationResult.Status status;
+public class XMLTimeStamp {
 }

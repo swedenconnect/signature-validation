@@ -2,6 +2,7 @@ package se.idsec.sigval.pdf.timestamp;
 
 import lombok.Getter;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
+import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
 
 /**
  * This class parse validates and holds the essential information about a PDF document timestamp.

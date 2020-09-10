@@ -20,7 +20,7 @@ import se.idsec.signservice.security.sign.SignatureValidationResult;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
-import se.idsec.sigval.pdf.verify.policy.PolicyValidationResult;
+import se.idsec.sigval.commons.data.PolicyValidationResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
 

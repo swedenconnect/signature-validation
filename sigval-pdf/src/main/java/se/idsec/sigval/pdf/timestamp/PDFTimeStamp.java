@@ -14,6 +14,8 @@ import org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder;
 import org.bouncycastle.tsp.TimeStampToken;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
+import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerificationResult;
+import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
 import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
 import se.idsec.sigval.pdf.utils.PDFSVAUtils;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
@@ -90,7 +92,7 @@ public class PDFTimeStamp {
       }
     }
     catch (Exception ex) {
-      log.debug("Exception while parsing timestamp", ex);
+      log.debug("Exception while parsing timestamp: {}", ex.getMessage());
       exception = ex;
       sigValid = false;
       return;

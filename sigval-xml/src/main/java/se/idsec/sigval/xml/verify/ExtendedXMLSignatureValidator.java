@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.pdf.verify;
+package se.idsec.sigval.xml.verify;
 
-import se.idsec.signservice.security.sign.pdf.PDFSignatureValidator;
+import se.idsec.signservice.security.sign.xml.XMLSignatureValidator;
 import se.idsec.sigval.commons.data.SignedDocumentValidationResult;
-import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
+import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 
 import java.security.SignatureException;
 
-public interface ExtendedPDFSignatureValidator extends PDFSignatureValidator {
+public interface ExtendedXMLSignatureValidator extends XMLSignatureValidator {
 
   /**
-   * Compile a complete PDF signature verification result object from the list of individual signature results
+   * Compile a complete XML signature verification result object from the list of individual signature results
    *
-   * @param pdfDocBytes validate the complete PDF document and return concluding validation results for the complete document.
+   * @param documentBytes validate the complete PDF document and return concluding validation results for the complete document.
    * @return PDF signature validation result objects
    */
-  SignedDocumentValidationResult<ExtendedPdfSigValResult> extendedResultValidation(byte[] pdfDocBytes) throws SignatureException;
+  SignedDocumentValidationResult<ExtendedXmlSigvalResult> extendedResultValidation(byte[] documentBytes) throws SignatureException;
 
 }
