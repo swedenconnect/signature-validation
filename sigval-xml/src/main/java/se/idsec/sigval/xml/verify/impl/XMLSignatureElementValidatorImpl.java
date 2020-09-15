@@ -23,18 +23,19 @@ import org.apache.xml.security.keys.content.X509Data;
 import org.apache.xml.security.keys.content.x509.XMLX509Certificate;
 import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xml.security.signature.XMLSignatureException;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import se.idsec.signservice.security.certificate.CertificateUtils;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
-import se.idsec.signservice.security.sign.xml.impl.DefaultXMLSigner;
+import se.idsec.sigval.cert.chain.ExtendedCertPathValidatorException;
+import se.idsec.sigval.commons.data.PolicyValidationResult;
 import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
+import se.idsec.sigval.svt.claims.PolicyValidationClaims;
+import se.idsec.sigval.svt.claims.ValidationConclusion;
 import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 import se.idsec.sigval.xml.policy.XMLSignaturePolicyValidator;
-import se.idsec.sigval.xml.svt.XMLSVTValidator;
 import se.idsec.sigval.xml.verify.XMLSignatureElementValidator;
 
 import java.security.GeneralSecurityException;
@@ -44,58 +45,99 @@ import java.security.cert.CertPathBuilderException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
 public class XMLSignatureElementValidatorImpl implements XMLSignatureElementValidator {
-/*
-  *//** XAdES namespace URI. *//*
-  private static final String XADES_NAMESPACE = "http://uri.etsi.org/01903/v1.3.2#";
 
-  *//** Optional certificate validator. *//*
+  /** Optional certificate validator. */
   private final CertificateValidator certificateValidator;
 
   private final TimeStampPolicyVerifier timeStampPolicyVerifier;
 
   private final XMLSignaturePolicyValidator signaturePolicyValidator;
 
-  private final XMLSVTValidator xmlsvtValidator;
-
-  *//** Flag that tells if the validator should handle XAdES signatures. *//*
+  /** Flag that tells if the validator should handle XAdES signatures. */
   protected boolean xadesProcessing = true;
 
-  *//**
-   * Constructor setting up the validator without SVT validation.
-   *//*
+  /**
+   * Constructor setting up the validator.
+   */
   public XMLSignatureElementValidatorImpl(
     CertificateValidator certificateValidator, XMLSignaturePolicyValidator signaturePolicyValidator,
     TimeStampPolicyVerifier timeStampPolicyVerifier) {
     this.certificateValidator = certificateValidator;
     this.signaturePolicyValidator = signaturePolicyValidator;
     this.timeStampPolicyVerifier = timeStampPolicyVerifier;
-    this.xmlsvtValidator = null;
   }
 
-  *//**
-   * Constructor setting up the validator with SVT validation.
-   *//*
-  public XMLSignatureElementValidatorImpl(
-    CertificateValidator certificateValidator, XMLSignaturePolicyValidator signaturePolicyValidator,
-    TimeStampPolicyVerifier timeStampPolicyVerifier, XMLSVTValidator xmlsvtValidator) {
-    this.certificateValidator = certificateValidator;
-    this.signaturePolicyValidator = signaturePolicyValidator;
-    this.timeStampPolicyVerifier = timeStampPolicyVerifier;
-    this.xmlsvtValidator = xmlsvtValidator;
-  }
 
-  *//**
+  /**
    * Validates the signature value and checks that the signer certificate is accepted.
    *
    * @param signature             the signature element
    * @param signatureUriReference the signature URI reference
    * @return a validation result
-   *//*
-  protected ExtendedXmlSigvalResult validateSignature(final Element signature, final String signatureUriReference) {
+   */
+  @Override
+  public ExtendedXmlSigvalResult validateSignature(final Element signature, final String signatureUriReference) {
+    ExtendedXmlSigvalResult result = validateSignatureElement(signature, signatureUriReference);
+
+    // If we have a cert path validator installed, perform path validation...
+    //
+    if (result.isSuccess() && this.certificateValidator != null) {
+      try {
+        CertificateValidationResult validatorResult = this.certificateValidator.validate(result.getSignerCertificate(),
+          result.getSignatureCertificateChain(), null);
+        result.setCertificateValidationResult(validatorResult);
+      }
+      catch (Exception ex) {
+        if (ex instanceof ExtendedCertPathValidatorException) {
+          ExtendedCertPathValidatorException extEx = (ExtendedCertPathValidatorException) ex;
+          result.setCertificateValidationResult(extEx.getPathValidationResult());
+          result.setError(SignatureValidationResult.Status.ERROR_SIGNER_INVALID, extEx.getMessage(), ex);
+        } else {
+          if (ex instanceof CertPathBuilderException){
+            final String msg = String.format("Failed to build a path to a trusted root for signer certificate - %s", ex.getMessage());
+            log.error("{}", ex.getMessage());
+            result.setError(SignatureValidationResult.Status.ERROR_NOT_TRUSTED, msg, ex);
+          }
+          if (ex instanceof GeneralSecurityException) {
+            final String msg = String.format("Certificate path validation failure for signer certificate - %s", ex.getMessage());
+            log.error("{}", ex.getMessage(), ex);
+            result.setError(SignatureValidationResult.Status.ERROR_SIGNER_INVALID, msg, ex);
+          }
+        }
+      }
+    }
+
+    // Let the signature policy verifier determine the final result path validation
+    // The signature policy verifier may accept a revoked cert if signature is timestamped
+    PolicyValidationResult policyValidationResult = signaturePolicyValidator.validatePolicy(result);
+    PolicyValidationClaims policyValidationClaims = policyValidationResult.getPolicyValidationClaims();
+    if (!policyValidationClaims.getRes().equals(ValidationConclusion.PASSED)) {
+      result.setStatus(policyValidationResult.getStatus());
+      result.setStatusMessage(policyValidationClaims.getMsg());
+      result.setException(new SignatureException(policyValidationClaims.getMsg()));
+    }
+    result.setValidationPolicyResultList(Arrays.asList(policyValidationClaims));
+
+    return result;
+  }
+
+  @Override public CertificateValidator getCertificateValidator() {
+    return certificateValidator;
+  }
+
+  /**
+   * Validates the signature value and checks that the signer certificate is accepted.
+   *
+   * @param signature             the signature element
+   * @param signatureUriReference the signature URI reference
+   * @return a validation result
+   */
+  public ExtendedXmlSigvalResult validateSignatureElement(final Element signature, final String signatureUriReference) {
 
     ExtendedXmlSigvalResult result = new ExtendedXmlSigvalResult();
     result.setSignatureElement(signature);
@@ -124,7 +166,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
           result.setSignerCertificate(validationCertificate);
 
           // Get hold of any other certs (intermediate and roots)
-          result.setAdditionalCertificates(this.getAdditionalCertificates(xmlSignature.getKeyInfo(), validationCertificate));
+          result.setSignatureCertificateChain(this.getAllSignatureCertifictes(xmlSignature.getKeyInfo()));
 
           validationKey = validationCertificate.getPublicKey();
         }
@@ -183,14 +225,13 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
     }
   }
 
-  *//**
-   * Extracts all certificates from the supplied KeyInfo except for the actual signer certificate.
+  /**
+   * Extracts all certificates from the supplied KeyInfo.
    *
    * @param keyInfo           the KeyInfo
-   * @param signerCertificate the signer certificate
    * @return a list of certificates
-   *//*
-  protected List<X509Certificate> getAdditionalCertificates(final KeyInfo keyInfo, final X509Certificate signerCertificate) {
+   */
+  protected List<X509Certificate> getAllSignatureCertifictes(final KeyInfo keyInfo) {
     List<X509Certificate> additional = new ArrayList<>();
     for (int i = 0; i < keyInfo.lengthX509Data(); i++) {
       try {
@@ -202,9 +243,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
           final XMLX509Certificate xmlCert = x509data.itemCertificate(j);
           if (xmlCert != null) {
             final X509Certificate cert = CertificateUtils.decodeCertificate(xmlCert.getCertificateBytes());
-            if (!cert.equals(signerCertificate)) {
-              additional.add(cert);
-            }
+            additional.add(cert);
           }
         }
       }
@@ -217,27 +256,13 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
   }
 
 
-  *//**
-   * Looks for any {@code xades:SignedProperties} elements and registers an Id attribute for the elements that are
-   * found.
-   *
-   * @param document the document to manipulate
-   *//*
-  protected void registerXadesIdNodes(Document document) {
-    final NodeList xadesSignedProperties = document.getElementsByTagNameNS(XADES_NAMESPACE, "SignedProperties");
-    for (int i = 0; i < xadesSignedProperties.getLength(); i++) {
-      final Element sp = (Element) xadesSignedProperties.item(i);
-      sp.setIdAttribute("Id", true);
-    }
-  }
-
-  *//**
+  /**
    * Utility method for getting hold of the reference URI:s of a {@code SignedInfo} element.
    *
    * @param signedInfo the signed info element
    * @return a list of one or more reference URI:s
    * @throws SignatureException for unmarshalling errors
-   *//*
+   */
   private List<String> getSignedInfoReferenceURIs(final Element signedInfo) throws SignatureException {
     final NodeList references = signedInfo.getElementsByTagNameNS(javax.xml.crypto.dsig.XMLSignature.XMLNS, "Reference");
     if (references.getLength() == 0) {
@@ -249,5 +274,5 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       uris.add(reference.getAttribute("URI"));
     }
     return uris;
-  }*/
+  }
 }

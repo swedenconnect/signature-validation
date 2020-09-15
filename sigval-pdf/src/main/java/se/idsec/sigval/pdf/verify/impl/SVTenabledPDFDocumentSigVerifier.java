@@ -268,9 +268,9 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       CMSSignedDataParser cmsSignedDataParser = CMSVerifyUtils.getCMSSignedDataParser(signature, pdfDocBytes);
       CMSTypedStream signedContent = cmsSignedDataParser.getSignedContent();
       signedContent.drain();
-      CMSVerifyUtils.PDFSigCerts pdfSigCerts = CMSVerifyUtils.extractCertificates(cmsSignedDataParser);
-      cmsSVResult.setSignerCertificate(pdfSigCerts.getSigCert());
-      cmsSVResult.setSignatureCertificateChain(pdfSigCerts.getChain());
+      CMSVerifyUtils.CMSSigCerts CMSSigCerts = CMSVerifyUtils.extractCertificates(cmsSignedDataParser);
+      cmsSVResult.setSignerCertificate(CMSSigCerts.getSigCert());
+      cmsSVResult.setSignatureCertificateChain(CMSSigCerts.getChain());
       // Store the svt validated certificates as path of certificate validation results
       CertificateValidationResult cvr = new DefaultCertificateValidationResult(PDFSVAUtils.getOrderedCertList(svtValResult.getSignerCertificate(), svtValResult.getCertificateChain()));
       cmsSVResult.setCertificateValidationResult(cvr);

@@ -111,10 +111,10 @@ public class XMLDocumentBuilder {
    * is to try to preserve integrity of an existing signature.
    *
    * @param doc The XML document being processed.
-   * @return
+   * @return The bytes of the xml document
    * @throws TransformerException
    */
-  public static byte[] getCanonicalDocText(Document doc) throws TransformerException {
+  public static byte[] getCanonicalDocBytes(Document doc) throws TransformerException {
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     trans.transform(new DOMSource(doc), new StreamResult(os));
     byte[] xmlData = os.toByteArray();

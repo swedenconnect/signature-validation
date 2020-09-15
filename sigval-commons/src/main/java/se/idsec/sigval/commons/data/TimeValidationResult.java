@@ -20,6 +20,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
+import se.idsec.sigval.commons.timestamp.TimeStamp;
 import se.idsec.sigval.svt.claims.TimeValidationClaims;
 
 @Data
@@ -31,5 +32,7 @@ public class TimeValidationResult {
   private TimeValidationClaims timeValidationClaims;
   /** Optional certificate validation result obtained when validating certificates used to verify the time claim */
   private CertificateValidationResult certificateValidationResult;
+  /** Signature timestamps obtained through PKI validation of the signature **/
+  private TimeStamp timeStamp;
 
 }

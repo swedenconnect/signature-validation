@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.xml.verify;
+package se.idsec.sigval.xml.utils;
 
 import org.w3c.dom.Element;
-import se.idsec.signservice.security.certificate.CertificateValidator;
-import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
+import se.idsec.sigval.svt.validation.SignatureSVTValidationResult;
 
-public interface XMLSignatureElementValidator {
+import java.util.List;
 
-  ExtendedXmlSigvalResult validateSignature(final Element signature, final String signatureUriReference);
-
-  CertificateValidator getCertificateValidator();
+public class XMLSVAUtils {
+  public static SignatureSVTValidationResult getMatchingSvtValidation(Element signature, byte[] docBytes,
+    List<SignatureSVTValidationResult> svtValidationResultList) {
+    if (svtValidationResultList == null || svtValidationResultList.isEmpty()){
+      return null;
+    }
+    // TODO
+    return null;
+  }
 }

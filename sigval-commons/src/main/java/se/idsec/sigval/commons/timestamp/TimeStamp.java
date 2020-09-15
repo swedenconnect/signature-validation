@@ -1,4 +1,4 @@
-package se.idsec.sigval.pdf.timestamp;
+package se.idsec.sigval.commons.timestamp;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -14,10 +14,8 @@ import org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder;
 import org.bouncycastle.tsp.TimeStampToken;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
-import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerificationResult;
-import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
-import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
-import se.idsec.sigval.pdf.utils.PDFSVAUtils;
+import se.idsec.sigval.commons.utils.GeneralCMSUtils;
+import se.idsec.sigval.commons.utils.SVAUtils;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
 
@@ -28,14 +26,14 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * This class parse validates and holds the essential information about a PDF timestamp.
+ * This class parse validates and holds the essential information about a RFC 3161 timestamp.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
 @Getter
 @Slf4j
-public class PDFTimeStamp {
+public class TimeStamp {
 
   protected byte[] timeStampSigBytes;
   protected byte[] timestampedData;
@@ -49,7 +47,7 @@ public class PDFTimeStamp {
   protected CertificateValidationResult certificateValidationResult;
   protected Exception exception;
 
-  public PDFTimeStamp(byte[] timeStampSigBytes, byte[] timestampedData, TimeStampPolicyVerifier tsPolicyVerifier) throws Exception {
+  public TimeStamp(byte[] timeStampSigBytes, byte[] timestampedData, TimeStampPolicyVerifier tsPolicyVerifier) throws Exception {
     this.timestampedData = timestampedData;
     this.tsPolicyVerifier = tsPolicyVerifier;
     this.timeStampSigBytes = timeStampSigBytes;
@@ -74,12 +72,12 @@ public class PDFTimeStamp {
    */
   protected void init() throws Exception {
     try {
-      CMSSignedDataParser cmsSignedDataParser = CMSVerifyUtils.getCMSSignedDataParser(timeStampSigBytes, timestampedData);
-      CMSVerifyUtils.CMSSigCerts sigCerts = CMSVerifyUtils.extractCertificates(cmsSignedDataParser);
+      CMSSignedDataParser cmsSignedDataParser = GeneralCMSUtils.getCMSSignedDataParser(timeStampSigBytes, timestampedData);
+      GeneralCMSUtils.CMSSigCerts sigCerts = GeneralCMSUtils.extractCertificates(cmsSignedDataParser);
       sigCert = sigCerts.getSigCert();
       certList = sigCerts.getChain();
       verifyTsSignature();
-      tstInfo = PDFSVAUtils.getPdfDocTSTInfo(timeStampSigBytes);
+      tstInfo = SVAUtils.getPdfDocTSTInfo(timeStampSigBytes);
       verifyTsMessageImprint(cmsSignedDataParser);
       sigValid = true;
       TimeStampPolicyVerificationResult policyVerificationResult = tsPolicyVerifier.verifyTsPolicy(timeStampSigBytes, tstInfo,

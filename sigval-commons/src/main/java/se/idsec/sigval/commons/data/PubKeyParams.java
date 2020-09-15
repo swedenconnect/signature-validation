@@ -14,12 +14,21 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.xml.timestamp;
+package se.idsec.sigval.commons.data;
 
-/**
- *
- * @author Martin Lindström (martin@idsec.se)
- * @author Stefan Santesson (stefan@idsec.se)
- */
-public class XMLTimeStamp {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import se.idsec.sigval.commons.algorithms.NamedCurve;
+import se.idsec.sigval.commons.algorithms.PublicKeyType;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class PubKeyParams {
+
+  private PublicKeyType pkType;
+  private NamedCurve namedCurve;
+  private int keyLength;
+
 }

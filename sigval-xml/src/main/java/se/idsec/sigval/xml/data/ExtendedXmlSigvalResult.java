@@ -20,10 +20,6 @@ import lombok.Setter;
 import org.w3c.dom.Element;
 import se.idsec.signservice.security.sign.xml.XMLSignatureValidationResult;
 import se.idsec.sigval.commons.data.ExtendedSigValResult;
-import se.idsec.sigval.commons.data.TimeValidationResult;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  *
@@ -38,27 +34,5 @@ public class ExtendedXmlSigvalResult extends ExtendedSigValResult implements XML
   @Override public Element getSignatureElement() {
     return null;
   }
-
-  @Override public List<XMLTimeValidationResult> getTimeValidationResults() {
-    return (List<XMLTimeValidationResult>) super.getTimeValidationResults();
-  }
-
-  @Override public void setTimeValidationResults(List<? extends TimeValidationResult> timeValidationResults) {
-    super.setTimeValidationResults(
-      timeValidationResults.stream()
-        .map(timeValidationResult -> getXmlTimeResults(timeValidationResult))
-        .collect(Collectors.toList())
-    );
-  }
-
-  private XMLTimeValidationResult getXmlTimeResults(TimeValidationResult timeValidationResult) {
-    if (timeValidationResult instanceof XMLTimeValidationResult) return (XMLTimeValidationResult) timeValidationResult;
-    return new XMLTimeValidationResult(
-      timeValidationResult.getTimeValidationClaims(),
-      timeValidationResult.getCertificateValidationResult(),
-      null
-    );
-  }
-
 
 }

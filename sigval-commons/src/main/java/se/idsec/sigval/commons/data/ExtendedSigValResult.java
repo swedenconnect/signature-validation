@@ -30,6 +30,7 @@ import se.idsec.sigval.svt.claims.SignatureClaims;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -57,10 +58,17 @@ public class ExtendedSigValResult extends DefaultSignatureValidationResult {
   /** List of validation policies applied to the validation process and if they succeeded or failed **/
   private List<PolicyValidationClaims> validationPolicyResultList = new ArrayList<>();
   /** List of verified times and information about how time verification was done **/
-  private List<? extends TimeValidationResult> timeValidationResults = new ArrayList<>();
+  private List<TimeValidationResult> timeValidationResults = new ArrayList<>();
   /** The signature SVA claims of this signature **/
   private SignatureClaims signatureClaims;
   /** The signed SVT JWT. Null content if the verification is not SVT verified **/
   private SignedJWT svtJWT;
 
+  /** {@inheritDoc} */
+  @Override public List<X509Certificate> getAdditionalCertificates() {
+    if (signatureCertificateChain == null) return new ArrayList<>();
+    return signatureCertificateChain.stream()
+      .filter(x509Certificate -> !x509Certificate.equals(getSignerCertificate()))
+      .collect(Collectors.toList());
+  }
 }

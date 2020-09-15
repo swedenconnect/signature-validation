@@ -1,10 +1,9 @@
-package se.idsec.sigval.pdf.utils;
+package se.idsec.sigval.commons.utils;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.cms.Attribute;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
@@ -15,23 +14,21 @@ import org.bouncycastle.cms.CMSTypedStream;
 import org.bouncycastle.cms.SignerInformation;
 import org.bouncycastle.operator.bc.BcDigestCalculatorProvider;
 import org.bouncycastle.util.CollectionStore;
-import se.idsec.signservice.security.sign.pdf.configuration.PDFAlgorithmRegistry;
 import se.idsec.sigval.commons.algorithms.NamedCurve;
 import se.idsec.sigval.commons.algorithms.NamedCurveRegistry;
 import se.idsec.sigval.commons.algorithms.PublicKeyType;
-import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
-import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
+import se.idsec.sigval.commons.data.PubKeyParams;
+import se.idsec.sigval.commons.timestamp.TimeStamp;
 import se.idsec.sigval.svt.claims.TimeValidationClaims;
 
-import java.io.*;
-import java.security.NoSuchAlgorithmException;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.*;
-import java.util.logging.Logger;
 
 /**
  * Utility methods for CMS verification
@@ -40,7 +37,7 @@ import java.util.logging.Logger;
  * @author Stefan Santesson (stefan@idsec.se)
  */
 @Slf4j
-public class CMSVerifyUtils {
+public class GeneralCMSUtils {
 
   /**
    * Extracts signing certificate and supporting certificate chain
@@ -60,18 +57,6 @@ public class CMSVerifyUtils {
     return new CMSSigCerts(sigCert, certList);
   }
 
-  /**
-   * Obtains a {@link CMSSignedDataParser}*
-   *
-   * @param sig          The {@link PDSignature} of the signature
-   * @param signedPdfDoc the bytes of the complete PDF document holding this signature
-   * @return CMSSignedDataParser
-   * @throws CMSException on error
-   * @throws IOException  on error
-   */
-  public static CMSSignedDataParser getCMSSignedDataParser(PDSignature sig, byte[] signedPdfDoc) throws CMSException, IOException {
-    return getCMSSignedDataParser(sig.getContents(signedPdfDoc), sig.getSignedContent(signedPdfDoc));
-  }
 
   /**
    * Obtains a {@link CMSSignedDataParser}
@@ -87,45 +72,15 @@ public class CMSVerifyUtils {
     return new CMSSignedDataParser(new BcDigestCalculatorProvider(), new CMSTypedStream(bis), cmsContentInfo);
   }
 
-  public static void getCMSAlgoritmProtectionData(Attribute cmsAlgoProtAttr, ExtendedPdfSigValResult sigResult) {
-    if (cmsAlgoProtAttr == null) {
-      sigResult.setCmsAlgorithmProtection(false);
-      return;
-    }
-    sigResult.setCmsAlgorithmProtection(true);
-
-    try {
-      ASN1Sequence cmsapSeq = ASN1Sequence.getInstance(cmsAlgoProtAttr.getAttrValues().getObjectAt(0));
-
-      //Get Hash algo
-      AlgorithmIdentifier hashAlgoId = AlgorithmIdentifier.getInstance(cmsapSeq.getObjectAt(0));
-      sigResult.setCmsAlgoProtectionDigestAlgo(hashAlgoId.getAlgorithm());
-
-      //GetSigAlgo
-      for (int objIdx = 1; objIdx < cmsapSeq.size(); objIdx++) {
-        ASN1Encodable asn1Encodable = cmsapSeq.getObjectAt(objIdx);
-        if (asn1Encodable instanceof ASN1TaggedObject) {
-          ASN1TaggedObject taggedObj = ASN1TaggedObject.getInstance(asn1Encodable);
-          if (taggedObj.getTagNo() == 1) {
-            AlgorithmIdentifier algoId = AlgorithmIdentifier.getInstance(taggedObj, false);
-            sigResult.setCmsAlgoProtectionSigAlgo(algoId.getAlgorithm());
-          }
-        }
-      }
-    }
-    catch (Exception e) {
-      Logger.getLogger(CMSVerifyUtils.class.getName()).warning("Failed to parse CMSAlgoritmProtection algoritms");
-    }
-  }
-
   /**
    * Retrieves Public key parameters from a public key
    *
    * @param pubKey    The public key
-   * @param sigResult The data object where result data are stored
    * @throws IOException
    */
-  public static void getPkParams(PublicKey pubKey, ExtendedPdfSigValResult sigResult) throws IOException {
+  public static PubKeyParams getPkParams(PublicKey pubKey) throws IOException {
+
+    PubKeyParams pubKeyParams = new PubKeyParams();
 
     try {
       ASN1InputStream din = new ASN1InputStream(new ByteArrayInputStream(pubKey.getEncoded()));
@@ -135,27 +90,27 @@ public class CMSVerifyUtils {
 
       AlgorithmIdentifier algoId = AlgorithmIdentifier.getInstance(pkSeq.getObjectAt(0));
       PublicKeyType pkType = PublicKeyType.getTypeFromOid(algoId.getAlgorithm().getId());
-      sigResult.setPkType(pkType);
-      sigResult.setPkType(pkType);
+      pubKeyParams.setPkType(pkType);
       if (pkType.equals(PublicKeyType.EC)) {
         ASN1ObjectIdentifier curveOid = ASN1ObjectIdentifier.getInstance(algoId.getParameters());
         NamedCurve curve = NamedCurveRegistry.get(curveOid);
-        sigResult.setNamedEcCurve(curve);
+        pubKeyParams.setNamedCurve(curve);
         int totalKeyBits = curve.getKeyLen();
-        sigResult.setKeyLength(totalKeyBits);
-        return;
+        pubKeyParams.setKeyLength(totalKeyBits);
+        return pubKeyParams;
       }
 
       if (pkType.equals(PublicKeyType.RSA)) {
         RSAPublicKey rsaPublicKey = (RSAPublicKey) pubKey;
-        sigResult.setKeyLength(rsaPublicKey.getModulus().bitLength());
-        return;
+        pubKeyParams.setKeyLength(rsaPublicKey.getModulus().bitLength());
+        return pubKeyParams;
       }
 
     }
     catch (Exception e) {
-      Logger.getLogger(CMSVerifyUtils.class.getName()).fine("Illegal public key parameters: " + e.getMessage());
+     log.debug("Illegal public key parameters: " + e.getMessage());
     }
+    return null;
   }
 
   /**
@@ -206,37 +161,6 @@ public class CMSVerifyUtils {
     return eSSCertIDSeq;
   }
 
-  public static boolean checkAlgoritmConsistency(ExtendedPdfSigValResult sigResult) {
-    if (sigResult.getSignatureAlgorithm() == null) {
-      return false;
-    }
-    PDFAlgorithmRegistry.PDFSignatureAlgorithmProperties algorithmProperties;
-    try {
-      algorithmProperties = PDFAlgorithmRegistry.getAlgorithmProperties(
-        sigResult.getSignatureAlgorithm());
-    }
-    catch (NoSuchAlgorithmException e) {
-      return false;
-    }
-
-    //Ceheck if CML Algoprotection is present.
-    if (!sigResult.isCmsAlgorithmProtection()) {
-      return true;
-    }
-    try {
-      // Check that the signature algo is equivalent to the algo settings in CMS algo protection
-      String cmsAlgoProtAlgoUri = PDFAlgorithmRegistry.getAlgorithmURI(sigResult.getCmsAlgoProtectionSigAlgo(),
-        sigResult.getCmsAlgoProtectionDigestAlgo());
-      if (cmsAlgoProtAlgoUri.equals(sigResult.getSignatureAlgorithm())) {
-        return true;
-      }
-    }
-    catch (NoSuchAlgorithmException e) {
-      log.debug("Error while comparing CMS algo protection: ", e);
-    }
-    return false;
-  }
-
   /**
    * converts an X509CertificateHolder object to an X509Certificate object.
    *
@@ -261,7 +185,7 @@ public class CMSVerifyUtils {
     return cert;
   }
 
-  public static TimeValidationClaims getMatchingTimeValidationClaims(PDFTimeStamp timeStamp, List<TimeValidationClaims> vtList) {
+  public static TimeValidationClaims getMatchingTimeValidationClaims(TimeStamp timeStamp, List<TimeValidationClaims> vtList) {
     try {
       Optional<TimeValidationClaims> matchOptional = vtList.stream()
         .filter(verifiedTime -> verifiedTime.getId().equalsIgnoreCase(timeStamp.getTstInfo().getSerialNumber().getValue().toString(16)))

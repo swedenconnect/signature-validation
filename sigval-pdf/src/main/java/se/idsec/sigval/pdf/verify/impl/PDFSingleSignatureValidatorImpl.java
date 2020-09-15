@@ -122,11 +122,11 @@ public class PDFSingleSignatureValidatorImpl implements PDFSingleSignatureValida
     CMSSignedDataParser cmsSignedDataParser = CMSVerifyUtils.getCMSSignedDataParser(signature, pdfDocument);
     CMSTypedStream signedContent = cmsSignedDataParser.getSignedContent();
     signedContent.drain();
-    CMSVerifyUtils.PDFSigCerts pdfSigCerts = CMSVerifyUtils.extractCertificates(cmsSignedDataParser);
+    CMSVerifyUtils.CMSSigCerts CMSSigCerts = CMSVerifyUtils.extractCertificates(cmsSignedDataParser);
     SignerInformation signerInformation = cmsSignedDataParser.getSignerInfos().iterator().next();
-    sigResult.setSignerCertificate(pdfSigCerts.getSigCert());
-    sigResult.setSignatureCertificateChain(pdfSigCerts.getChain());
-    X509CertificateHolder certHolder = new X509CertificateHolder(pdfSigCerts.getSigCert().getEncoded());
+    sigResult.setSignerCertificate(CMSSigCerts.getSigCert());
+    sigResult.setSignatureCertificateChain(CMSSigCerts.getChain());
+    X509CertificateHolder certHolder = new X509CertificateHolder(CMSSigCerts.getSigCert().getEncoded());
     SignerInformationVerifier signerInformationVerifier = new JcaSimpleSignerInfoVerifierBuilder().setProvider("BC").build(certHolder);
 
     // Verify signature value against document data
