@@ -22,13 +22,15 @@ import se.idsec.signservice.security.sign.pdf.configuration.PDFObjectIdentifiers
 import se.idsec.sigval.cert.chain.ExtendedCertPathValidatorException;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
+import se.idsec.sigval.commons.data.PubKeyParams;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
+import se.idsec.sigval.commons.data.TimeValidationResult;
+import se.idsec.sigval.commons.timestamp.TimeStamp;
 import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
+import se.idsec.sigval.commons.timestamp.impl.BasicTimstampPolicyVerifier;
+import se.idsec.sigval.commons.utils.GeneralCMSUtils;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
-import se.idsec.sigval.pdf.data.PdfTimeValidationResult;
 import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
-import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
-import se.idsec.sigval.pdf.timestamp.impl.BasicTimstampPolicyVerifier;
 import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
 import se.idsec.sigval.pdf.verify.PDFSingleSignatureValidator;
 import se.idsec.sigval.pdf.verify.policy.PDFSignaturePolicyValidator;
@@ -122,7 +124,7 @@ public class PDFSingleSignatureValidatorImpl implements PDFSingleSignatureValida
     CMSSignedDataParser cmsSignedDataParser = CMSVerifyUtils.getCMSSignedDataParser(signature, pdfDocument);
     CMSTypedStream signedContent = cmsSignedDataParser.getSignedContent();
     signedContent.drain();
-    CMSVerifyUtils.CMSSigCerts CMSSigCerts = CMSVerifyUtils.extractCertificates(cmsSignedDataParser);
+    GeneralCMSUtils.CMSSigCerts CMSSigCerts = GeneralCMSUtils.extractCertificates(cmsSignedDataParser);
     SignerInformation signerInformation = cmsSignedDataParser.getSignerInfos().iterator().next();
     sigResult.setSignerCertificate(CMSSigCerts.getSigCert());
     sigResult.setSignatureCertificateChain(CMSSigCerts.getChain());
@@ -144,7 +146,9 @@ public class PDFSingleSignatureValidatorImpl implements PDFSingleSignatureValida
     }
 
     // Get algorithms and public key related data
-    CMSVerifyUtils.getPkParams(sigResult.getSignerCertificate().getPublicKey(), sigResult);
+    PubKeyParams pkParams = GeneralCMSUtils.getPkParams(sigResult.getSignerCertificate().getPublicKey());
+    sigResult.setPubKeyParams(pkParams);
+
     ASN1ObjectIdentifier signAlgoOid = new ASN1ObjectIdentifier(signerInformation.getEncryptionAlgOID());
     ASN1ObjectIdentifier digestAlgoOid = new ASN1ObjectIdentifier(signerInformation.getDigestAlgOID());
     sigResult.setCmsSignatureAlgo(signAlgoOid);
@@ -293,7 +297,7 @@ public class PDFSingleSignatureValidatorImpl implements PDFSingleSignatureValida
    * @return a list of timestamps found in the signature data
    * @throws Exception on errors
    */
-  private List<PdfTimeValidationResult> checkTimeStamps(final SignerInformation signerInformation)
+  private List<TimeValidationResult> checkTimeStamps(final SignerInformation signerInformation)
     throws Exception {
     AttributeTable unsignedAttributes = signerInformation.getUnsignedAttributes();
     if (unsignedAttributes == null) {
@@ -303,12 +307,12 @@ public class PDFSingleSignatureValidatorImpl implements PDFSingleSignatureValida
     if (timeStampsASN1.size() == 0) {
       return new ArrayList<>();
     }
-    List<PdfTimeValidationResult> timeStampList = new ArrayList<>();
+    List<TimeValidationResult> timeStampList = new ArrayList<>();
     for (int i = 0; i < timeStampsASN1.size(); i++) {
       Attribute tsAttribute = Attribute.getInstance(timeStampsASN1.get(i));
       byte[] tsContentInfoBytes = ContentInfo.getInstance(tsAttribute.getAttrValues().getObjectAt(0).toASN1Primitive()).getEncoded("DER");
-      PDFTimeStamp timeStamp = new PDFTimeStamp(tsContentInfoBytes, signerInformation.getSignature(), timeStampPolicyVerifier);
-      timeStampList.add(new PdfTimeValidationResult(null, timeStamp.getCertificateValidationResult(), timeStamp));
+      TimeStamp timeStamp = new TimeStamp(tsContentInfoBytes, signerInformation.getSignature(), timeStampPolicyVerifier);
+      timeStampList.add(new TimeValidationResult(null, timeStamp.getCertificateValidationResult(), timeStamp));
     }
     return timeStampList;
   }
@@ -320,16 +324,16 @@ public class PDFSingleSignatureValidatorImpl implements PDFSingleSignatureValida
    * @param docTimeStampList   list of document timestamps provided with this signed PDF document
    */
   private void addVerifiedTimes(ExtendedPdfSigValResult directVerifyResult, final List<PDFDocTimeStamp> docTimeStampList) {
-    List<PdfTimeValidationResult> timeValidationResults = new ArrayList<>();
+    List<TimeValidationResult> timeValidationResults = new ArrayList<>();
 
     // Loop through direct validation results and add signature timestamp results
-    for (PdfTimeValidationResult result : directVerifyResult.getTimeValidationResults()) {
-      PDFTimeStamp timeStamp = result.getTimeStamp();
+    for (TimeValidationResult result : directVerifyResult.getTimeValidationResults()) {
+      TimeStamp timeStamp = result.getTimeStamp();
       //      if (timeStamp != null && timeStamp.hasVerifiedTimestamp()){
       TimeValidationClaims timeValidationClaims = getVerifiedTimeFromTimeStamp(timeStamp,
         SigValIdentifiers.TIME_VERIFICATION_TYPE_PDF_SIG_TIMESTAMP);
       if (timeValidationClaims != null) {
-        timeValidationResults.add(new PdfTimeValidationResult(
+        timeValidationResults.add(new TimeValidationResult(
           timeValidationClaims, timeStamp.getCertificateValidationResult(), timeStamp));
       }
       //      }
@@ -353,7 +357,7 @@ public class PDFSingleSignatureValidatorImpl implements PDFSingleSignatureValida
       TimeValidationClaims timeValidationClaims = getVerifiedTimeFromTimeStamp(docTimeStamp,
         SigValIdentifiers.TIME_VERIFICATION_TYPE_PDF_DOC_TIMESTAMP);
       if (timeValidationClaims != null) {
-        timeValidationResults.add(new PdfTimeValidationResult(
+        timeValidationResults.add(new TimeValidationResult(
           timeValidationClaims, docTimeStamp.getCertificateValidationResult(), docTimeStamp));
       }
       //      }
@@ -374,7 +378,7 @@ public class PDFSingleSignatureValidatorImpl implements PDFSingleSignatureValida
     directVerifyResult.setTimeValidationResults(timeValidationResults);
   }
 
-  private TimeValidationClaims getVerifiedTimeFromTimeStamp(final PDFTimeStamp pdfTimeStamp, final String type) {
+  private TimeValidationClaims getVerifiedTimeFromTimeStamp(final TimeStamp pdfTimeStamp, final String type) {
     try {
       TimeValidationClaims timeValidationClaims = TimeValidationClaims.builder()
         .id(pdfTimeStamp.getTstInfo().getSerialNumber().getValue().toString(16))
@@ -417,7 +421,7 @@ public class PDFSingleSignatureValidatorImpl implements PDFSingleSignatureValida
       DigestAlgorithm hashAlgo = null;
 
       if (essSigningCertV2Attr != null) {
-        ASN1Sequence essCertIDv2Sequence = CMSVerifyUtils.getESSCertIDSequence(essSigningCertV2Attr);
+        ASN1Sequence essCertIDv2Sequence = GeneralCMSUtils.getESSCertIDSequence(essSigningCertV2Attr);
         /**
          * ESSCertIDv2 ::=  SEQUENCE {
          *   hashAlgorithm           AlgorithmIdentifier
@@ -444,7 +448,7 @@ public class PDFSingleSignatureValidatorImpl implements PDFSingleSignatureValida
       }
       else {
         if (signingCertAttr != null) {
-          ASN1Sequence essCertIDSequence = CMSVerifyUtils.getESSCertIDSequence(signingCertAttr);
+          ASN1Sequence essCertIDSequence = GeneralCMSUtils.getESSCertIDSequence(signingCertAttr);
           /**
            * ESSCertID ::=  SEQUENCE {
            *      certHash                 Hash,

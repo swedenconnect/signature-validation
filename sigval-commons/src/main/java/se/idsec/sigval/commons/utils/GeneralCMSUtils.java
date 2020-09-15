@@ -94,7 +94,7 @@ public class GeneralCMSUtils {
       if (pkType.equals(PublicKeyType.EC)) {
         ASN1ObjectIdentifier curveOid = ASN1ObjectIdentifier.getInstance(algoId.getParameters());
         NamedCurve curve = NamedCurveRegistry.get(curveOid);
-        pubKeyParams.setNamedCurve(curve);
+        pubKeyParams.setNamedEcCurve(curve);
         int totalKeyBits = curve.getKeyLen();
         pubKeyParams.setKeyLength(totalKeyBits);
         return pubKeyParams;

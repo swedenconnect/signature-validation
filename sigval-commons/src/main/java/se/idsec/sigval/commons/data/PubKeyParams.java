@@ -27,8 +27,11 @@ import se.idsec.sigval.commons.algorithms.PublicKeyType;
 @AllArgsConstructor
 public class PubKeyParams {
 
+  /** Public key type **/
   private PublicKeyType pkType;
-  private NamedCurve namedCurve;
+  /** The ECC curve if the signature is signed with ECDSA **/
+  private NamedCurve namedEcCurve;
+  /** Length of the signature key used for the  sig algorithm **/
   private int keyLength;
 
 }

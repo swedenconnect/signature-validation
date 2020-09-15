@@ -49,12 +49,8 @@ public class ExtendedSigValResult extends DefaultSignatureValidationResult {
   private byte[] signedDocument;
   /** Legacy indicator if the signing certificate matches a present ESSSigningCertificate signed attribute **/
   private boolean invalidSignCert = false;
-  /** Public key type **/
-  private PublicKeyType pkType;
-  /** The ECC curve if the signature is signed with ECDSA **/
-  private NamedCurve namedEcCurve;
-  /** Length of the signature key used for the  sig algorithm **/
-  private int keyLength;
+  /** Public key parameters */
+  private PubKeyParams pubKeyParams;
   /** List of validation policies applied to the validation process and if they succeeded or failed **/
   private List<PolicyValidationClaims> validationPolicyResultList = new ArrayList<>();
   /** List of verified times and information about how time verification was done **/

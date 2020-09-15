@@ -2,6 +2,7 @@ package se.idsec.sigval.pdf.timestamp;
 
 import lombok.Getter;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
+import se.idsec.sigval.commons.timestamp.TimeStamp;
 import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
 
 /**
@@ -12,7 +13,7 @@ import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
  * @author Stefan Santesson (stefan@idsec.se)
  */
 @Getter
-public class PDFDocTimeStamp extends PDFTimeStamp {
+public class PDFDocTimeStamp extends TimeStamp {
 
   protected PDSignature documentTimestampSig;
 

@@ -16,10 +16,12 @@ import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.signservice.security.certificate.impl.DefaultCertificateValidationResult;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
 import se.idsec.sigval.commons.algorithms.JWSAlgorithmRegistry;
+import se.idsec.sigval.commons.data.PubKeyParams;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.commons.data.SignedDocumentValidationResult;
+import se.idsec.sigval.commons.data.TimeValidationResult;
+import se.idsec.sigval.commons.utils.GeneralCMSUtils;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
-import se.idsec.sigval.pdf.data.PdfTimeValidationResult;
 import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContextFactory;
 import se.idsec.sigval.pdf.svt.PDFSVTValidator;
 import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
@@ -253,7 +255,8 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
 
       String algoUri = JWSAlgorithmRegistry.getUri(svtJwsAlgo);
       cmsSVResult.setSignatureAlgorithm(algoUri);
-      CMSVerifyUtils.getPkParams(getCert(svtValResult.getSignerCertificate()).getPublicKey(), cmsSVResult);
+      PubKeyParams pkParams = GeneralCMSUtils.getPkParams(getCert(svtValResult.getSignerCertificate()).getPublicKey());
+      cmsSVResult.setPubKeyParams(pkParams);
 
       //Set signed SVT JWT
       cmsSVResult.setSvtJWT(signedJWT);
@@ -268,7 +271,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       CMSSignedDataParser cmsSignedDataParser = CMSVerifyUtils.getCMSSignedDataParser(signature, pdfDocBytes);
       CMSTypedStream signedContent = cmsSignedDataParser.getSignedContent();
       signedContent.drain();
-      CMSVerifyUtils.CMSSigCerts CMSSigCerts = CMSVerifyUtils.extractCertificates(cmsSignedDataParser);
+      GeneralCMSUtils.CMSSigCerts CMSSigCerts = GeneralCMSUtils.extractCertificates(cmsSignedDataParser);
       cmsSVResult.setSignerCertificate(CMSSigCerts.getSigCert());
       cmsSVResult.setSignatureCertificateChain(CMSSigCerts.getChain());
       // Store the svt validated certificates as path of certificate validation results
@@ -305,7 +308,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
           .build()))
         .build());
       cmsSVResult.setTimeValidationResults(timeValidationClaimsList.stream()
-        .map(timeValidationClaims -> new PdfTimeValidationResult(
+        .map(timeValidationClaims -> new TimeValidationResult(
           timeValidationClaims, null, null))
         .collect(Collectors.toList())
       );

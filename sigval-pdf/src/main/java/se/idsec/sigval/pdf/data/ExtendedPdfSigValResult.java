@@ -59,24 +59,4 @@ public class ExtendedPdfSigValResult extends ExtendedSigValResult implements PDF
   /** The bytes of content info of this signature (The bytes of the PDSignature oject **/
   @Setter @Getter private byte[] signedData;
 
-  @Override public List<PdfTimeValidationResult> getTimeValidationResults() {
-    return (List<PdfTimeValidationResult>) super.getTimeValidationResults();
-  }
-
-  @Override public void setTimeValidationResults(List<? extends TimeValidationResult> timeValidationResults) {
-    super.setTimeValidationResults(
-      timeValidationResults.stream()
-        .map(timeValidationResult -> getPdfTimeResults(timeValidationResult))
-        .collect(Collectors.toList())
-    );
-  }
-
-  private PdfTimeValidationResult getPdfTimeResults(TimeValidationResult timeValidationResult) {
-    if (timeValidationResult instanceof PdfTimeValidationResult) return (PdfTimeValidationResult) timeValidationResult;
-    return new PdfTimeValidationResult(
-      timeValidationResult.getTimeValidationClaims(),
-      timeValidationResult.getCertificateValidationResult()
-      ,null
-    );
-  }
 }

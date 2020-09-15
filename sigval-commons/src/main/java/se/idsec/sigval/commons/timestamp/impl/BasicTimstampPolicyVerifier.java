@@ -1,4 +1,4 @@
-package se.idsec.sigval.pdf.timestamp.impl;
+package se.idsec.sigval.commons.timestamp.impl;
 
 import lombok.Setter;
 import org.bouncycastle.asn1.tsp.TSTInfo;

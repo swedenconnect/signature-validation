@@ -24,9 +24,9 @@ import se.idsec.signservice.security.sign.SignatureValidationResult;
 import se.idsec.sigval.cert.chain.PathValidationResult;
 import se.idsec.sigval.cert.validity.ValidationStatus;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
+import se.idsec.sigval.commons.data.TimeValidationResult;
+import se.idsec.sigval.commons.timestamp.TimeStamp;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
-import se.idsec.sigval.pdf.data.PdfTimeValidationResult;
-import se.idsec.sigval.pdf.timestamp.PDFTimeStamp;
 import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
 import se.idsec.sigval.commons.data.PolicyValidationResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
@@ -195,7 +195,7 @@ public class PkixPdfSignaturePolicyValidator extends AbstractBasicPDFSignaturePo
    * @param pdfTimeValidationResults list of timestamps relevant for this signature
    * @return true if revocation was sufficiently after signing time
    */
-  private boolean checkRevocationTime(ValidationStatus validationStatus, List<PdfTimeValidationResult> pdfTimeValidationResults) {
+  private boolean checkRevocationTime(ValidationStatus validationStatus, List<TimeValidationResult> pdfTimeValidationResults) {
     if (pdfTimeValidationResults == null) {
       log.debug("No timestamps available for this signature");
       return false;
@@ -206,7 +206,7 @@ public class PkixPdfSignaturePolicyValidator extends AbstractBasicPDFSignaturePo
       return false;
     }
 
-    List<PDFTimeStamp> validTimestamps = pdfTimeValidationResults.stream()
+    List<TimeStamp> validTimestamps = pdfTimeValidationResults.stream()
       .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeStamp())
       .filter(pdfTimeStamp -> pdfTimeStamp.hasVerifiedTimestamp())
       .collect(Collectors.toList());
@@ -216,7 +216,7 @@ public class PkixPdfSignaturePolicyValidator extends AbstractBasicPDFSignaturePo
     // earliest date we know the signature existed
     Date firstDate = new Date();
 
-    for (PDFTimeStamp timeStamp : validTimestamps) {
+    for (TimeStamp timeStamp : validTimestamps) {
       try {
         Date tsDate = timeStamp.getTstInfo().getGenTime().getDate();
         if (tsDate.before(firstDate)) {
