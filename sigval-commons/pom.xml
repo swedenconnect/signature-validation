@@ -17,6 +17,10 @@
             <artifactId>lombok</artifactId>
         </dependency>
         <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+        </dependency>
+        <dependency>
             <groupId>se.idsec.signservice.commons</groupId>
             <artifactId>signservice-commons</artifactId>
             <version>1.0.4-SNAPSHOT</version>

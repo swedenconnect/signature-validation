@@ -22,7 +22,7 @@ import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 
 import java.security.SignatureException;
 
-public interface ExtendedXMLSignatureValidator extends XMLSignatureValidator {
+public interface ExtendedXMLSignedDocumentValidator extends XMLSignatureValidator {
 
   /**
    * Compile a complete XML signature verification result object from the list of individual signature results

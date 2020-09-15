@@ -14,7 +14,7 @@ import java.util.List;
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-public interface PDFSingleSignatureVerifier {
+public interface PDFSingleSignatureValidator {
 
   /**
    * Verifies the signature on a PDF document

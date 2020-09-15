@@ -26,7 +26,7 @@ import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
 import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
 import se.idsec.sigval.pdf.utils.PDFSVAUtils;
 import se.idsec.sigval.pdf.verify.ExtendedPDFSignatureValidator;
-import se.idsec.sigval.pdf.verify.PDFSingleSignatureVerifier;
+import se.idsec.sigval.pdf.verify.PDFSingleSignatureValidator;
 import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
 import se.idsec.sigval.svt.algorithms.SVTAlgoRegistry;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
@@ -67,16 +67,16 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
   /** SVT token validator **/
   private final PDFSVTValidator pdfsvtValidator;
   /** Signature verifier for signatures not supported by SVT. This verifier is also performing validation of signature timestamps **/
-  private final PDFSingleSignatureVerifier pdfSingleSignatureVerifier;
+  private final PDFSingleSignatureValidator pdfSingleSignatureValidator;
   private final PDFSignatureContextFactory pdfSignatureContextFactory;
 
   /**
    * Constructor if no SVT validation is supported
    *
-   * @param pdfSingleSignatureVerifier The verifier used to verify signatures not supported by SVA
+   * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVA
    */
-  public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureVerifier pdfSingleSignatureVerifier, PDFSignatureContextFactory pdfSignatureContextFactory) {
-    this.pdfSingleSignatureVerifier = pdfSingleSignatureVerifier;
+  public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureValidator pdfSingleSignatureValidator, PDFSignatureContextFactory pdfSignatureContextFactory) {
+    this.pdfSingleSignatureValidator = pdfSingleSignatureValidator;
     this.pdfSignatureContextFactory = pdfSignatureContextFactory;
     this.pdfsvtValidator = null;
   }
@@ -84,11 +84,11 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
   /**
    * Constructor
    *
-   * @param pdfSingleSignatureVerifier The verifier used to verify signatures not supported by SVA
+   * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVA
    * @param pdfsvtValidator      Certificate verifier for the certificate used to sign SVA tokens
    */
-  public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureVerifier pdfSingleSignatureVerifier, PDFSVTValidator pdfsvtValidator, PDFSignatureContextFactory pdfSignatureContextFactory) {
-    this.pdfSingleSignatureVerifier = pdfSingleSignatureVerifier;
+  public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureValidator pdfSingleSignatureValidator, PDFSVTValidator pdfsvtValidator, PDFSignatureContextFactory pdfSignatureContextFactory) {
+    this.pdfSingleSignatureValidator = pdfSingleSignatureValidator;
     this.pdfsvtValidator = pdfsvtValidator;
     this.pdfSignatureContextFactory = pdfSignatureContextFactory;
   }
@@ -142,25 +142,22 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       // This list starts empty. It is only filled with objects if there is a signature that is validated without SVT.
       List<PDFDocTimeStamp> docTimeStampList = new ArrayList<>();
       boolean docTsVerified = false;
+      // Obtain any SVT validation results from a present SVT validator
+      List<SignatureSVTValidationResult> svtValidationResults = pdfsvtValidator == null ? null : pdfsvtValidator.validate(pdfDocBytes);
 
       for (PDSignature signature : signatureList) {
         SignatureSVTValidationResult svtValResult = null;
-        if (pdfsvtValidator != null) {
-          // Do SVT validation if we have an SVT validator
-          List<SignatureSVTValidationResult> svtValidationResults = pdfsvtValidator.validate(pdfDocBytes);
-          svtValResult = getMatchingSvtValidation(
-            PDFSVAUtils.getSignatureValueBytes(signature, pdfDocBytes), svtValidationResults);
-        }
+          svtValResult = getMatchingSvtValidation(PDFSVAUtils.getSignatureValueBytes(signature, pdfDocBytes), svtValidationResults);
         if (svtValResult == null) {
           // This signature is not covered by a valid SVA. Perform normal signature verification
           try {
             //Get verified documentTimestamps if not previously loaded
             if (!docTsVerified) {
-              docTimeStampList = pdfSingleSignatureVerifier.verifyDocumentTimestamps(docTsSigList, pdfDocBytes);
+              docTimeStampList = pdfSingleSignatureValidator.verifyDocumentTimestamps(docTsSigList, pdfDocBytes);
               docTsVerified = true;
             }
 
-            SignatureValidationResult directVerifyResult = pdfSingleSignatureVerifier.verifySignature(signature, pdfDocBytes, docTimeStampList,
+            SignatureValidationResult directVerifyResult = pdfSingleSignatureValidator.verifySignature(signature, pdfDocBytes, docTimeStampList,
               signatureContext);
             sigVerifyResultList.add(directVerifyResult);
           }
@@ -213,7 +210,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
 
   /** {@inheritDoc} */
   @Override public CertificateValidator getCertificateValidator() {
-    return pdfSingleSignatureVerifier.getCertificateValidator();
+    return pdfSingleSignatureValidator.getCertificateValidator();
   }
 
   /**
@@ -335,7 +332,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
    */
   private PDFDocTimeStamp getCurrentSvtTimestamp(List<PDSignature> svtTsSigList, JWTClaimsSet jwtClaimsSet, byte[] pdfDocBytes)
     throws IOException, ParseException {
-    List<PDFDocTimeStamp> docTimeStampList = pdfSingleSignatureVerifier.verifyDocumentTimestamps(svtTsSigList, pdfDocBytes);
+    List<PDFDocTimeStamp> docTimeStampList = pdfSingleSignatureValidator.verifyDocumentTimestamps(svtTsSigList, pdfDocBytes);
     for (PDFDocTimeStamp docTimeStamp : docTimeStampList) {
       String svajwt = PDFSVAUtils.getSVAJWT(docTimeStamp.getTstInfo());
       SignedJWT signedJWT = SignedJWT.parse(svajwt);
@@ -346,8 +343,15 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
     throw new IOException("No matching SVT timestamp is available to support the SVT results");
   }
 
+  /**
+   * Compare if the signature value match any of the listed SVT validation results
+   * @param sigValueBytes signature value bytes
+   * @param svtValidationResults validation result from SVT validation
+   * @return The SVT validation results, or null on no match
+   */
   private SignatureSVTValidationResult getMatchingSvtValidation(byte[] sigValueBytes,
     List<SignatureSVTValidationResult> svtValidationResults) {
+    if (svtValidationResults == null) return null;
     for (SignatureSVTValidationResult svtValResult : svtValidationResults) {
       try {
         MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(svtValResult.getSignedJWT().getHeader().getAlgorithm());

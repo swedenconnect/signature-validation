@@ -30,17 +30,13 @@ import se.idsec.signservice.security.certificate.CertificateUtils;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
-import se.idsec.signservice.security.sign.xml.XMLSignatureLocation;
-import se.idsec.signservice.security.sign.xml.impl.DefaultXMLSignatureValidationResult;
 import se.idsec.signservice.security.sign.xml.impl.DefaultXMLSigner;
-import se.idsec.sigval.commons.data.SignedDocumentValidationResult;
 import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
 import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 import se.idsec.sigval.xml.policy.XMLSignaturePolicyValidator;
 import se.idsec.sigval.xml.svt.XMLSVTValidator;
-import se.idsec.sigval.xml.verify.ExtendedXMLSignatureValidator;
+import se.idsec.sigval.xml.verify.XMLSignatureElementValidator;
 
-import javax.xml.xpath.XPathExpressionException;
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.security.SignatureException;
@@ -48,16 +44,15 @@ import java.security.cert.CertPathBuilderException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Slf4j
-public class XMLDocumentSignatureValidator implements ExtendedXMLSignatureValidator {
-
-  /** XAdES namespace URI. */
+public class XMLSignatureElementValidatorImpl implements XMLSignatureElementValidator {
+/*
+  *//** XAdES namespace URI. *//*
   private static final String XADES_NAMESPACE = "http://uri.etsi.org/01903/v1.3.2#";
 
-  /** Optional certificate validator. */
+  *//** Optional certificate validator. *//*
   private final CertificateValidator certificateValidator;
 
   private final TimeStampPolicyVerifier timeStampPolicyVerifier;
@@ -66,13 +61,13 @@ public class XMLDocumentSignatureValidator implements ExtendedXMLSignatureValida
 
   private final XMLSVTValidator xmlsvtValidator;
 
-  /** Flag that tells if the validator should handle XAdES signatures. */
+  *//** Flag that tells if the validator should handle XAdES signatures. *//*
   protected boolean xadesProcessing = true;
 
-  /**
+  *//**
    * Constructor setting up the validator without SVT validation.
-   */
-  public XMLDocumentSignatureValidator(
+   *//*
+  public XMLSignatureElementValidatorImpl(
     CertificateValidator certificateValidator, XMLSignaturePolicyValidator signaturePolicyValidator,
     TimeStampPolicyVerifier timeStampPolicyVerifier) {
     this.certificateValidator = certificateValidator;
@@ -81,10 +76,10 @@ public class XMLDocumentSignatureValidator implements ExtendedXMLSignatureValida
     this.xmlsvtValidator = null;
   }
 
-  /**
+  *//**
    * Constructor setting up the validator with SVT validation.
-   */
-  public XMLDocumentSignatureValidator(
+   *//*
+  public XMLSignatureElementValidatorImpl(
     CertificateValidator certificateValidator, XMLSignaturePolicyValidator signaturePolicyValidator,
     TimeStampPolicyVerifier timeStampPolicyVerifier, XMLSVTValidator xmlsvtValidator) {
     this.certificateValidator = certificateValidator;
@@ -93,99 +88,13 @@ public class XMLDocumentSignatureValidator implements ExtendedXMLSignatureValida
     this.xmlsvtValidator = xmlsvtValidator;
   }
 
-  @Override public SignedDocumentValidationResult<ExtendedXmlSigvalResult> extendedResultValidation(byte[] documentBytes)
-    throws SignatureException {
-    return null;
-  }
-
-  @Override public List<SignatureValidationResult> validate(Document document) throws SignatureException {
-    // First locate all signature elements ...
-    //
-    NodeList signatureElements = document.getElementsByTagNameNS(javax.xml.crypto.dsig.XMLSignature.XMLNS, "Signature");
-    if (signatureElements.getLength() == 0) {
-      throw new SignatureException("Supplied document is not signed");
-    }
-    List<Element> signatures = new ArrayList<>();
-    for (int i = 0; i < signatureElements.getLength(); i++) {
-      signatures.add((Element) signatureElements.item(i));
-    }
-    return this.validate(document, signatures);
-  }
-
-  @Override public List<SignatureValidationResult> validate(Document document, XMLSignatureLocation signatureLocation)
-    throws SignatureException {
-    if (signatureLocation == null) {
-      return this.validate(document);
-    }
-    try {
-      final Element signature = signatureLocation.getSignature(document);
-      if (signature == null) {
-        throw new SignatureException("Could not find Signature element");
-      }
-      return this.validate(document, Collections.singletonList(signature));
-    }
-    catch (XPathExpressionException e) {
-      throw new SignatureException(e.getMessage(), e);
-    }
-  }
-
-  /**
-   * Validates the supplied signatures.
-   *
-   * @param document   the document containing the signatures
-   * @param signatures the signatures
-   * @return a list of result objects
-   */
-  protected List<SignatureValidationResult> validate(final Document document, final List<Element> signatures) {
-
-    // Get the document ID attribute (and register the ID attributes).
-    //
-    final String signatureUriReference = DefaultXMLSigner.registerIdAttributes(document);
-
-    // Register ID nodes for XAdES ...
-    //
-    if (this.xadesProcessing) {
-      this.registerXadesIdNodes(document);
-    }
-
-    // Verify all signatures ...
-    //
-    List<SignatureValidationResult> results = new ArrayList<>();
-    for (Element signature : signatures) {
-      ExtendedXmlSigvalResult result = this.validateSignature(signature, signatureUriReference);
-
-      // If we have a cert path validator installed, perform path validation...
-      //
-      if (result.isSuccess() && this.certificateValidator != null) {
-        try {
-          CertificateValidationResult validatorResult = this.certificateValidator.validate(result.getSignerCertificate(),
-            result.getAdditionalCertificates(), null);
-          result.setCertificateValidationResult(validatorResult);
-        }
-        catch (CertPathBuilderException e) {
-          final String msg = String.format("Failed to build a path to a trusted root for signer certificate - %s", e.getMessage());
-          log.error("{}", e.getMessage(), e);
-          result.setError(SignatureValidationResult.Status.ERROR_NOT_TRUSTED, msg, e);
-        }
-        catch (GeneralSecurityException e) {
-          final String msg = String.format("Certificate path validation failure for signer certificate - %s", e.getMessage());
-          log.error("{}", e.getMessage(), e);
-          result.setError(SignatureValidationResult.Status.ERROR_SIGNER_INVALID, msg, e);
-        }
-      }
-      results.add(result);
-    }
-
-    return results;
-  }
-
-  /**
+  *//**
    * Validates the signature value and checks that the signer certificate is accepted.
    *
    * @param signature             the signature element
    * @param signatureUriReference the signature URI reference
    * @return a validation result
-   */
+   *//*
   protected ExtendedXmlSigvalResult validateSignature(final Element signature, final String signatureUriReference) {
 
     ExtendedXmlSigvalResult result = new ExtendedXmlSigvalResult();
@@ -274,13 +183,13 @@ public class XMLDocumentSignatureValidator implements ExtendedXMLSignatureValida
     }
   }
 
-  /**
+  *//**
    * Extracts all certificates from the supplied KeyInfo except for the actual signer certificate.
    *
    * @param keyInfo           the KeyInfo
    * @param signerCertificate the signer certificate
    * @return a list of certificates
-   */
+   *//*
   protected List<X509Certificate> getAdditionalCertificates(final KeyInfo keyInfo, final X509Certificate signerCertificate) {
     List<X509Certificate> additional = new ArrayList<>();
     for (int i = 0; i < keyInfo.lengthX509Data(); i++) {
@@ -307,45 +216,13 @@ public class XMLDocumentSignatureValidator implements ExtendedXMLSignatureValida
     return additional;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean isSigned(final Document document) throws IllegalArgumentException {
-    try {
-      NodeList signatureElements = document.getElementsByTagNameNS(javax.xml.crypto.dsig.XMLSignature.XMLNS, "Signature");
-      return signatureElements.getLength() > 0;
-    }
-    catch (Exception e) {
-      throw new IllegalArgumentException("Invalid document", e);
-    }
-  }
 
-  /** {@inheritDoc} */
-  @Override
-  public List<X509Certificate> getRequiredSignerCertificates() {
-    return new ArrayList<>();
-  }
-
-  /** {@inheritDoc} */
-  @Override
-  public CertificateValidator getCertificateValidator() {
-    return this.certificateValidator;
-  }
-
-  /**
-   * Sets flag that tells whether this validator should handle XAdES processing. The default is {@code true}
-   *
-   * @param xadesProcessing whether to process XAdES
-   */
-  public void setXadesProcessing(boolean xadesProcessing) {
-    this.xadesProcessing = xadesProcessing;
-  }
-
-  /**
+  *//**
    * Looks for any {@code xades:SignedProperties} elements and registers an Id attribute for the elements that are
    * found.
    *
    * @param document the document to manipulate
-   */
+   *//*
   protected void registerXadesIdNodes(Document document) {
     final NodeList xadesSignedProperties = document.getElementsByTagNameNS(XADES_NAMESPACE, "SignedProperties");
     for (int i = 0; i < xadesSignedProperties.getLength(); i++) {
@@ -354,13 +231,13 @@ public class XMLDocumentSignatureValidator implements ExtendedXMLSignatureValida
     }
   }
 
-  /**
+  *//**
    * Utility method for getting hold of the reference URI:s of a {@code SignedInfo} element.
    *
    * @param signedInfo the signed info element
    * @return a list of one or more reference URI:s
    * @throws SignatureException for unmarshalling errors
-   */
+   *//*
   private List<String> getSignedInfoReferenceURIs(final Element signedInfo) throws SignatureException {
     final NodeList references = signedInfo.getElementsByTagNameNS(javax.xml.crypto.dsig.XMLSignature.XMLNS, "Reference");
     if (references.getLength() == 0) {
@@ -372,5 +249,5 @@ public class XMLDocumentSignatureValidator implements ExtendedXMLSignatureValida
       uris.add(reference.getAttribute("URI"));
     }
     return uris;
-  }
+  }*/
 }
