@@ -32,12 +32,16 @@ import se.idsec.signservice.security.sign.SignatureValidationResult;
 import se.idsec.sigval.cert.chain.ExtendedCertPathValidatorException;
 import se.idsec.sigval.commons.data.PolicyValidationResult;
 import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
+import se.idsec.sigval.commons.utils.GeneralCMSUtils;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
 import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 import se.idsec.sigval.xml.policy.XMLSignaturePolicyValidator;
 import se.idsec.sigval.xml.verify.XMLSignatureElementValidator;
+import se.idsec.sigval.xml.xmlstruct.SignatureData;
+import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
 
+import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.security.SignatureException;
@@ -77,12 +81,11 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
    * Validates the signature value and checks that the signer certificate is accepted.
    *
    * @param signature             the signature element
-   * @param signatureUriReference the signature URI reference
    * @return a validation result
    */
   @Override
-  public ExtendedXmlSigvalResult validateSignature(final Element signature, final String signatureUriReference) {
-    ExtendedXmlSigvalResult result = validateSignatureElement(signature, signatureUriReference);
+  public ExtendedXmlSigvalResult validateSignature(final Element signature, final XMLSignatureContext signatureContext) {
+    ExtendedXmlSigvalResult result = validateSignatureElement(signature);
 
     // If we have a cert path validator installed, perform path validation...
     //
@@ -112,6 +115,20 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       }
     }
 
+    // Add signature context conclusions
+    try {
+      result.setSignedDocument(signatureContext.getSignedDocument(signature));
+      result.setCoversDocument(signatureContext.isCoversWholeDocument(signature));
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    // TODO
+    //result.setTimeValidationResults();
+    //result.setClaimedSigningTime();
+    //result.isEtsiAdes();
+
     // Let the signature policy verifier determine the final result path validation
     // The signature policy verifier may accept a revoked cert if signature is timestamped
     PolicyValidationResult policyValidationResult = signaturePolicyValidator.validatePolicy(result);
@@ -134,10 +151,9 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
    * Validates the signature value and checks that the signer certificate is accepted.
    *
    * @param signature             the signature element
-   * @param signatureUriReference the signature URI reference
    * @return a validation result
    */
-  public ExtendedXmlSigvalResult validateSignatureElement(final Element signature, final String signatureUriReference) {
+  public ExtendedXmlSigvalResult validateSignatureElement(final Element signature) {
 
     ExtendedXmlSigvalResult result = new ExtendedXmlSigvalResult();
     result.setSignatureElement(signature);
@@ -147,7 +163,9 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       XMLSignature xmlSignature = new XMLSignature(signature, "");
 
       // Make sure the signature covers the entire document.
+      // Commented away as this is handled by the signature context implementation
       //
+/*
       final List<String> uris = this.getSignedInfoReferenceURIs(xmlSignature.getSignedInfo().getElement());
       if (!uris.contains(signatureUriReference)) {
         final String msg = String.format("The Signature contained the reference(s) %s - none of these covers the entire document", uris);
@@ -155,6 +173,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
         result.setError(SignatureValidationResult.Status.ERROR_BAD_FORMAT, msg);
         return result;
       }
+*/
 
       // Locate the certificate that was used to sign ...
       //
@@ -188,9 +207,16 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
         result.setError(SignatureValidationResult.Status.ERROR_BAD_FORMAT, msg);
         return result;
       }
+
+
       // The KeyInfo contained cert/key. First verify signature bytes...
       //
       try {
+        // Set pk parameters
+        result.setPubKeyParams(GeneralCMSUtils.getPkParams(validationKey));
+        // Set algorithm
+        result.setSignatureAlgorithm(xmlSignature.getSignedInfo().getSignatureMethodURI());
+        // Check signature
         if (!xmlSignature.checkSignatureValue(validationKey)) {
           final String msg = "Signature is invalid - signature value did not validate correctly or reference digest comparison failed";
           log.info("{}", msg);
@@ -198,7 +224,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
           return result;
         }
       }
-      catch (XMLSignatureException e) {
+      catch (XMLSignatureException | IOException e) {
         final String msg = "Signature is invalid - " + e.getMessage();
         log.info("{}", msg, e);
         result.setError(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE, msg, e);
@@ -219,7 +245,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       result.setStatus(SignatureValidationResult.Status.SUCCESS);
       return result;
     }
-    catch (XMLSecurityException | SignatureException e) {
+    catch (Exception e) {
       result.setError(SignatureValidationResult.Status.ERROR_BAD_FORMAT, e.getMessage(), e);
       return result;
     }

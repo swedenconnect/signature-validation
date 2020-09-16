@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.xml.verify;
+package se.idsec.sigval.xml.xmlstruct.impl;
 
-import org.w3c.dom.Element;
-import se.idsec.signservice.security.certificate.CertificateValidator;
-import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
+import org.w3c.dom.Document;
 import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
+import se.idsec.sigval.xml.xmlstruct.XMLSignatureContextFactory;
 
-public interface XMLSignatureElementValidator {
+import java.io.IOException;
 
-  ExtendedXmlSigvalResult validateSignature(final Element signature, final XMLSignatureContext signatureContext);
+public class DefaultXMLSignatureContextFactory implements XMLSignatureContextFactory {
 
-  CertificateValidator getCertificateValidator();
+  /** {@inheritDoc} */
+  @Override public XMLSignatureContext getSignatureContext(Document document) throws IOException {
+    return new DefaultXMLSignatureContext(document);
+  }
 }

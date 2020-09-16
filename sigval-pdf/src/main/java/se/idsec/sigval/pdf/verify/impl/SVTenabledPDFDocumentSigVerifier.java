@@ -88,6 +88,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
    *
    * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVA
    * @param pdfsvtValidator      Certificate verifier for the certificate used to sign SVA tokens
+   * @param pdfSignatureContextFactory factory for creating an instance of signature context for the validated document
    */
   public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureValidator pdfSingleSignatureValidator, PDFSVTValidator pdfsvtValidator, PDFSignatureContextFactory pdfSignatureContextFactory) {
     this.pdfSingleSignatureValidator = pdfSingleSignatureValidator;
@@ -324,6 +325,8 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
 
 
   /**
+   * Note, this function is present already in the SVT Validation class. This will be deleted
+   *
    * This verifies and returns the validated document timestamp holding the current SVT token used to validate signatures
    *
    * @param svtTsSigList list of signatures containing SVT tokens
@@ -333,6 +336,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
    * @throws IOException
    * @throws ParseException
    */
+/*
   private PDFDocTimeStamp getCurrentSvtTimestamp(List<PDSignature> svtTsSigList, JWTClaimsSet jwtClaimsSet, byte[] pdfDocBytes)
     throws IOException, ParseException {
     List<PDFDocTimeStamp> docTimeStampList = pdfSingleSignatureValidator.verifyDocumentTimestamps(svtTsSigList, pdfDocBytes);
@@ -345,6 +349,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
     }
     throw new IOException("No matching SVT timestamp is available to support the SVT results");
   }
+*/
 
   /**
    * Compare if the signature value match any of the listed SVT validation results

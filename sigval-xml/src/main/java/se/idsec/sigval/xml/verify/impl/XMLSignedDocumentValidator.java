@@ -16,6 +16,7 @@
 
 package se.idsec.sigval.xml.verify.impl;
 
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -32,6 +33,9 @@ import se.idsec.sigval.xml.utils.XMLDocumentBuilder;
 import se.idsec.sigval.xml.utils.XMLSVAUtils;
 import se.idsec.sigval.xml.verify.ExtendedXMLSignedDocumentValidator;
 import se.idsec.sigval.xml.verify.XMLSignatureElementValidator;
+import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
+import se.idsec.sigval.xml.xmlstruct.XMLSignatureContextFactory;
+import se.idsec.sigval.xml.xmlstruct.impl.DefaultXMLSignatureContextFactory;
 
 import java.security.SignatureException;
 import java.security.cert.X509Certificate;
@@ -48,10 +52,17 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
   /** Validator for individual signatures */
   private final XMLSignatureElementValidator signatureElementValidator;
 
+  /** An optional validator capable of validating signatures based on provided SVT tokens */
   private final XMLSVTValidator xmlsvtValidator;
 
+  /**
+   * Factory for getting an implementation of the signature context provider providing info about the signed document
+   * @param signatureContextFactory signature context factory
+   */
+  @Setter private XMLSignatureContextFactory signatureContextFactory;
+
   /** Flag that tells if the validator should handle XAdES signatures. */
-  protected boolean xadesProcessing = true;
+  @Setter private boolean xadesProcessing = true;
 
   /**
    * Constructor setting up the validator.
@@ -60,6 +71,7 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
     XMLSVTValidator xmlsvtValidator) {
     this.signatureElementValidator = signatureElementValidator;
     this.xmlsvtValidator = xmlsvtValidator;
+    this.signatureContextFactory = new DefaultXMLSignatureContextFactory();
   }
 
   /**
@@ -68,6 +80,7 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
   public XMLSignedDocumentValidator(XMLSignatureElementValidator signatureElementValidator) {
     this.signatureElementValidator = signatureElementValidator;
     this.xmlsvtValidator = null;
+    this.signatureContextFactory = new DefaultXMLSignatureContextFactory();
   }
 
   @Override public SignedDocumentValidationResult<ExtendedXmlSigvalResult> extendedResultValidation(byte[] documentBytes)
@@ -127,16 +140,19 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
   protected List<SignatureValidationResult> validate(final Document document, final List<Element> signatures) throws Exception{
 
     try {
-      byte[] docBytes = XMLDocumentBuilder.getCanonicalDocBytes(document);
+      XMLSignatureContext signatureContext = signatureContextFactory.getSignatureContext(document);
+      byte[] docBytes = signatureContext.getDocumentBytes();
       // Get the document ID attribute (and register the ID attributes).
       //
-      final String signatureUriReference = DefaultXMLSigner.registerIdAttributes(document);
+      // final String signatureUriReference = DefaultXMLSigner.registerIdAttributes(document);
 
       // Register ID nodes for XAdES ...
       //
+/*
       if (this.xadesProcessing) {
         this.registerXadesIdNodes(document);
       }
+*/
 
       // Attempt SVT validation first
       List<SignatureSVTValidationResult> svtValidationResultList = xmlsvtValidator == null ? null : xmlsvtValidator.validate(docBytes);
@@ -146,9 +162,11 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
       for (Element signature : signatures) {
         SignatureSVTValidationResult svtValResult = XMLSVAUtils.getMatchingSvtValidation(signature, docBytes, svtValidationResultList);
         if (svtValResult == null) {
-          results.add(signatureElementValidator.validateSignature(signature, signatureUriReference));
+          // Register all ID attributes
+          signatureContext.getSignatureData(signature, true);
+          results.add(signatureElementValidator.validateSignature(signature, signatureContext));
         } else {
-          results.add(compileXMLSigValResultsFromSvtValidation(svtValResult, signature, docBytes));
+          results.add(compileXMLSigValResultsFromSvtValidation(svtValResult, signature, signatureContext));
         }
       }
 
@@ -206,7 +224,7 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
     }
   }
 
-  private SignatureValidationResult compileXMLSigValResultsFromSvtValidation(SignatureSVTValidationResult svtValResult, Element signature, byte[] docBytes) {
+  private SignatureValidationResult compileXMLSigValResultsFromSvtValidation(SignatureSVTValidationResult svtValResult, Element signature, XMLSignatureContext signatureContext) {
     //TODO
     return null;
   }

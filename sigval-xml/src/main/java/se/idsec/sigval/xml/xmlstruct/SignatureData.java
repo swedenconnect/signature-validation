@@ -14,16 +14,24 @@
  * limitations under the License.
  */
 
-package se.idsec.sigval.xml.verify;
+package se.idsec.sigval.xml.xmlstruct;
 
-import org.w3c.dom.Element;
-import se.idsec.signservice.security.certificate.CertificateValidator;
-import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
-import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.apache.xml.security.signature.XMLSignature;
 
-public interface XMLSignatureElementValidator {
+import java.util.List;
 
-  ExtendedXmlSigvalResult validateSignature(final Element signature, final XMLSignatureContext signatureContext);
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class SignatureData{
 
-  CertificateValidator getCertificateValidator();
+  private List<byte[]> signedXmlFragments;
+  private List<String> refURIList;
+  private XMLSignature signature;
+
 }
