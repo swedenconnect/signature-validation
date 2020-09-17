@@ -112,12 +112,20 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
           result.setCertificateValidationResult(validatorResult);
         }
         catch (Exception ex) {
+          // We only set errors if path building failed (no path available to trust anchor).
+          // All other status indications are evaluated by the signature policy evaluator.
           if (ex instanceof ExtendedCertPathValidatorException) {
             ExtendedCertPathValidatorException extEx = (ExtendedCertPathValidatorException) ex;
             result.setCertificateValidationResult(extEx.getPathValidationResult());
-            result.setError(SignatureValidationResult.Status.ERROR_SIGNER_INVALID, extEx.getMessage(), ex);
+            List<X509Certificate> validatedCertificatePath = extEx.getPathValidationResult().getValidatedCertificatePath();
+            if (validatedCertificatePath == null || validatedCertificatePath.isEmpty()){
+              log.debug("Failed to build certificates to a trusted path");
+              result.setError(SignatureValidationResult.Status.ERROR_NOT_TRUSTED, extEx.getMessage(), ex);
+            }
+            // We don't set an error if we have path validation result.
           }
           else {
+            // This option means that we don't have access to path validation result. Set error always:
             if (ex instanceof CertPathBuilderException) {
               final String msg = String.format("Failed to build a path to a trusted root for signer certificate - %s", ex.getMessage());
               log.error("{}", ex.getMessage());
@@ -163,6 +171,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
             }
           })
           .filter(timeStamp -> timeStamp != null)
+          .filter(timeStamp -> timeStamp.getTstInfo() != null)
           .collect(Collectors.toList());
       }
 
@@ -380,19 +389,19 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
     return null;
   }
 
-  private TimeValidationClaims getVerifiedTimeFromTimeStamp(final TimeStamp pdfTimeStamp, final String type) {
+  private TimeValidationClaims getVerifiedTimeFromTimeStamp(final TimeStamp timeStamp, final String type) {
     try {
       TimeValidationClaims timeValidationClaims = TimeValidationClaims.builder()
-        .id(pdfTimeStamp.getTstInfo().getSerialNumber().getValue().toString(16))
-        .iss(pdfTimeStamp.getSigCert().getSubjectX500Principal().toString())
-        .time(pdfTimeStamp.getTstInfo().getGenTime().getDate().getTime() / 1000)
+        .id(timeStamp.getTstInfo().getSerialNumber().getValue().toString(16))
+        .iss(timeStamp.getSigCert().getSubjectX500Principal().toString())
+        .time(timeStamp.getTstInfo().getGenTime().getDate().getTime() / 1000)
         .type(type)
-        .val(pdfTimeStamp.getPolicyValidationClaimsList())
+        .val(timeStamp.getPolicyValidationClaimsList())
         .build();
       return timeValidationClaims;
     }
     catch (Exception ex) {
-      log.error("Error collecting time validation claims", ex);
+      log.error("Error collecting time validation claims data: {}", ex.getMessage());
       return null;
     }
   }

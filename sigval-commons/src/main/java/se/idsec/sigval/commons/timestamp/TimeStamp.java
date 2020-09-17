@@ -76,8 +76,8 @@ public class TimeStamp {
       GeneralCMSUtils.CMSSigCerts sigCerts = GeneralCMSUtils.extractCertificates(cmsSignedDataParser);
       sigCert = sigCerts.getSigCert();
       certList = sigCerts.getChain();
-      verifyTsSignature();
       tstInfo = SVAUtils.getPdfDocTSTInfo(timeStampSigBytes);
+      verifyTsSignature();
       verifyTsMessageImprint(cmsSignedDataParser);
       sigValid = true;
       TimeStampPolicyVerificationResult policyVerificationResult = tsPolicyVerifier.verifyTsPolicy(timeStampSigBytes, tstInfo,

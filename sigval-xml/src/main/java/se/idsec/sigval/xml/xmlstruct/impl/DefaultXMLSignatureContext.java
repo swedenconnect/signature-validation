@@ -38,6 +38,8 @@ import java.util.Optional;
 @Slf4j
 public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigConstants {
 
+  private final static String[] idNames = new String[]{"iD", "id", "Id", "ID"};
+
   private final Document document;
   private final byte[] documentBytes;
 
@@ -61,8 +63,9 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
 
   private String getIdAttrVal(Element element) {
     String idAttrValCandidate = null;
-    idAttrValCandidate = getIdAttrVal("Id", element, idAttrValCandidate);
-    idAttrValCandidate = getIdAttrVal("ID", element, idAttrValCandidate);
+    for (String idName : idNames){
+      idAttrValCandidate = getIdAttrVal(idName, element, idAttrValCandidate);
+    }
     return idAttrValCandidate;
   }
 
@@ -78,7 +81,7 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
     return documentBytes;
   }
 
-  @Override public byte[] getSignedDocument(Element signature) throws IOException {
+  @Override public byte[] getSignedDocument(Element signature) {
 
     try {
       SignatureData signatureData = getSignatureData(signature, false);
@@ -100,7 +103,7 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
     catch (Exception e) {
       log.debug("Failed to parse and retrieve a matching document: {}", e.getMessage());
     }
-    throw new IOException("Unable to obtain signed XML document");
+    return null;
   }
 
   private boolean isMatch(Document signedDoc, Element signature) {
@@ -136,7 +139,7 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
     return false;
   }
 
-  @Override public boolean isCoversWholeDocument(Element signature) throws IllegalArgumentException {
+  @Override public boolean isCoversWholeDocument(Element signature) {
     try {
       SignatureData signatureData = getSignatureData(signature, false);
       List<String> sigIdRefList = signatureData.getRefURIList();
@@ -217,13 +220,10 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
   }
 
   private void registerIdInElement(Element element, String referenceUri) {
-    String signatureUriReference = element.getAttribute("ID");
-    if (StringUtils.isNotEmpty(signatureUriReference) && ("#" + signatureUriReference).equals(referenceUri)) {
-      element.setIdAttribute("ID", true);
-    } else {
-      signatureUriReference = element.getAttribute("Id");
-      if (StringUtils.isNotEmpty(signatureUriReference)  && ("#" + signatureUriReference).equals(referenceUri)) {
-        element.setIdAttribute("Id", true);
+    for (String idName : idNames){
+      String signatureUriReference = element.getAttribute(idName);
+      if (StringUtils.isNotEmpty(signatureUriReference) && ("#" + signatureUriReference).equals(referenceUri)) {
+        element.setIdAttribute(idName, true);
       }
     }
   }

@@ -42,7 +42,7 @@ public interface XMLSignatureContext {
    * @return the bytes signed by the provided signature
    * @throws IOException if the signature is not found or no signed data can be located
    */
-  byte[] getSignedDocument(Element signature) throws IOException;
+  byte[] getSignedDocument(Element signature);
 
   /**
    * Test if this signature covers the whole document.
@@ -53,7 +53,7 @@ public interface XMLSignatureContext {
    * @param signature The signature tested if it covers the whole document
    * @return true if the signature covers the whole document
    */
-  boolean isCoversWholeDocument(Element signature) throws IllegalArgumentException;
+  boolean isCoversWholeDocument(Element signature);
 
   /**
    * Parse and extract signature data from the signature
