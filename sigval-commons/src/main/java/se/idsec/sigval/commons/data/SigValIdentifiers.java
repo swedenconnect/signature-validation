@@ -24,7 +24,7 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 public class SigValIdentifiers {
 
   /** PDF signature timestamp */
-  public static final String TIME_VERIFICATION_TYPE_PDF_SIG_TIMESTAMP = "http://id.swedenconnect.se/svt/timeval-type/pdf-sig-timestamp/01";
+  public static final String TIME_VERIFICATION_TYPE_SIG_TIMESTAMP = "http://id.swedenconnect.se/svt/timeval-type/sig-timestamp/01";
   /** PDF document timestamp */
   public static final String TIME_VERIFICATION_TYPE_PDF_DOC_TIMESTAMP = "http://id.swedenconnect.se/svt/timeval-type/pdf-doc-timestamp/01";
   /** SVT timestamp */

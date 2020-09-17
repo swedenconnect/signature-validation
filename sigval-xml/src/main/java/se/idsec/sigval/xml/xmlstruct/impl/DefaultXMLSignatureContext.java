@@ -27,6 +27,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import se.idsec.sigval.xml.utils.XMLDocumentBuilder;
 import se.idsec.sigval.xml.xmlstruct.SignatureData;
+import se.idsec.sigval.xml.xmlstruct.XMLSigConstants;
 import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
 
 import java.io.IOException;
@@ -35,9 +36,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Slf4j
-public class DefaultXMLSignatureContext implements XMLSignatureContext {
-
-  private static final String XMLDSIG_NS = "http://www.w3.org/2000/09/xmldsig#";
+public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigConstants {
 
   private final Document document;
   private final byte[] documentBytes;
@@ -176,7 +175,7 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext {
       for (int i = 0; i < signatureRefs.getLength(); i++){
         Element refElement = (Element)signatureRefs.item(i);
         String transform = getTransformAlgorithm(refElement);
-        if (transform.equalsIgnoreCase("http://www.w3.org/2010/xmldsig2#transform")) {
+        if (XMLDSIG_V2_TRANSFORM.equalsIgnoreCase(transform)) {
           throw new IOException("XMLDsig versioin 2.0 signatures not supported");
         }
         String uri = refElement.getAttribute("URI");

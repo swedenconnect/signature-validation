@@ -47,7 +47,7 @@ public class ExtendedSigValResult extends DefaultSignatureValidationResult {
   private boolean coversDocument = false;
   /** The pdf document in the form it was before being signed by this signature */
   private byte[] signedDocument;
-  /** Legacy indicator if the signing certificate matches a present ESSSigningCertificate signed attribute **/
+  /** Indicator if the signature is an AdES signature but certificate match the AdES signed certificate hash **/
   private boolean invalidSignCert = false;
   /** Public key parameters */
   private PubKeyParams pubKeyParams;

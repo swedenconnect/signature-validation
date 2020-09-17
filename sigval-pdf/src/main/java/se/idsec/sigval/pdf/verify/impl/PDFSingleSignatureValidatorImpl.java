@@ -329,52 +329,24 @@ public class PDFSingleSignatureValidatorImpl implements PDFSingleSignatureValida
     // Loop through direct validation results and add signature timestamp results
     for (TimeValidationResult result : directVerifyResult.getTimeValidationResults()) {
       TimeStamp timeStamp = result.getTimeStamp();
-      //      if (timeStamp != null && timeStamp.hasVerifiedTimestamp()){
       TimeValidationClaims timeValidationClaims = getVerifiedTimeFromTimeStamp(timeStamp,
-        SigValIdentifiers.TIME_VERIFICATION_TYPE_PDF_SIG_TIMESTAMP);
+        SigValIdentifiers.TIME_VERIFICATION_TYPE_SIG_TIMESTAMP);
       if (timeValidationClaims != null) {
         timeValidationResults.add(new TimeValidationResult(
           timeValidationClaims, timeStamp.getCertificateValidationResult(), timeStamp));
       }
-      //      }
     }
-
-/*
-    List<TimeValidationClaims> timeValidationClaimsList = directVerifyResult.getTimeValidationResults();
-    directVerifyResult.getTimeValidationResults().stream()
-      .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeStamp())
-      //Only if timestamp is valid
-      .filter(pdfTimeStamp -> pdfTimeStamp != null && pdfTimeStamp.hasVerifiedTimestamp())
-      .map(pdfTimeStamp -> getVerifiedTimeFromTimeStamp(pdfTimeStamp, SigValIdentifiers.TIME_VERIFICATION_TYPE_PDF_SIG_TIMESTAMP))
-      //Remove null results
-      .filter(verifiedTime -> verifiedTime != null)
-      .forEach(verifiedTime -> timeValidationClaimsList.add(verifiedTime));
-*/
 
     // Loop through document timestamps
     for (PDFDocTimeStamp docTimeStamp : docTimeStampList) {
-      //      if (docTimeStamp != null && docTimeStamp.hasVerifiedTimestamp()){
       TimeValidationClaims timeValidationClaims = getVerifiedTimeFromTimeStamp(docTimeStamp,
         SigValIdentifiers.TIME_VERIFICATION_TYPE_PDF_DOC_TIMESTAMP);
       if (timeValidationClaims != null) {
         timeValidationResults.add(new TimeValidationResult(
           timeValidationClaims, docTimeStamp.getCertificateValidationResult(), docTimeStamp));
       }
-      //      }
     }
 
-/*
-    // Add document timestamp
-    docTimeStampList.stream()
-      //Only if signature is covered by timestamp
-      .filter(pdfDocTimeStamp -> pdfDocTimeStamp.isSignatureCovered(directVerifyResult.getPdfSignature()))
-      //Only if timestamp is valid
-      .filter(pdfDocTimeStamp -> pdfDocTimeStamp.hasVerifiedTimestamp())
-      .map(pdfTimeStamp -> getVerifiedTimeFromTimeStamp(pdfTimeStamp, SigValIdentifiers.TIME_VERIFICATION_TYPE_PDF_DOC_TIMESTAMP))
-      //Remove null results
-      .filter(verifiedTime -> verifiedTime != null)
-      .forEach(verifiedTime -> timeValidationClaimsList.add(verifiedTime));
-*/
     directVerifyResult.setTimeValidationResults(timeValidationResults);
   }
 

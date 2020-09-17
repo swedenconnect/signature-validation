@@ -16,6 +16,7 @@
 
 package se.idsec.sigval.xml.verify;
 
+import org.w3c.dom.Document;
 import se.idsec.signservice.security.sign.xml.XMLSignatureValidator;
 import se.idsec.sigval.commons.data.SignedDocumentValidationResult;
 import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
@@ -27,9 +28,9 @@ public interface ExtendedXMLSignedDocumentValidator extends XMLSignatureValidato
   /**
    * Compile a complete XML signature verification result object from the list of individual signature results
    *
-   * @param documentBytes validate the complete PDF document and return concluding validation results for the complete document.
-   * @return PDF signature validation result objects
+   * @param document validate the complete PDF document and return concluding validation results for the complete document.
+   * @return XML signature validation result objects
    */
-  SignedDocumentValidationResult<ExtendedXmlSigvalResult> extendedResultValidation(byte[] documentBytes) throws SignatureException;
+  SignedDocumentValidationResult<ExtendedXmlSigvalResult> extendedResultValidation(Document document) throws SignatureException;
 
 }

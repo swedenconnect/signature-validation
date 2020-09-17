@@ -33,6 +33,8 @@ import se.idsec.sigval.xml.utils.XMLDocumentBuilder;
 import se.idsec.sigval.xml.utils.XMLSVAUtils;
 import se.idsec.sigval.xml.verify.ExtendedXMLSignedDocumentValidator;
 import se.idsec.sigval.xml.verify.XMLSignatureElementValidator;
+import se.idsec.sigval.xml.xmlstruct.SignatureData;
+import se.idsec.sigval.xml.xmlstruct.XAdESObjectParser;
 import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
 import se.idsec.sigval.xml.xmlstruct.XMLSignatureContextFactory;
 import se.idsec.sigval.xml.xmlstruct.impl.DefaultXMLSignatureContextFactory;
@@ -42,6 +44,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentValidator {
@@ -60,9 +63,6 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
    * @param signatureContextFactory signature context factory
    */
   @Setter private XMLSignatureContextFactory signatureContextFactory;
-
-  /** Flag that tells if the validator should handle XAdES signatures. */
-  @Setter private boolean xadesProcessing = true;
 
   /**
    * Constructor setting up the validator.
@@ -83,10 +83,8 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
     this.signatureContextFactory = new DefaultXMLSignatureContextFactory();
   }
 
-  @Override public SignedDocumentValidationResult<ExtendedXmlSigvalResult> extendedResultValidation(byte[] documentBytes)
-    throws SignatureException {
-    // TODO
-    return null;
+  @Override public SignedDocumentValidationResult<ExtendedXmlSigvalResult> extendedResultValidation(Document document) throws SignatureException {
+    return getConcludingSigVerifyResult(validate(document));
   }
 
   @Override public List<SignatureValidationResult> validate(Document document) throws SignatureException {
@@ -142,17 +140,6 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
     try {
       XMLSignatureContext signatureContext = signatureContextFactory.getSignatureContext(document);
       byte[] docBytes = signatureContext.getDocumentBytes();
-      // Get the document ID attribute (and register the ID attributes).
-      //
-      // final String signatureUriReference = DefaultXMLSigner.registerIdAttributes(document);
-
-      // Register ID nodes for XAdES ...
-      //
-/*
-      if (this.xadesProcessing) {
-        this.registerXadesIdNodes(document);
-      }
-*/
 
       // Attempt SVT validation first
       List<SignatureSVTValidationResult> svtValidationResultList = xmlsvtValidator == null ? null : xmlsvtValidator.validate(docBytes);
@@ -162,9 +149,7 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
       for (Element signature : signatures) {
         SignatureSVTValidationResult svtValResult = XMLSVAUtils.getMatchingSvtValidation(signature, docBytes, svtValidationResultList);
         if (svtValResult == null) {
-          // Register all ID attributes
-          signatureContext.getSignatureData(signature, true);
-          results.add(signatureElementValidator.validateSignature(signature, signatureContext));
+            results.add(signatureElementValidator.validateSignature(signature, signatureContext));
         } else {
           results.add(compileXMLSigValResultsFromSvtValidation(svtValResult, signature, signatureContext));
         }
@@ -202,15 +187,6 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
   }
 
   /**
-   * Sets flag that tells whether this validator should handle XAdES processing. The default is {@code true}
-   *
-   * @param xadesProcessing whether to process XAdES
-   */
-  public void setXadesProcessing(boolean xadesProcessing) {
-    this.xadesProcessing = xadesProcessing;
-  }
-
-  /**
    * Looks for any {@code xades:SignedProperties} elements and registers an Id attribute for the elements that are
    * found.
    *
@@ -228,5 +204,70 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
     //TODO
     return null;
   }
+
+  /**
+   * Compile a complete XML signature verification result object from the list of individual signature results
+   *
+   * @param sigVerifyResultList list of individual signature validation results. Each result must be of type {@link ExtendedXmlSigvalResult}
+   * @return PDF signature validation result objects
+   */
+  public static SignedDocumentValidationResult<ExtendedXmlSigvalResult> getConcludingSigVerifyResult(
+    List<SignatureValidationResult> sigVerifyResultList) {
+    SignedDocumentValidationResult<ExtendedXmlSigvalResult> sigVerifyResult = new SignedDocumentValidationResult<>();
+    List<ExtendedXmlSigvalResult> extendedPdfSigValResults = new ArrayList<>();
+    try {
+      extendedPdfSigValResults = sigVerifyResultList.stream()
+        .map(signatureValidationResult -> (ExtendedXmlSigvalResult) signatureValidationResult)
+        .collect(Collectors.toList());
+      sigVerifyResult.setSignatureValidationResults(extendedPdfSigValResults);
+    }
+    catch (Exception ex) {
+      throw new IllegalArgumentException("Provided results are not instances of ExtendedXmlSigvalResult");
+    }
+    // Test if there are no signatures
+    if (sigVerifyResultList.isEmpty()) {
+      sigVerifyResult.setSignatureCount(0);
+      sigVerifyResult.setStatusMessage("No signatures");
+      sigVerifyResult.setValidSignatureCount(0);
+      sigVerifyResult.setCompleteSuccess(false);
+      sigVerifyResult.setSigned(false);
+      return sigVerifyResult;
+    }
+
+    //Get valid signatures
+    sigVerifyResult.setSigned(true);
+    sigVerifyResult.setSignatureCount(sigVerifyResultList.size());
+    List<ExtendedXmlSigvalResult> validSignatureResultList = extendedPdfSigValResults.stream()
+      .filter(cmsSigVerifyResult -> cmsSigVerifyResult.isSuccess())
+      .collect(Collectors.toList());
+
+    sigVerifyResult.setValidSignatureCount(validSignatureResultList.size());
+    if (validSignatureResultList.isEmpty()) {
+      //No valid signatures
+      sigVerifyResult.setCompleteSuccess(false);
+      sigVerifyResult.setStatusMessage("No valid signatures");
+      return sigVerifyResult;
+    }
+
+    //Reaching this point means that there are valid signatures.
+    if (sigVerifyResult.getSignatureCount() == validSignatureResultList.size()) {
+      sigVerifyResult.setStatusMessage("OK");
+      sigVerifyResult.setCompleteSuccess(true);
+    }
+    else {
+      sigVerifyResult.setStatusMessage("Some signatures are valid and some are invalid");
+      sigVerifyResult.setCompleteSuccess(false);
+    }
+
+    //Check if any valid signature signs the whole document
+    boolean validSigSignsWholeDoc = validSignatureResultList.stream()
+      .filter(signatureValidationResult -> signatureValidationResult.isCoversDocument())
+      .findFirst().isPresent();
+
+    sigVerifyResult.setValidSignatureSignsWholeDocument(validSigSignsWholeDoc);
+
+    return sigVerifyResult;
+  }
+
 
 }

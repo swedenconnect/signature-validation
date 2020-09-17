@@ -17,6 +17,7 @@
 package se.idsec.sigval.xml.verify.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.xml.security.c14n.Canonicalizer;
 import org.apache.xml.security.exceptions.XMLSecurityException;
 import org.apache.xml.security.keys.KeyInfo;
 import org.apache.xml.security.keys.content.X509Data;
@@ -24,6 +25,7 @@ import org.apache.xml.security.keys.content.x509.XMLX509Certificate;
 import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xml.security.signature.XMLSignatureException;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import se.idsec.signservice.security.certificate.CertificateUtils;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
@@ -31,18 +33,25 @@ import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
 import se.idsec.sigval.cert.chain.ExtendedCertPathValidatorException;
 import se.idsec.sigval.commons.data.PolicyValidationResult;
+import se.idsec.sigval.commons.data.SigValIdentifiers;
+import se.idsec.sigval.commons.data.TimeValidationResult;
+import se.idsec.sigval.commons.timestamp.TimeStamp;
 import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
 import se.idsec.sigval.commons.utils.GeneralCMSUtils;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
+import se.idsec.sigval.svt.claims.TimeValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
 import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 import se.idsec.sigval.xml.policy.XMLSignaturePolicyValidator;
 import se.idsec.sigval.xml.verify.XMLSignatureElementValidator;
-import se.idsec.sigval.xml.xmlstruct.SignatureData;
-import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
+import se.idsec.sigval.xml.xmlstruct.*;
 
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.cert.CertPathBuilderException;
@@ -51,9 +60,10 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
-public class XMLSignatureElementValidatorImpl implements XMLSignatureElementValidator {
+public class XMLSignatureElementValidatorImpl implements XMLSignatureElementValidator, XMLSigConstants {
 
   /** Optional certificate validator. */
   private final CertificateValidator certificateValidator;
@@ -76,71 +86,138 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
     this.timeStampPolicyVerifier = timeStampPolicyVerifier;
   }
 
-
   /**
    * Validates the signature value and checks that the signer certificate is accepted.
    *
-   * @param signature             the signature element
+   * @param signature the signature element
    * @return a validation result
    */
   @Override
   public ExtendedXmlSigvalResult validateSignature(final Element signature, final XMLSignatureContext signatureContext) {
-    ExtendedXmlSigvalResult result = validateSignatureElement(signature);
 
-    // If we have a cert path validator installed, perform path validation...
-    //
-    if (result.isSuccess() && this.certificateValidator != null) {
-      try {
-        CertificateValidationResult validatorResult = this.certificateValidator.validate(result.getSignerCertificate(),
-          result.getSignatureCertificateChain(), null);
-        result.setCertificateValidationResult(validatorResult);
-      }
-      catch (Exception ex) {
-        if (ex instanceof ExtendedCertPathValidatorException) {
-          ExtendedCertPathValidatorException extEx = (ExtendedCertPathValidatorException) ex;
-          result.setCertificateValidationResult(extEx.getPathValidationResult());
-          result.setError(SignatureValidationResult.Status.ERROR_SIGNER_INVALID, extEx.getMessage(), ex);
-        } else {
-          if (ex instanceof CertPathBuilderException){
-            final String msg = String.format("Failed to build a path to a trusted root for signer certificate - %s", ex.getMessage());
-            log.error("{}", ex.getMessage());
-            result.setError(SignatureValidationResult.Status.ERROR_NOT_TRUSTED, msg, ex);
+    ExtendedXmlSigvalResult result = new ExtendedXmlSigvalResult();
+
+    try {
+      // Register all ID attributes
+      SignatureData signatureData = signatureContext.getSignatureData(signature, true);
+
+      result = validateSignatureElement(signature);
+
+      // If we have a cert path validator installed, perform path validation...
+      //
+      if (result.isSuccess() && this.certificateValidator != null) {
+        try {
+          CertificateValidationResult validatorResult = this.certificateValidator.validate(result.getSignerCertificate(),
+            result.getSignatureCertificateChain(), null);
+          result.setCertificateValidationResult(validatorResult);
+        }
+        catch (Exception ex) {
+          if (ex instanceof ExtendedCertPathValidatorException) {
+            ExtendedCertPathValidatorException extEx = (ExtendedCertPathValidatorException) ex;
+            result.setCertificateValidationResult(extEx.getPathValidationResult());
+            result.setError(SignatureValidationResult.Status.ERROR_SIGNER_INVALID, extEx.getMessage(), ex);
           }
-          if (ex instanceof GeneralSecurityException) {
-            final String msg = String.format("Certificate path validation failure for signer certificate - %s", ex.getMessage());
-            log.error("{}", ex.getMessage(), ex);
-            result.setError(SignatureValidationResult.Status.ERROR_SIGNER_INVALID, msg, ex);
+          else {
+            if (ex instanceof CertPathBuilderException) {
+              final String msg = String.format("Failed to build a path to a trusted root for signer certificate - %s", ex.getMessage());
+              log.error("{}", ex.getMessage());
+              result.setError(SignatureValidationResult.Status.ERROR_NOT_TRUSTED, msg, ex);
+            }
+            else {
+              final String msg = String.format("Certificate path validation failure for signer certificate - %s", ex.getMessage());
+              log.error("{}", ex.getMessage(), ex);
+              result.setError(SignatureValidationResult.Status.ERROR_SIGNER_INVALID, msg, ex);
+            }
           }
         }
       }
-    }
 
-    // Add signature context conclusions
-    try {
+      XAdESObjectParser xAdESObjectParser = new XAdESObjectParser(signature, signatureData);
       result.setSignedDocument(signatureContext.getSignedDocument(signature));
       result.setCoversDocument(signatureContext.isCoversWholeDocument(signature));
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-    }
+      result.setEtsiAdes(xAdESObjectParser.getQualifyingProperties() != null);
+      result.setInvalidSignCert(!xAdESObjectParser.isXadesVerified(result.getSignerCertificate()));
+      result.setClaimedSigningTime(xAdESObjectParser.getClaimedSigningTime());
 
-    // TODO
-    //result.setTimeValidationResults();
-    //result.setClaimedSigningTime();
-    //result.isEtsiAdes();
+      if (result.isEtsiAdes() && result.isInvalidSignCert()) {
+        final String msg = "Signature is XAdES signature, but signature certificate does not match signed certificate digest";
+        log.debug(msg);
+        result.setError(SignatureValidationResult.Status.ERROR_SIGNER_INVALID, msg, new CertPathBuilderException(msg));
+      }
 
-    // Let the signature policy verifier determine the final result path validation
-    // The signature policy verifier may accept a revoked cert if signature is timestamped
-    PolicyValidationResult policyValidationResult = signaturePolicyValidator.validatePolicy(result);
-    PolicyValidationClaims policyValidationClaims = policyValidationResult.getPolicyValidationClaims();
-    if (!policyValidationClaims.getRes().equals(ValidationConclusion.PASSED)) {
-      result.setStatus(policyValidationResult.getStatus());
-      result.setStatusMessage(policyValidationClaims.getMsg());
-      result.setException(new SignatureException(policyValidationClaims.getMsg()));
+      // Timestamp validation
+      List<TimeStamp> timeStampList = new ArrayList<>();
+      List<XadesSignatureTimestampData> signatureTimeStampDataList = xAdESObjectParser.getSignatureTimeStampDataList();
+      if (signatureTimeStampDataList != null && !signatureTimeStampDataList.isEmpty()) {
+
+        timeStampList = signatureTimeStampDataList.stream()
+          .map(tsData -> {
+            try {
+              return new TimeStamp(
+                tsData.getTimeStampSignatureBytes(),
+                getTimestampedBytes(signature, tsData.getCanonicalizationMethod()),
+                timeStampPolicyVerifier);
+            }
+            catch (Exception ex) {
+              return null;
+            }
+          })
+          .filter(timeStamp -> timeStamp != null)
+          .collect(Collectors.toList());
+      }
+
+      List<TimeValidationResult> timeValidationResultList = timeStampList.stream()
+        .map(timeStamp -> getTimeValidationResult(timeStamp))
+        .filter(timeValidationResult -> timeValidationResult != null)
+        .collect(Collectors.toList());
+      result.setTimeValidationResults(timeValidationResultList);
+
+      // Let the signature policy verifier determine the final result path validation
+      // The signature policy verifier may accept a revoked cert if signature is timestamped
+      PolicyValidationResult policyValidationResult = signaturePolicyValidator.validatePolicy(result);
+      PolicyValidationClaims policyValidationClaims = policyValidationResult.getPolicyValidationClaims();
+      if (!policyValidationClaims.getRes().equals(ValidationConclusion.PASSED)) {
+        result.setStatus(policyValidationResult.getStatus());
+        result.setStatusMessage(policyValidationClaims.getMsg());
+        result.setException(new SignatureException(policyValidationClaims.getMsg()));
+      }
+      result.setValidationPolicyResultList(Arrays.asList(policyValidationClaims));
+
     }
-    result.setValidationPolicyResultList(Arrays.asList(policyValidationClaims));
-
+    catch (Exception ex) {
+      log.error("Failed to parse signature {}", ex.getMessage());
+      result.setError(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE, "Failed to parse signature data", ex);
+    }
     return result;
+  }
+
+  /**
+   * Obtains the bytes that should be time stamped by a signature timestamp for a specific signature.
+   *
+   * <p>According to XAdES, the signature timestamp is calculated over the canonicalized SignatureValue element</p>
+   * <p>This means that the element itself with element tags and attributes as well as the Base64 encoded signature value
+   * is timestamped, not only the signature bytes. The Canonicalization algorithm used to canonicalize the element value is
+   * specified by the ds:CanonicalizationMethod element inside the xades:SignatureTimestamp element</p>
+   *
+   * @param signatureElement       signature element
+   * @param canonicalizationMethod canonicalization algorithm uri
+   * @return canonical signature value element bytes
+   */
+  private byte[] getTimestampedBytes(Element signatureElement, String canonicalizationMethod) {
+    try {
+      Node sigValElement = signatureElement.getElementsByTagNameNS(XMLDSIG_NS, "SignatureValue").item(0);
+      Transformer transformer = TransformerFactory.newInstance().newTransformer();
+      ByteArrayOutputStream os = new ByteArrayOutputStream();
+      transformer.transform(new DOMSource(sigValElement), new StreamResult(os));
+      byte[] sigValElementBytes = os.toByteArray();
+      Canonicalizer canonicalizer = Canonicalizer.getInstance(canonicalizationMethod);
+      byte[] canonicalizedSigElement = canonicalizer.canonicalize(sigValElementBytes);
+      return canonicalizedSigElement;
+    }
+    catch (Exception ex) {
+      log.debug("Failed to parse signature value element using time stamp canonicalization algorithm", ex);
+      return null;
+    }
   }
 
   @Override public CertificateValidator getCertificateValidator() {
@@ -150,7 +227,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
   /**
    * Validates the signature value and checks that the signer certificate is accepted.
    *
-   * @param signature             the signature element
+   * @param signature the signature element
    * @return a validation result
    */
   public ExtendedXmlSigvalResult validateSignatureElement(final Element signature) {
@@ -161,19 +238,6 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
     try {
       // Parse the signature element.
       XMLSignature xmlSignature = new XMLSignature(signature, "");
-
-      // Make sure the signature covers the entire document.
-      // Commented away as this is handled by the signature context implementation
-      //
-/*
-      final List<String> uris = this.getSignedInfoReferenceURIs(xmlSignature.getSignedInfo().getElement());
-      if (!uris.contains(signatureUriReference)) {
-        final String msg = String.format("The Signature contained the reference(s) %s - none of these covers the entire document", uris);
-        log.error(msg);
-        result.setError(SignatureValidationResult.Status.ERROR_BAD_FORMAT, msg);
-        return result;
-      }
-*/
 
       // Locate the certificate that was used to sign ...
       //
@@ -207,7 +271,6 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
         result.setError(SignatureValidationResult.Status.ERROR_BAD_FORMAT, msg);
         return result;
       }
-
 
       // The KeyInfo contained cert/key. First verify signature bytes...
       //
@@ -254,7 +317,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
   /**
    * Extracts all certificates from the supplied KeyInfo.
    *
-   * @param keyInfo           the KeyInfo
+   * @param keyInfo the KeyInfo
    * @return a list of certificates
    */
   protected List<X509Certificate> getAllSignatureCertifictes(final KeyInfo keyInfo) {
@@ -281,7 +344,6 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
     return additional;
   }
 
-
   /**
    * Utility method for getting hold of the reference URI:s of a {@code SignedInfo} element.
    *
@@ -300,5 +362,38 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       uris.add(reference.getAttribute("URI"));
     }
     return uris;
+  }
+
+  /**
+   * Add verified timestamps to the signature validation results
+   *
+   * @param timeStamp the verification results including result data from time stamps embedded in the signature
+   */
+  private TimeValidationResult getTimeValidationResult(TimeStamp timeStamp) {
+
+    // Loop through direct validation results and add signature timestamp results
+    TimeValidationClaims timeValidationClaims = getVerifiedTimeFromTimeStamp(timeStamp,
+      SigValIdentifiers.TIME_VERIFICATION_TYPE_SIG_TIMESTAMP);
+    if (timeValidationClaims != null) {
+      return new TimeValidationResult(timeValidationClaims, timeStamp.getCertificateValidationResult(), timeStamp);
+    }
+    return null;
+  }
+
+  private TimeValidationClaims getVerifiedTimeFromTimeStamp(final TimeStamp pdfTimeStamp, final String type) {
+    try {
+      TimeValidationClaims timeValidationClaims = TimeValidationClaims.builder()
+        .id(pdfTimeStamp.getTstInfo().getSerialNumber().getValue().toString(16))
+        .iss(pdfTimeStamp.getSigCert().getSubjectX500Principal().toString())
+        .time(pdfTimeStamp.getTstInfo().getGenTime().getDate().getTime() / 1000)
+        .type(type)
+        .val(pdfTimeStamp.getPolicyValidationClaimsList())
+        .build();
+      return timeValidationClaims;
+    }
+    catch (Exception ex) {
+      log.error("Error collecting time validation claims", ex);
+      return null;
+    }
   }
 }

@@ -125,6 +125,16 @@
         <artifactId>authcontextinfo10-jaxb</artifactId>
         <version>1.0.1</version>
       </dependency>
+      <dependency>
+        <groupId>se.swedenconnect.schemas</groupId>
+        <artifactId>etsi-xades-jaxb</artifactId>
+        <version>1.0.1</version>
+      </dependency>
+      <dependency>
+        <groupId>se.swedenconnect.schemas</groupId>
+        <artifactId>etsi-xades-ext-jaxb</artifactId>
+        <version>1.0.1</version>
+      </dependency>
     </dependencies>
 
   </dependencyManagement>
