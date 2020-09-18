@@ -20,11 +20,15 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.w3c.dom.Element;
 import se.idsec.sigval.commons.svt.AbstractSVTSigValClaimsIssuer;
 import se.idsec.sigval.svt.claims.*;
 import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 import se.idsec.sigval.xml.verify.XMLSignatureElementValidator;
+import se.idsec.sigval.xml.xmlstruct.SignatureData;
+import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
 
+import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -64,7 +68,7 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
     SignatureClaims claimsData = SignatureClaims.builder()
       .sig_ref(getSigRefData(sigResult, hashAlgoUri))
       .sig_val(getSignaturePolicyValidations(sigResult))
-      .sig_data_ref(getDocRefHashes(sigResult, hashAlgoUri))
+      .sig_data_ref(getDocRefHashes(sigResult, sigValInput, hashAlgoUri))
       .time_val(
         sigResult.getTimeValidationResults().stream()
           .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeValidationClaims())
@@ -78,7 +82,18 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
   }
 
 
-  private List<SignedDataClaims> getDocRefHashes(ExtendedXmlSigvalResult sigResult, String hashAlgoUri) {
+  private List<SignedDataClaims> getDocRefHashes(ExtendedXmlSigvalResult sigResult, XMLSigValInput sigValInput, String hashAlgoUri)
+    throws IOException {
+
+    // Go through all XML references and locate the bytes that were hashed by each reference
+    // Throw exception if the reference data cannot be located. This implementation only supports internal references
+    XMLSignatureContext signatureContext = sigValInput.getSignatureContext();
+    Element signatureElement = sigValInput.getSignatureElement();
+    SignatureData signatureData = signatureContext.getSignatureData(signatureElement, false);
+
+    // Idea - Fix function in signature context to make it able to extract all referenced data (as opposed to now)
+    // Return a map of signed data, mapped by reference URI. as well as the URI representing the root node in SignatureData.
+
     return new ArrayList<>();
   }
 

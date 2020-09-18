@@ -88,22 +88,6 @@ public class PDFSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<byte
     return claimsResultsList;
   }
 
-  /**
-   * Test if the time validation claims represent a verified time
-   * @param timeValidationClaims time verification claims
-   * @return true if the time validation claims represents verified time
-   */
-/*
-  private boolean isVerifiedTime(TimeValidationClaims timeValidationClaims) {
-    if (timeValidationClaims == null) return false;
-    List<PolicyValidationClaims> policyValidationClaims = timeValidationClaims.getVal();
-    if (policyValidationClaims == null || policyValidationClaims.isEmpty()) return false;
-    return policyValidationClaims.stream()
-      .filter(validation -> validation.getRes().equals(ValidationConclusion.PASSED))
-      .findFirst().isPresent();
-  }
-*/
-
   /** {@inheritDoc} */
   @Override protected SVTProfile getSvtProfile() {
     return SVTProfile.PDF;
@@ -132,132 +116,9 @@ public class PDFSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<byte
       .build();
   }
 
-  private String getB64Hash(byte[] bytes, String hashAlgoUri) throws NoSuchAlgorithmException {
-    MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(hashAlgoUri);
-    return Base64.encodeBase64String(md.digest(bytes));
-  }
-
   private List<SignedDataClaims> getDocRefHashes(ExtendedPdfSigValResult sigVerifyResult, byte[] signedDocument, String hashAlgoUri) throws IOException, NoSuchAlgorithmException {
     return Arrays.asList(calculateDocRefHash(sigVerifyResult.getPdfSignature(), signedDocument, hashAlgoUri));
   }
-
-/*  private CertReferenceClaims getCertRef(ExtendedPdfSigValResult sigResult, String hashAlgoUri)
-    throws CertificateEncodingException, NoSuchAlgorithmException, IOException {
-    X509Certificate signerCertificate = sigResult.getSignerCertificate();
-    List<X509Certificate> signatureCertificateChain = sigResult.getSignatureCertificateChain();
-
-    CertificateValidationResult certificateValidationResult;
-    try {
-      certificateValidationResult = Assert.checkNonNull(sigResult.getCertificateValidationResult());
-    } catch (Exception ex){
-      log.error("Unable to obtain the required certificate validation result object", ex);
-      throw new IOException("Unable to obtain the required certificate validation result object");
-    }
-
-    List<X509Certificate> validatedCertificatePath = certificateValidationResult.getValidatedCertificatePath();
-    boolean altered = !isCertPathMatch(validatedCertificatePath, signatureCertificateChain);
-    boolean hasValidatedCerts = validatedCertificatePath != null && !validatedCertificatePath.isEmpty();
-
-    if (hasValidatedCerts && altered){
-      // A certificate path other than the one provided in the signature was used for signature validation
-      // Store the examined certificate path
-      List<String> b64Chain = new ArrayList<>();
-      for (X509Certificate chainCert: validatedCertificatePath){
-        b64Chain.add(Base64.encodeBase64String(chainCert.getEncoded()));
-      }
-      return CertReferenceClaims.builder()
-        .type(CertReferenceClaims.CertRefType.chain.name())
-        .ref(b64Chain)
-        .build();
-    }
-
-    // In all other cases, the original signature chain is provided as hash references.
-    MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(hashAlgoUri);
-    String certHash = Base64.encodeBase64String(md.digest(signerCertificate.getEncoded()));
-    if (signatureCertificateChain == null || signatureCertificateChain.size() < 2){
-      // There is only one signerCertificate. Send it as single reference
-      return CertReferenceClaims.builder()
-        .type(CertReferenceClaims.CertRefType.chain_hash.name())
-        .ref(Arrays.asList(certHash))
-        .build();
-    }
-    // The chain contains more than one signerCertificate. Send chain hash ref
-    for (X509Certificate chainCert: signatureCertificateChain){
-      md.update(chainCert.getEncoded());
-    }
-    String chainHash = Base64.encodeBase64String(md.digest());
-    return CertReferenceClaims.builder()
-      .type(CertReferenceClaims.CertRefType.chain_hash.name())
-      .ref(Arrays.asList(certHash, chainHash))
-      .build();
-  }*/
-
-  /**
-   * Compares the validated path against the signature certificate path and determines if the validated path is altered.
-   * @param validatedCertificatePath the validated certificate path
-   * @param signatureCertificateChain the certificates obtained from the signature
-   * @return true if the signature certificate path contains all certificates of the validated certificate path
-   */
-/*
-  private boolean isCertPathMatch(List<X509Certificate> validatedCertificatePath, List<X509Certificate> signatureCertificateChain) {
-    //The validated certificate path is considered to be equal to the signature certificate collection if all certificates in the validated certificate path
-    //is found in the signature certificate list
-
-    if (validatedCertificatePath == null || validatedCertificatePath.isEmpty()){
-      log.debug("The validated certificate path is null or empty");
-      return false;
-    }
-
-    for (X509Certificate validatedCert : validatedCertificatePath){
-      if (!signatureCertificateChain.contains(validatedCert)){
-        log.debug("The validated certificate path is different than the signature certificate path. Signature cert path does not contain {}", validatedCert.getSubjectX500Principal());
-        return false;
-      }
-    }
-    log.debug("All certificates in the validated certificate path is found in the signature certificate path");
-    return true;
-  }
-*/
-
-/*
-  private String getVerifiedSignerCertHash(ExtendedPdfSigValResult sigVerifyResult, String hashAlgoUri) throws CertificateEncodingException,
-    NoSuchAlgorithmException {
-    MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(hashAlgoUri);
-    return Base64.encodeBase64String(md.digest(sigVerifyResult.getSignerCertificate().getEncoded()));
-  }
-
-  private String getCertChainHash(ExtendedPdfSigValResult sigVerifyResult, String hashAlgoUri)
-    throws CertificateEncodingException, NoSuchAlgorithmException {
-    MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(hashAlgoUri);
-    List<X509Certificate> chain = sigVerifyResult.getSignatureCertificateChain();
-    for (X509Certificate cert : chain) {
-      md.update(cert.getEncoded());
-    }
-    return Base64.encodeBase64String(md.digest());
-  }
-*/
-
-  /**
-   * Perform policy validation
-   *
-   * @param sigVerifyResult basic validation result
-   * @return signature validation result for defined policies
-   */
-/*
-  private List<PolicyValidationClaims> getSignaturePolicyValidations(ExtendedPdfSigValResult sigVerifyResult) {
-    List<PolicyValidationClaims> pvList = sigVerifyResult.getValidationPolicyResultList();
-
-    if (pvList.isEmpty() && defaultBasicValidation) {
-      log.warn("Signature result did not provide any policy signature result. Configured to set basic validation level");
-      pvList.add(PolicyValidationClaims.builder()
-        .pol(SigValIdentifiers.SIG_VALIDATION_POLICY_BASIC_VALIDATION)
-        .res(sigVerifyResult.isSuccess() ? ValidationConclusion.PASSED : ValidationConclusion.FAILED)
-        .build());
-    }
-
-    return pvList;
-  }
-*/
 
   /**
    * Performs the basic calculation of the hash of signed data in a PDF document, signed by a particular signature

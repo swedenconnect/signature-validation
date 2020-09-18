@@ -61,6 +61,15 @@ public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SV
     super(algorithm, privateKey, certificates);
   }
 
+  /**
+   * Gets the certificate reference claims for signature validation result
+   * @param sigResult signature validation result data
+   * @param hashAlgoUri the hash algorithm used to hash data
+   * @return certificate reference claims
+   * @throws CertificateEncodingException certificate errors
+   * @throws NoSuchAlgorithmException unsupported algorithm
+   * @throws IOException data parsing errors
+   */
   protected CertReferenceClaims getCertRef(ExtendedSigValResult sigResult, String hashAlgoUri)
     throws CertificateEncodingException, NoSuchAlgorithmException, IOException{
     X509Certificate signerCertificate = sigResult.getSignerCertificate();
@@ -137,6 +146,11 @@ public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SV
     return true;
   }
 
+  /**
+   * Test if provided time validation claims indicates presence of verified time
+   * @param timeValidationClaims time validation claims
+   * @return true if time validation claims contains verified time
+   */
   protected boolean isVerifiedTime(TimeValidationClaims timeValidationClaims) {
     if (timeValidationClaims == null) return false;
     List<PolicyValidationClaims> policyValidationClaims = timeValidationClaims.getVal();
@@ -146,7 +160,11 @@ public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SV
       .findFirst().isPresent();
   }
 
-
+  /**
+   * Returns the signature policy validation claims
+   * @param sigResult result of signature validation
+   * @return list of policy validation claims
+   */
   protected List<PolicyValidationClaims> getSignaturePolicyValidations(ExtendedSigValResult sigResult) {
     List<PolicyValidationClaims> pvList = sigResult.getValidationPolicyResultList();
 
@@ -160,5 +178,18 @@ public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SV
 
     return pvList;
   }
+
+  /**
+   * Create a Base64 hash value string based on input data and hash algorithm URI
+   * @param bytes bytes to hash
+   * @param hashAlgoUri hash algorithm URI
+   * @return Base64 string with hash value
+   * @throws NoSuchAlgorithmException unsupported hash algorithm
+   */
+  protected String getB64Hash(byte[] bytes, String hashAlgoUri) throws NoSuchAlgorithmException {
+    MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(hashAlgoUri);
+    return Base64.encodeBase64String(md.digest(bytes));
+  }
+
 
 }

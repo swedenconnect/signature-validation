@@ -16,21 +16,6 @@
 
 package se.idsec.sigval.xml.svt;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.w3c.dom.Element;
-import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class XMLSigValInput {
-
-  private Element signatureElement;
-  private XMLSignatureContext signatureContext;
-  private XMLDocumentSVTMethod svtMethod;
-
+public enum XMLDocumentSVTMethod {
+  REPLACE, REPLACE_ALL, EXTEND, EXTEND_ALL
 }

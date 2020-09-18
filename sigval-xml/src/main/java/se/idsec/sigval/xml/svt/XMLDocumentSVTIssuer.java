@@ -16,21 +16,24 @@
 
 package se.idsec.sigval.xml.svt;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.w3c.dom.Element;
-import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
+import lombok.extern.slf4j.Slf4j;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class XMLSigValInput {
+import javax.swing.text.Document;
 
-  private Element signatureElement;
-  private XMLSignatureContext signatureContext;
-  private XMLDocumentSVTMethod svtMethod;
+@Slf4j
+public class XMLDocumentSVTIssuer {
+
+  private final XMLSVTSigValClaimsIssuer svtClaimsIssuer;
+
+  public XMLDocumentSVTIssuer(XMLDocumentSVTMethod svtMethod, XMLSVTSigValClaimsIssuer svtClaimsIssuer) {
+    this.svtClaimsIssuer = svtClaimsIssuer;
+  }
+
+  public byte[] issueSvt(Document document, XMLDocumentSVTMethod svtMethod){
+    // TODO traverse the document signatures and issue SVT according to the declared method
+
+    // Return the enhanced XML document
+    return null;
+  }
 
 }
