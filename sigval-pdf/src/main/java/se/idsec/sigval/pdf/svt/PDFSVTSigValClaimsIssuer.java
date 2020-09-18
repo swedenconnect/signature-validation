@@ -2,9 +2,6 @@ package se.idsec.sigval.pdf.svt;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
-import com.sun.tools.javac.util.Assert;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
@@ -13,20 +10,17 @@ import org.bouncycastle.asn1.cms.ContentInfo;
 import org.bouncycastle.asn1.cms.SignedData;
 import org.bouncycastle.asn1.cms.SignerInfo;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
-import se.idsec.signservice.security.certificate.CertificateValidationResult;
-import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.commons.data.SignedDocumentValidationResult;
+import se.idsec.sigval.commons.svt.AbstractSVTSigValClaimsIssuer;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.idsec.sigval.pdf.verify.ExtendedPDFSignatureValidator;
 import se.idsec.sigval.svt.algorithms.SVTAlgoRegistry;
 import se.idsec.sigval.svt.claims.*;
-import se.idsec.sigval.svt.issuer.SVTIssuer;
 
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,14 +28,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
+public class PDFSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<byte[]> {
 
   private final ExtendedPDFSignatureValidator signatureVerifier;
-  @Setter private boolean defaultBasicValidation = false;
-  @Getter private SignedDocumentValidationResult<ExtendedPdfSigValResult> pdfSigVerifyResultDocument;
 
   /**
-   * Constructor for the PDF SVT claims issuer
+   * Constructor for the PDF SVT claims issuer. This class is not thread safe and an instance of this issuer must be created for each instance of SVT creation.
    * @param algorithm the algorithm used to sign the SVT
    * @param privateKey the private key used to sign the SVT
    * @param certificates certificates for validating the signature on the SVT
@@ -63,7 +55,7 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
    * @throws IOException on error
    */
   @Override protected List<SignatureClaims> verify(byte[] signedDocument, String hashAlgoUri) throws IOException, SignatureException {
-    pdfSigVerifyResultDocument = signatureVerifier.extendedResultValidation(
+    SignedDocumentValidationResult<ExtendedPdfSigValResult> pdfSigVerifyResultDocument = signatureVerifier.extendedResultValidation(
       signedDocument);
 
     if (pdfSigVerifyResultDocument.getSignatureCount() < 1) {
@@ -78,7 +70,7 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
         SignatureClaims claimsData = SignatureClaims.builder()
           .sig_ref(getSigRefData(sigResult.getSignedData(), hashAlgoUri))
           .sig_val(getSignaturePolicyValidations(sigResult))
-          .sig_data_ref(getDecRefHashes(sigResult, signedDocument, hashAlgoUri))
+          .sig_data_ref(getDocRefHashes(sigResult, signedDocument, hashAlgoUri))
           .time_val(
             sigResult.getTimeValidationResults().stream()
             .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeValidationClaims())
@@ -101,6 +93,7 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
    * @param timeValidationClaims time verification claims
    * @return true if the time validation claims represents verified time
    */
+/*
   private boolean isVerifiedTime(TimeValidationClaims timeValidationClaims) {
     if (timeValidationClaims == null) return false;
     List<PolicyValidationClaims> policyValidationClaims = timeValidationClaims.getVal();
@@ -109,6 +102,7 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
       .filter(validation -> validation.getRes().equals(ValidationConclusion.PASSED))
       .findFirst().isPresent();
   }
+*/
 
   /** {@inheritDoc} */
   @Override protected SVTProfile getSvtProfile() {
@@ -143,11 +137,11 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
     return Base64.encodeBase64String(md.digest(bytes));
   }
 
-  private List<SignedDataClaims> getDecRefHashes(ExtendedPdfSigValResult sigVerifyResult, byte[] signedDocument, String hashAlgoUri) throws IOException, NoSuchAlgorithmException {
+  private List<SignedDataClaims> getDocRefHashes(ExtendedPdfSigValResult sigVerifyResult, byte[] signedDocument, String hashAlgoUri) throws IOException, NoSuchAlgorithmException {
     return Arrays.asList(calculateDocRefHash(sigVerifyResult.getPdfSignature(), signedDocument, hashAlgoUri));
   }
 
-  private CertReferenceClaims getCertRef(ExtendedPdfSigValResult sigResult, String hashAlgoUri)
+/*  private CertReferenceClaims getCertRef(ExtendedPdfSigValResult sigResult, String hashAlgoUri)
     throws CertificateEncodingException, NoSuchAlgorithmException, IOException {
     X509Certificate signerCertificate = sigResult.getSignerCertificate();
     List<X509Certificate> signatureCertificateChain = sigResult.getSignatureCertificateChain();
@@ -196,7 +190,7 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
       .type(CertReferenceClaims.CertRefType.chain_hash.name())
       .ref(Arrays.asList(certHash, chainHash))
       .build();
-  }
+  }*/
 
   /**
    * Compares the validated path against the signature certificate path and determines if the validated path is altered.
@@ -204,6 +198,7 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
    * @param signatureCertificateChain the certificates obtained from the signature
    * @return true if the signature certificate path contains all certificates of the validated certificate path
    */
+/*
   private boolean isCertPathMatch(List<X509Certificate> validatedCertificatePath, List<X509Certificate> signatureCertificateChain) {
     //The validated certificate path is considered to be equal to the signature certificate collection if all certificates in the validated certificate path
     //is found in the signature certificate list
@@ -222,6 +217,7 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
     log.debug("All certificates in the validated certificate path is found in the signature certificate path");
     return true;
   }
+*/
 
 /*
   private String getVerifiedSignerCertHash(ExtendedPdfSigValResult sigVerifyResult, String hashAlgoUri) throws CertificateEncodingException,
@@ -247,6 +243,7 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
    * @param sigVerifyResult basic validation result
    * @return signature validation result for defined policies
    */
+/*
   private List<PolicyValidationClaims> getSignaturePolicyValidations(ExtendedPdfSigValResult sigVerifyResult) {
     List<PolicyValidationClaims> pvList = sigVerifyResult.getValidationPolicyResultList();
 
@@ -260,6 +257,7 @@ public class PDFSVTSigValClaimsIssuer extends SVTIssuer {
 
     return pvList;
   }
+*/
 
   /**
    * Performs the basic calculation of the hash of signed data in a PDF document, signed by a particular signature

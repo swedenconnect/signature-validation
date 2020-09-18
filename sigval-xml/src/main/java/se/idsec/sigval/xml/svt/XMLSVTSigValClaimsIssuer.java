@@ -18,15 +18,29 @@ package se.idsec.sigval.xml.svt;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
-import se.idsec.sigval.svt.claims.SVTProfile;
-import se.idsec.sigval.svt.claims.SignatureClaims;
-import se.idsec.sigval.svt.issuer.SVTIssuer;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import se.idsec.sigval.commons.svt.AbstractSVTSigValClaimsIssuer;
+import se.idsec.sigval.svt.claims.*;
+import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
+import se.idsec.sigval.xml.verify.XMLSignatureElementValidator;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
-public class XMLSVTSigValClaimsIssuer extends SVTIssuer {
+@Slf4j
+public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLSigValInput> {
+  //TODO  This is the next big task in order to issue SVT for XML docs
+
+  /**  */
+  private final XMLSignatureElementValidator signatureVerifier;
+
+  /** If this is true and signature validation did not provide any policy validation conclusion, then set basic validation level */
+  @Setter private boolean defaultBasicValidation = false;
 
   /**
    * @param algorithm    the algorithm used to sign the SVT as well as selecting the Hash algorithm used to generate SVT hash values
@@ -36,12 +50,39 @@ public class XMLSVTSigValClaimsIssuer extends SVTIssuer {
    * @throws JOSEException
    */
   public XMLSVTSigValClaimsIssuer(JWSAlgorithm algorithm, Object privateKey,
-    List<X509Certificate> certificates) throws NoSuchAlgorithmException, JOSEException {
+    List<X509Certificate> certificates, XMLSignatureElementValidator signatureVerifier) throws NoSuchAlgorithmException, JOSEException {
     super(algorithm, privateKey, certificates);
+    this.signatureVerifier = signatureVerifier;
   }
 
   /** {@inheritDoc} */
-  @Override protected List<SignatureClaims> verify(byte[] signedDocument, String hashAlgoUri) throws Exception {
+  @Override protected List<SignatureClaims> verify(XMLSigValInput sigValInput, String hashAlgoUri) throws Exception {
+
+    ExtendedXmlSigvalResult sigResult = signatureVerifier.validateSignature(sigValInput.getSignatureElement(),
+      sigValInput.getSignatureContext());
+
+    SignatureClaims claimsData = SignatureClaims.builder()
+      .sig_ref(getSigRefData(sigResult, hashAlgoUri))
+      .sig_val(getSignaturePolicyValidations(sigResult))
+      .sig_data_ref(getDocRefHashes(sigResult, hashAlgoUri))
+      .time_val(
+        sigResult.getTimeValidationResults().stream()
+          .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeValidationClaims())
+          .filter(timeValidationClaims -> isVerifiedTime(timeValidationClaims))
+          .collect(Collectors.toList())
+      )
+      .signer_cert_ref(getCertRef(sigResult, hashAlgoUri))
+      .build();
+
+    return Arrays.asList(claimsData);
+  }
+
+
+  private List<SignedDataClaims> getDocRefHashes(ExtendedXmlSigvalResult sigResult, String hashAlgoUri) {
+    return new ArrayList<>();
+  }
+
+  private SigReferenceClaims getSigRefData(ExtendedXmlSigvalResult sigResult, String hashAlgoUri) {
     return null;
   }
 
