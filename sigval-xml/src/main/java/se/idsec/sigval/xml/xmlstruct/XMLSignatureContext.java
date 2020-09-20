@@ -16,6 +16,7 @@
 
 package se.idsec.sigval.xml.xmlstruct;
 
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import se.idsec.sigval.xml.xmlstruct.impl.DefaultXMLSignatureContext;
 
@@ -42,7 +43,7 @@ public interface XMLSignatureContext {
    * @return the bytes signed by the provided signature
    * @throws IOException if the signature is not found or no signed data can be located
    */
-  byte[] getSignedDocument(Element signature);
+  //byte[] getSignedDocument(Element signature);
 
   /**
    * Test if this signature covers the whole document.
@@ -53,23 +54,28 @@ public interface XMLSignatureContext {
    * @param signature The signature tested if it covers the whole document
    * @return true if the signature covers the whole document
    */
-  boolean isCoversWholeDocument(Element signature);
+  //boolean isCoversWholeDocument(Element signature);
 
   /**
    * Parse and extract signature data from the signature
    *
    * @param signature The signature element
-   * @param registerIdAttr set to true  to force registration of ID or Id attributes in the signed XML document mapping to Reference URI attributes of the signature
    * @return signature data
    * @throws IOException on error parsing the signature and extracting the necessary information
    */
-  SignatureData getSignatureData(Element signature, boolean registerIdAttr) throws IOException;
+  SignatureData getSignatureData(Element signature) throws IOException;
 
   /**
    * Returns the bytes of the signed document
    * @return bytes of the signed document
    * @throws IOException on error parsing the document content
    */
-  byte[] getDocumentBytes() throws IOException;
+  byte[] getDocumentBytes();
+
+  /**
+   * Get the XML document
+   * @return XML document
+   */
+  Document getDocument();
 
 }

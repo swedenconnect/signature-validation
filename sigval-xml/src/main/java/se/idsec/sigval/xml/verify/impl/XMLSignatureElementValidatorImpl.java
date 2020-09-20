@@ -93,14 +93,11 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
    * @return a validation result
    */
   @Override
-  public ExtendedXmlSigvalResult validateSignature(final Element signature, final XMLSignatureContext signatureContext) {
+  public ExtendedXmlSigvalResult validateSignature(final Element signature, final SignatureData signatureData) {
 
     ExtendedXmlSigvalResult result = new ExtendedXmlSigvalResult();
 
     try {
-      // Register all ID attributes
-      SignatureData signatureData = signatureContext.getSignatureData(signature, true);
-
       result = validateSignatureElement(signature);
 
       // If we have a cert path validator installed, perform path validation...
@@ -141,8 +138,8 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       }
 
       XAdESObjectParser xAdESObjectParser = new XAdESObjectParser(signature, signatureData);
-      result.setSignedDocument(signatureContext.getSignedDocument(signature));
-      result.setCoversDocument(signatureContext.isCoversWholeDocument(signature));
+      result.setSignedDocument(signatureData.getSignedDocument());
+      result.setCoversDocument(signatureData.isCoversWholeDoc());
       result.setEtsiAdes(xAdESObjectParser.getQualifyingProperties() != null);
       result.setInvalidSignCert(!xAdESObjectParser.isXadesVerified(result.getSignerCertificate()));
       result.setClaimedSigningTime(xAdESObjectParser.getClaimedSigningTime());

@@ -16,6 +16,7 @@
 
 package se.idsec.sigval.xml.xmlstruct.impl;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.xml.security.signature.SignedInfo;
@@ -25,23 +26,21 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 import se.idsec.sigval.xml.utils.XMLDocumentBuilder;
 import se.idsec.sigval.xml.xmlstruct.SignatureData;
 import se.idsec.sigval.xml.xmlstruct.XMLSigConstants;
 import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
 
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.util.*;
 
 @Slf4j
 public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigConstants {
 
-  private final static String[] idNames = new String[]{"iD", "id", "Id", "ID"};
+  private final static String[] idNames = new String[] { "iD", "id", "Id", "ID" };
 
-  private final Document document;
-  private final byte[] documentBytes;
+  @Getter private final Document document;
+  @Getter private final byte[] documentBytes;
 
   private final String rootNamespaceURI;
   private final String rootElementName;
@@ -56,14 +55,15 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
       this.rootNamespaceURI = documentElement.getNamespaceURI();
       this.rootElementName = documentElement.getLocalName();
       this.rootIdAttrVal = getIdAttrVal(document.getDocumentElement());
-    } catch (Exception ex){
+    }
+    catch (Exception ex) {
       throw new IOException(ex);
     }
   }
 
   private String getIdAttrVal(Element element) {
     String idAttrValCandidate = null;
-    for (String idName : idNames){
+    for (String idName : idNames) {
       idAttrValCandidate = getIdAttrVal(idName, element, idAttrValCandidate);
     }
     return idAttrValCandidate;
@@ -76,18 +76,12 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
       : defaultVal;
   }
 
-
-  @Override public byte[] getDocumentBytes() throws IOException {
-    return documentBytes;
-  }
-
-  @Override public byte[] getSignedDocument(Element signature) {
+  public byte[] getSignedDocument(Map<String, byte[]> refDataMap) {
 
     try {
-      SignatureData signatureData = getSignatureData(signature, false);
-      Map<String, byte[]> refDataMap = signatureData.getRefDataMap();
+      //SignatureData signatureData = getSignatureData(signature, false);
 
-      Optional<Document> documentOptional = signatureData.getRefDataMap().keySet().stream()
+      Optional<Document> documentOptional = refDataMap.keySet().stream()
         .map(s -> refDataMap.get(s))
         .map(bytes -> {
           try {
@@ -98,10 +92,11 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
           }
         })
         .filter(parsedFrag -> parsedFrag != null)
-        .filter(signedDoc -> isMatch(signedDoc, signature))
+        .filter(parsedFrag -> isFragmentMatchingRootElement(parsedFrag, refDataMap))
         .findFirst();
 
-      if (documentOptional.isPresent()) return XMLDocumentBuilder.getCanonicalDocBytes(documentOptional.get());
+      if (documentOptional.isPresent())
+        return XMLDocumentBuilder.getCanonicalDocBytes(documentOptional.get());
     }
     catch (Exception e) {
       log.debug("Failed to parse and retrieve a matching document: {}", e.getMessage());
@@ -109,53 +104,47 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
     return null;
   }
 
-  private boolean isMatch(Document signedDoc, Element signature) {
+  private boolean isFragmentMatchingRootElement(Document parsedFragment, Map<String, byte[]> refDataMap) {
     try {
-      SignatureData signatureData = getSignatureData(signature, false);
-      Element signedDocDocumentElement = signedDoc.getDocumentElement();
+      Element signedDocDocumentElement = parsedFragment.getDocumentElement();
       String nameSpaceUri = signedDocDocumentElement.getNamespaceURI();
       String localName = signedDocDocumentElement.getLocalName();
-      Map<String, byte[]> refDataMap = signatureData.getRefDataMap();
 
       boolean nsMatch = false;
       if (rootNamespaceURI == null) {
         nsMatch = nameSpaceUri == null;
-      } else {
+      }
+      else {
         nsMatch = rootNamespaceURI.equals(nameSpaceUri);
       }
 
       boolean elmNameMatch = rootElementName.equals(localName);
 
       boolean idMatch = false;
-      if (rootIdAttrVal == null || rootIdAttrVal.isEmpty()){
+      if (rootIdAttrVal == null || rootIdAttrVal.isEmpty()) {
         idMatch = refDataMap.containsKey("");
-      } else {
+      }
+      else {
         idMatch = refDataMap.containsKey("#" + rootIdAttrVal);
       }
 
+      // Finally conclude if this fragment match the document root
       return nsMatch && elmNameMatch && idMatch;
 
     }
-    catch (IOException e) {
+    catch (Exception e) {
       log.debug("Signature match check cause exception - {}", e.getMessage());
     }
     return false;
   }
 
-  @Override public boolean isCoversWholeDocument(Element signature) {
-    try {
-      SignatureData signatureData = getSignatureData(signature, false);
-      Map<String, byte[]> refDataMap = signatureData.getRefDataMap();
-      if (refDataMap.containsKey("")) return true;
-      return refDataMap.containsKey("#" + rootIdAttrVal);
-    }
-    catch (IOException e) {
-      log.debug("Error parsing data to determine if signature covers document: {}", e.getMessage());
-    }
-    return false;
+  public boolean isCoversWholeDocument(Map<String, byte[]> refDataMap) {
+    if (refDataMap.containsKey(""))
+      return true;
+    return refDataMap.containsKey("#" + rootIdAttrVal);
   }
 
-  @Override public SignatureData getSignatureData(Element sigNode, boolean registerIdAttr) throws IOException {
+  @Override public SignatureData getSignatureData(Element sigNode) throws IOException {
     SignatureData.SignatureDataBuilder builder = SignatureData.builder();
 
     try {
@@ -164,39 +153,36 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
 
       NodeList signatureRefs = signedInfo.getElement().getElementsByTagNameNS(XMLDSIG_NS, "Reference");
       Map<String, byte[]> referencedDataMap = new HashMap<>();
-      for (int i = 0; i < signatureRefs.getLength(); i++){
-        Element refElement = (Element)signatureRefs.item(i);
+      for (int i = 0; i < signatureRefs.getLength(); i++) {
+        Element refElement = (Element) signatureRefs.item(i);
         String transform = getTransformAlgorithm(refElement);
         if (XMLDSIG_V2_TRANSFORM.equalsIgnoreCase(transform)) {
           throw new IOException("XMLDsig versioin 2.0 signatures not supported");
         }
         String uri = refElement.getAttribute("URI");
-        if (StringUtils.isNotEmpty(uri.trim()) && registerIdAttr) registerId(uri);
+        // Make sure id attributes are registered
+        if (StringUtils.isNotEmpty(uri.trim()))
+          registerId(uri);
         byte[] signedData = null;
         try {
           XMLSignatureInput xmlSignatureInput = signedInfo.getReferencedContentAfterTransformsItem(i);
           signedData = xmlSignatureInput.getBytes();
           int sdf = 0;
-        } catch (Exception ignored){
-          int sdf=0;
+        }
+        catch (Exception ignored) {
+          int sdf = 0;
           //Its perfectly legal if we don't find a document behind every reference, as long as 1 reference match our signed document
         }
         referencedDataMap.put(uri, signedData);
       }
-      builder.refDataMap(referencedDataMap);
-
-
-      builder.signature(signature);
-
-
-      if (registerIdAttr){
-        referencedDataMap.keySet().stream()
-          .filter(referenceUri -> StringUtils.isNotEmpty(referenceUri))
-          .filter(referenceUri -> referenceUri.startsWith("#"))
-          .forEach(referenceUri -> registerId(referenceUri));
-      }
-
-    } catch (Exception ex) {
+      builder.refDataMap(referencedDataMap)
+        .signature(signature)
+        .coversWholeDoc(isCoversWholeDocument(referencedDataMap))
+        .signedDocument(getSignedDocument(referencedDataMap))
+        .signatureBytes(signature.getSignatureValue())
+        .signedInfoBytes(signature.getSignedInfo().getCanonicalizedOctetStream());
+    }
+    catch (Exception ex) {
       log.error("Error parsing ref URI from signature");
       throw new IOException("Error parsing ref URI from signature", ex);
     }
@@ -204,60 +190,26 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
     return builder.build();
   }
 
-/*
-  private Element getElementInDocument(String uri, byte[] signedData) {
-    // If the URI is the empty root element URI reference
-    if (StringUtils.isEmpty(uri.trim())) return document.getDocumentElement();
-
-    // URI points to an ID outside of the document we stop here and return null.
-    if (!uri.startsWith("#")) return null;
-
-    try {
-      Element signedDataDocElement = XMLDocumentBuilder.getDocument(signedData).getDocumentElement();
-      String idAttrVal = getIdAttrVal(signedDataDocElement);
-      if (StringUtils.isEmpty(idAttrVal)) return null;
-      String namespaceURI = signedDataDocElement.getNamespaceURI();
-      String localName = signedDataDocElement.getLocalName();
-      NodeList matchelements = document.getDocumentElement().getElementsByTagNameNS(namespaceURI, localName);
-      for (int i = 0; i< matchelements.getLength(); i++){
-        Node matchNode = matchelements.item(i);
-        if (matchNode instanceof Element){
-          Element matchElm = (Element) matchNode;
-          String matchIdVal = getIdAttrVal(matchElm);
-          if (uri.equals("#" + matchIdVal)){
-            //registerIdInElement(matchElm, uri);
-            return matchElm;
-          }
-        }
-      }
-    }
-    catch (IOException | SAXException | ParserConfigurationException e) {
-      e.printStackTrace();
-    }
-    return null;
-  }
-*/
-
   private void registerId(String referenceUri) {
     NodeList nodes = document.getDocumentElement().getElementsByTagName("*");
     List<Element> matchingElements = new ArrayList<>();
-    for (int i = 0 ; i<nodes.getLength() ; i++){
+    for (int i = 0; i < nodes.getLength(); i++) {
       Node node = nodes.item(i);
-      if (node instanceof Element){
+      if (node instanceof Element) {
         Element element = (Element) node;
         String idAttrVal = getIdAttrVal(element);
-        if (StringUtils.isNotEmpty(idAttrVal) && referenceUri.equals("#" + idAttrVal)){
+        if (StringUtils.isNotEmpty(idAttrVal) && referenceUri.equals("#" + idAttrVal)) {
           matchingElements.add(element);
         }
       }
     }
-    if (matchingElements.size() == 1){
+    if (matchingElements.size() == 1) {
       registerIdInElement(matchingElements.get(0), referenceUri);
     }
   }
 
   private void registerIdInElement(Element element, String referenceUri) {
-    for (String idName : idNames){
+    for (String idName : idNames) {
       String signatureUriReference = element.getAttribute(idName);
       if (StringUtils.isNotEmpty(signatureUriReference) && ("#" + signatureUriReference).equals(referenceUri)) {
         element.setIdAttribute(idName, true);
@@ -267,7 +219,8 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
 
   private String getTransformAlgorithm(Element refElement) {
     NodeList transformNodes = refElement.getElementsByTagNameNS(XMLDSIG_NS, "Transform");
-    if (transformNodes == null || transformNodes.getLength() < 1) return null;
+    if (transformNodes == null || transformNodes.getLength() < 1)
+      return null;
 
     try {
       Element transformElement = (Element) transformNodes.item(0);
@@ -275,7 +228,8 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
       return StringUtils.isNotEmpty(algorithm)
         ? algorithm
         : null;
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       log.debug("Failed to obtain transform algorithm: {}", ex.getMessage());
     }
     return null;

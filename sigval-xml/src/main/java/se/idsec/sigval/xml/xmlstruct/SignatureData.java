@@ -21,32 +21,20 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.xml.security.signature.XMLSignature;
-import org.w3c.dom.Element;
 
-import java.util.List;
 import java.util.Map;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class SignatureData{
+public class SignatureData {
 
-//  private List<byte[]> signedXmlFragments;
-//  private List<String> refURIList;
   private XMLSignature signature;
   private Map<String, byte[]> refDataMap;
-
-
-  @Data
-  @AllArgsConstructor
-  @NoArgsConstructor
-  @Builder
-  public static class ReferencedData{
-
-    private Element elementInDocument;
-    byte[] signedBytes;
-
-  }
+  private boolean coversWholeDoc;
+  private byte[] signedDocument;
+  private byte[] signatureBytes;
+  private byte[] signedInfoBytes;
 
 }

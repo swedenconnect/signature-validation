@@ -139,11 +139,12 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
       //
       List<SignatureValidationResult> results = new ArrayList<>();
       for (Element signature : signatures) {
+        SignatureData signatureData = signatureContext.getSignatureData(signature);
         SignatureSVTValidationResult svtValResult = XMLSVAUtils.getMatchingSvtValidation(signature, docBytes, svtValidationResultList);
         if (svtValResult == null) {
-            results.add(signatureElementValidator.validateSignature(signature, signatureContext));
+            results.add(signatureElementValidator.validateSignature(signature, signatureData));
         } else {
-          results.add(compileXMLSigValResultsFromSvtValidation(svtValResult, signature, signatureContext));
+          results.add(compileXMLSigValResultsFromSvtValidation(svtValResult, signature, signatureData));
         }
       }
 
@@ -192,7 +193,7 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
     }
   }
 
-  private SignatureValidationResult compileXMLSigValResultsFromSvtValidation(SignatureSVTValidationResult svtValResult, Element signature, XMLSignatureContext signatureContext) {
+  private SignatureValidationResult compileXMLSigValResultsFromSvtValidation(SignatureSVTValidationResult svtValResult, Element signature, SignatureData signatureData) {
     //TODO
     return null;
   }

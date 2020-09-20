@@ -21,7 +21,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.w3c.dom.Element;
-import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
+import se.idsec.sigval.xml.xmlstruct.SignatureData;
 
 @Data
 @NoArgsConstructor
@@ -30,7 +30,7 @@ import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
 public class XMLSigValInput {
 
   private Element signatureElement;
-  private XMLSignatureContext signatureContext;
+  private SignatureData signatureData;
   private XMLDocumentSVTMethod svtMethod;
 
 }

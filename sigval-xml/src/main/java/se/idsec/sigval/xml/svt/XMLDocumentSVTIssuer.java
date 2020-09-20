@@ -57,7 +57,7 @@ public class XMLDocumentSVTIssuer {
       try {
         signedSvtJWT = svtClaimsIssuer.getSignedSvtJWT(
           XMLSigValInput.builder()
-            .signatureContext(signatureContext)
+            .signatureData(signatureContext.getSignatureData(signature))
             .signatureElement(signature)
             .svtMethod(svtMethod)
             .build(), svtModel

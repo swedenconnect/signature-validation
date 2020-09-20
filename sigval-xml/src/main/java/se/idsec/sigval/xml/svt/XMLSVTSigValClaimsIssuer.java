@@ -20,7 +20,9 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.util.encoders.Base64;
 import org.w3c.dom.Element;
+import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.commons.svt.AbstractSVTSigValClaimsIssuer;
 import se.idsec.sigval.svt.claims.*;
 import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
@@ -29,11 +31,10 @@ import se.idsec.sigval.xml.xmlstruct.SignatureData;
 import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
 
 import java.io.IOException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -62,13 +63,15 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
   /** {@inheritDoc} */
   @Override protected List<SignatureClaims> verify(XMLSigValInput sigValInput, String hashAlgoUri) throws Exception {
 
+    SignatureData signatureData = sigValInput.getSignatureData();
+    Map<String, byte[]> refDataMap = signatureData.getRefDataMap();
     ExtendedXmlSigvalResult sigResult = signatureVerifier.validateSignature(sigValInput.getSignatureElement(),
-      sigValInput.getSignatureContext());
+      signatureData);
 
     SignatureClaims claimsData = SignatureClaims.builder()
-      .sig_ref(getSigRefData(sigResult, hashAlgoUri))
+      .sig_ref(getSigRefData(signatureData, hashAlgoUri))
       .sig_val(getSignaturePolicyValidations(sigResult))
-      .sig_data_ref(getDocRefHashes(sigResult, sigValInput, hashAlgoUri))
+      .sig_data_ref(getDocRefHashes(refDataMap, hashAlgoUri))
       .time_val(
         sigResult.getTimeValidationResults().stream()
           .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeValidationClaims())
@@ -82,23 +85,41 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
   }
 
 
-  private List<SignedDataClaims> getDocRefHashes(ExtendedXmlSigvalResult sigResult, XMLSigValInput sigValInput, String hashAlgoUri)
-    throws IOException {
+  private List<SignedDataClaims> getDocRefHashes(Map<String, byte[]> refDataMap, String hashAlgoUri)
+    throws IOException, NoSuchAlgorithmException {
 
     // Go through all XML references and locate the bytes that were hashed by each reference
     // Throw exception if the reference data cannot be located. This implementation only supports internal references
-    XMLSignatureContext signatureContext = sigValInput.getSignatureContext();
-    Element signatureElement = sigValInput.getSignatureElement();
-    SignatureData signatureData = signatureContext.getSignatureData(signatureElement, false);
+    List<SignedDataClaims> signedDataClaimsList = new ArrayList<>();
+    Set<String> refSet = refDataMap.keySet();
+    for(String ref : refSet){
+      byte[] signedBytes = refDataMap.get(ref);
+      if (signedBytes == null){
+        throw new IOException("Missing referenced data in signed document. Unable to collect signed data references for SVT");
+      }
+      MessageDigest digest = DigestAlgorithmRegistry.get(hashAlgoUri).getInstance();
+      signedDataClaimsList.add(SignedDataClaims.builder()
+        .ref(ref)
+        .hash(Base64.toBase64String(digest.digest(signedBytes)))
+        .build());
+    }
 
     // Idea - Fix function in signature context to make it able to extract all referenced data (as opposed to now)
     // Return a map of signed data, mapped by reference URI. as well as the URI representing the root node in SignatureData.
 
-    return new ArrayList<>();
+    return signedDataClaimsList;
   }
 
-  private SigReferenceClaims getSigRefData(ExtendedXmlSigvalResult sigResult, String hashAlgoUri) {
-    return null;
+  private SigReferenceClaims getSigRefData(SignatureData signatureData, String hashAlgoUri) throws IOException, NoSuchAlgorithmException{
+    byte[] signatureBytes = signatureData.getSignatureBytes();
+    byte[] signedInfoBytes = signatureData.getSignedInfoBytes();
+    if (signatureBytes == null || signedInfoBytes == null) throw new IOException("No signature or signed document bytes available");
+    MessageDigest digest = DigestAlgorithmRegistry.get(hashAlgoUri).getInstance();
+    return SigReferenceClaims.builder()
+      .id(signatureData.getSignature().getId())
+      .sb_hash(Base64.toBase64String(digest.digest(signedInfoBytes)))
+      .sig_hash(Base64.toBase64String(digest.digest(signatureData.getSignatureBytes())))
+      .build();
   }
 
   /** {@inheritDoc} */
