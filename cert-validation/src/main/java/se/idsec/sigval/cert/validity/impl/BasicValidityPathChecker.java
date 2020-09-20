@@ -132,10 +132,15 @@ public class BasicValidityPathChecker implements ValidityPathChecker {
     }
 
     try {
-      statusSignerCertificate.verify(issuer.getPublicKey());
+      if (issuer.equals(statusSignerCertificate)){
+        log.debug("The target cert issuer is also the OCSP response issuer {}", issuer.getSubjectX500Principal());
+      } else {
+        statusSignerCertificate.verify(issuer.getPublicKey());
+        log.debug("The OCSP certificate {} is issued by the CA that issued the target certificate", statusSignerCertificate.getSubjectX500Principal());
+      }
     }
     catch (Exception e) {
-      log.debug("OCSP validation failed: OCSP responder certificate can't be verified using target CA certificate");
+      log.debug("OCSP validation failed: OCSP responder certificate {} can't be verified using target CA certificate", statusSignerCertificate.getSubjectX500Principal());
       log.trace("OCSP certificate validation exception: ", e);
       throw new RuntimeException("OCSP validation failed: OCSP responder certificate can't be verified using target CA certificate");
     }
@@ -145,8 +150,8 @@ public class BasicValidityPathChecker implements ValidityPathChecker {
       .filter(certificate -> certificate.equals(validityStatus.getCertificate()))
       .findFirst().isPresent();
     if (targetCertInOcspPath) {
-      log.debug("OCSP validation failed: OCSP responder certificate trust path contains target certificate");
-      throw new RuntimeException("OCSP validation failed: OCSP responder certificate trust path contains target certificate");
+      log.debug("OCSP recursive error: OCSP responder certificate trust path contains target certificate");
+      throw new RuntimeException("OCSP recursive error: OCSP responder certificate trust path contains target certificate");
     }
 
     //Check OCSP extended key usage
@@ -165,7 +170,8 @@ public class BasicValidityPathChecker implements ValidityPathChecker {
 
     //Check OCSP responder cert validity status
     boolean ocspNocheck = CertUtils.isOCSPNocheckExt(statusSignerCertificate);
-    if (!ocspNocheck) {
+    if (!ocspNocheck && !issuer.equals(statusSignerCertificate)) {
+      // If there is no OCSP no-chek and the target issuer is not the OCSP issuer
       log.debug("OCSP service certificate without no-check extension for {}", statusSignerCertificate.getSubjectX500Principal());
       BasicCertificateValidityChecker certChecker = new BasicCertificateValidityChecker(
         statusSignerCertificate, issuer, crlCache);

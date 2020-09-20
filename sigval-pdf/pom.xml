@@ -23,7 +23,12 @@
         <dependency>
             <groupId>se.idsec.sigval.base</groupId>
             <artifactId>cert-validation</artifactId>
-            <version>1.0.0</version>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>se.idsec.signservice.commons</groupId>
+            <artifactId>signservice-pdf-commons</artifactId>
+            <version>1.0.6-SNAPSHOT</version>
         </dependency>
     </dependencies>
 
