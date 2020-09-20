@@ -105,7 +105,7 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
 
     case REPLACE:
     case EXTEND:
-      return  !(svtValidated && validSig);
+      return  !svtValidated || !validSig;
     case REPLACE_ALL:
     case EXTEND_ALL:
       return true;
