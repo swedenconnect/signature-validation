@@ -31,6 +31,7 @@ import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 import se.idsec.sigval.xml.svt.XMLSVTValidator;
 import se.idsec.sigval.xml.utils.XMLDocumentBuilder;
 import se.idsec.sigval.xml.utils.XMLSVAUtils;
+import se.idsec.sigval.xml.utils.XMLSigUtils;
 import se.idsec.sigval.xml.verify.ExtendedXMLSignedDocumentValidator;
 import se.idsec.sigval.xml.verify.XMLSignatureElementValidator;
 import se.idsec.sigval.xml.xmlstruct.SignatureData;
@@ -90,16 +91,7 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
   @Override public List<SignatureValidationResult> validate(Document document) throws SignatureException {
     // First locate all signature elements ...
     //
-    NodeList signatureElements = document.getElementsByTagNameNS(javax.xml.crypto.dsig.XMLSignature.XMLNS, "Signature");
-    if (signatureElements.getLength() == 0) {
-      log.debug("No signatures found");
-      // We return an empty list of signature results as it is not considered an exception to validate an unsigned document
-      return new ArrayList<>();
-    }
-    List<Element> signatures = new ArrayList<>();
-    for (int i = 0; i < signatureElements.getLength(); i++) {
-      signatures.add((Element) signatureElements.item(i));
-    }
+    List<Element> signatures = XMLSigUtils.getSignatures(document);
     try {
       return this.validate(document, signatures);
     }

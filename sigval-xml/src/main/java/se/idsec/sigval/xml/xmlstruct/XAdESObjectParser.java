@@ -55,7 +55,7 @@ public class XAdESObjectParser {
       JAXBContext jaxbContext = getXAdESContext();
       QualifyingProperties qp = (QualifyingProperties) jaxbContext.createUnmarshaller().unmarshal(qpNodes.item(i));
       try {
-        if (signatureData.getRefURIList().contains("#" + qp.getSignedProperties().getId())) {
+        if (signatureData.getRefDataMap().containsKey("#" + qp.getSignedProperties().getId())) {
           qualifyingProperties = qp;
           break;
         }

@@ -45,6 +45,7 @@ public class XMLDocumentBuilder {
      */
     safeDocBuilderFactory = DocumentBuilderFactory.newInstance();
     safeDocBuilderFactory.setNamespaceAware(true);
+    //safeDocBuilderFactory.setValidating(true);
     try {
       safeDocBuilderFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
       safeDocBuilderFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
