@@ -68,22 +68,50 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
     ExtendedXmlSigvalResult sigResult = signatureVerifier.validateSignature(sigValInput.getSignatureElement(),
       signatureData);
 
-    SignatureClaims claimsData = SignatureClaims.builder()
-      .sig_ref(getSigRefData(signatureData, hashAlgoUri))
-      .sig_val(getSignaturePolicyValidations(sigResult))
-      .sig_data_ref(getDocRefHashes(refDataMap, hashAlgoUri))
-      .time_val(
-        sigResult.getTimeValidationResults().stream()
-          .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeValidationClaims())
-          .filter(timeValidationClaims -> isVerifiedTime(timeValidationClaims))
-          .collect(Collectors.toList())
-      )
-      .signer_cert_ref(getCertRef(sigResult, hashAlgoUri))
-      .build();
+    XMLDocumentSVTMethod svtMethod = sigValInput.getSvtMethod();
+    if (isIssueSVT(sigResult, svtMethod)) {
+      SignatureClaims claimsData = SignatureClaims.builder()
+        .sig_ref(getSigRefData(signatureData, hashAlgoUri))
+        .sig_val(getSignaturePolicyValidations(sigResult))
+        .sig_data_ref(getDocRefHashes(refDataMap, hashAlgoUri))
+        .time_val(
+          sigResult.getTimeValidationResults().stream()
+            .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeValidationClaims())
+            .filter(timeValidationClaims -> isVerifiedTime(timeValidationClaims))
+            .collect(Collectors.toList())
+        )
+        .signer_cert_ref(getCertRef(sigResult, hashAlgoUri))
+        .build();
 
-    return Arrays.asList(claimsData);
+      return Arrays.asList(claimsData);
+    }
+    // This signature should not be extended with a new SVT token.
+    return null;
   }
 
+  private boolean isIssueSVT(ExtendedXmlSigvalResult sigResult, XMLDocumentSVTMethod svtMethod) {
+
+    boolean svtValidated = sigResult.getSvtJWT() != null;
+    boolean validSig = false;
+    List<PolicyValidationClaims> validationPolicyResultList = sigResult.getValidationPolicyResultList();
+    if (validationPolicyResultList != null){
+      validSig = validationPolicyResultList.stream()
+        .filter(policyValidationClaims -> policyValidationClaims.getRes().equals(ValidationConclusion.PASSED))
+        .findFirst()
+        .isPresent();
+    }
+
+    switch (svtMethod){
+
+    case REPLACE:
+    case EXTEND:
+      return  !(svtValidated && validSig);
+    case REPLACE_ALL:
+    case EXTEND_ALL:
+      return true;
+    }
+    return false;
+  }
 
   private List<SignedDataClaims> getDocRefHashes(Map<String, byte[]> refDataMap, String hashAlgoUri)
     throws IOException, NoSuchAlgorithmException {
