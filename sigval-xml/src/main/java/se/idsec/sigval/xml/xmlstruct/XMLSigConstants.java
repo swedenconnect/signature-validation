@@ -20,5 +20,6 @@ public interface XMLSigConstants {
 
   String XMLDSIG_NS = "http://www.w3.org/2000/09/xmldsig#";
   String XMLDSIG_V2_TRANSFORM = "http://www.w3.org/2010/xmldsig2#transform";
+  String XML_SVT_NS = "http://id.swedenconnect.se/svt/1.0/sig-prop/ns";
 
 }

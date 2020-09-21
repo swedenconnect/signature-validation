@@ -39,9 +39,8 @@ import java.util.stream.Collectors;
 
 @Slf4j
 public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLSigValInput> {
-  //TODO  This is the next big task in order to issue SVT for XML docs
 
-  /**  */
+  /** Signature verifier used to validate XML signatures to determine signature validity */
   private final XMLSignatureElementValidator signatureVerifier;
 
   /** If this is true and signature validation did not provide any policy validation conclusion, then set basic validation level */
