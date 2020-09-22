@@ -1,9 +1,6 @@
 package se.idsec.sigval.pdf.timestamp;
 
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.ECDSAVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -20,21 +17,15 @@ import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.commons.algorithms.JWSAlgorithmRegistry;
 import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
 import se.idsec.sigval.commons.utils.SVAUtils;
-import se.idsec.sigval.pdf.utils.PDFSVAUtils;
 import se.idsec.sigval.svt.claims.SVTClaims;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.security.MessageDigest;
-import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.security.interfaces.ECPublicKey;
-import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -106,41 +97,7 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
       }
     }
   }
-
-/*  *//**
-   * Verifies the SVA.
-   *
-   * @param publicKey the public key used to verify the SVA token signature
-   * @throws Exception if validation of SVA fails
-   *//*
-  private void verifySVA(PublicKey publicKey) throws Exception {
-    //Check for expiry
-    Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
-    if (expirationTime != null) {
-      if (new Date().after(expirationTime)) {
-        throw new RuntimeException("The SVA has expired");
-      }
-    }
-
-    PublicKey svaSigPublicKey = svaSigCert.getPublicKey();
-    JWSVerifier verifier = svaSigPublicKey instanceof RSAPublicKey ?
-      new RSASSAVerifier((RSAPublicKey) svaSigPublicKey) :
-      new ECDSAVerifier((ECPublicKey) svaSigPublicKey);
-
-    //Verify that the hash algorithm is consistent with the SVA claims
-    JWSAlgorithm algorithm = signedJWT.getHeader().getAlgorithm();
-    String algoUri = JWSAlgorithmRegistry.getUri(algorithm);
-    PDFAlgorithmRegistry.PDFSignatureAlgorithmProperties algorithmProperties = PDFAlgorithmRegistry.getAlgorithmProperties(algoUri);
-
-    DigestAlgorithm svaSigHashAlgo = DigestAlgorithmRegistry.get(algorithmProperties.getDigestAlgoOID());
-    DigestAlgorithm svaClaimsHashAlgo = DigestAlgorithmRegistry.get(svtClaims.getHash_algo());
-    if (!svaSigHashAlgo.equals(svaClaimsHashAlgo)) {
-      throw new IOException(
-        "SVA hahs algo mismatch. SVA algo: " + svaClaimsHashAlgo.getUri() + ", SVA token sig algo: " + svaSigHashAlgo.getUri());
-    }
-    svaSignatureValid = signedJWT.verify(verifier);
-  }*/
-
+  
   /**
    * Obtain SVA validation certificates from the provided SVA
    * If the SVA does not contain any certificates, we will choose the certificate and chain used to sign the timstamp

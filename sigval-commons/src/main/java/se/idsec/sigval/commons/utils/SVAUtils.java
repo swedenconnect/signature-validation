@@ -47,16 +47,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SVAUtils {
 
-/*
-  public static final String SIGNATURE_TYPE = "sig";
-  public static final String DOC_TIMESTAMP_TYPE = "docts";
-  public static final String SVT_TYPE = "svt";
-  public static final String UNKNOWN_TYPE = "unknown";
-  public static final String PDF_SIG_SUBFILETER_LC = "adbe.pkcs7.detached";
-  public static final String CADES_SIG_SUBFILETER_LC = "etsi.cades.detached";
-  public static final String TIMESTAMP_SUBFILTER_LC = "etsi.rfc3161";
-*/
-
   public static boolean isSVADocTimestamp(byte[] sigBytes) {
     try {
       TSTInfo tstInfo = getPdfDocTSTInfo(sigBytes);
@@ -117,27 +107,6 @@ public class SVAUtils {
     }
     return SignedData.getInstance(contentInfo.getContent());
   }
-
-
-/*
-  public static List<byte[]> getSignatureCertificateList(byte[] pdSignature) throws IOException {
-    SignedData signedData = getSignedDataFromSignature(pdSignature);
-    Iterator<ASN1Encodable> iterator = signedData.getCertificates().iterator();
-    List<byte[]> certList = new ArrayList<>();
-    while (iterator.hasNext()) {
-      certList.add(iterator.next().toASN1Primitive().getEncoded("DER"));
-    }
-    return certList;
-  }
-*/
-
-/*
-  private static SignerInfo getSignerInfo(SignedData signedData) throws Exception {
-    ASN1Encodable signerInfoObj = signedData.getSignerInfos().getObjectAt(0);
-    SignerInfo signerInfo = SignerInfo.getInstance(signerInfoObj);
-    return signerInfo;
-  }
-*/
 
   /**
    * Gets the referenced certificate and certificate chain validated through a SVA {@link CertReferenceClaims} claim
