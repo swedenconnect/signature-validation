@@ -1,6 +1,7 @@
 package se.idsec.sigval.pdf.svt;
 
 import com.nimbusds.jwt.SignedJWT;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
@@ -10,6 +11,7 @@ import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
+import se.idsec.sigval.commons.utils.SVAUtils;
 import se.idsec.sigval.pdf.timestamp.PDFSVTDocTimeStamp;
 import se.idsec.sigval.pdf.utils.PDFSVAUtils;
 import se.idsec.sigval.pdf.verify.PDFSingleSignatureValidator;
@@ -27,7 +29,8 @@ import java.util.*;
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-public class PDFSVTValidator extends SVTValidator {
+@Slf4j
+public class PDFSVTValidator extends SVTValidator<byte[]> {
 
   /** Certificate chain validator for SVA tokens **/
   private CertificateValidator svaCertVerifier;
@@ -106,7 +109,7 @@ public class PDFSVTValidator extends SVTValidator {
 
       //Get basic signature data
       byte[] sigContentInfo = signature.getContents(pdfDocBytes);
-      SignedData signedData = PDFSVAUtils.getSignedDataFromSignature(sigContentInfo);
+      SignedData signedData = SVAUtils.getSignedDataFromSignature(sigContentInfo);
       SignerInfo signerInfo = SignerInfo.getInstance(signedData.getSignerInfos().getObjectAt(0));
 
       // Get signature SVA claims maching this signature
@@ -183,7 +186,7 @@ public class PDFSVTValidator extends SVTValidator {
         validSvaTsList.add(svaTs);
       }
       catch (Exception e) {
-        e.printStackTrace();
+        log.debug("Signature validation failed on this SVA JWT - {}", e.getMessage());
       }
     }
     if (validSvaTsList.isEmpty()) {

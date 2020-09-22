@@ -82,22 +82,30 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
     return extendDocumentSignature(document, svtExtensionDataList);
   }
 
+  /**
+   * Extends the document signature with SVT token
+   * @param document the XML document owning the signatures to extend
+   * @param svtExtensionDataList
+   * @return
+   * @throws Exception
+   */
   private byte[] extendDocumentSignature(Document document, List<SVTExtensionData> svtExtensionDataList) throws Exception{
 
     for (SVTExtensionData svtExtensionData:svtExtensionDataList){
       SignedJWT signedJWT = svtExtensionData.getSignedJWT();
-      if (signedJWT == null) continue;
       Element sigElement = svtExtensionData.getElement();
-      XMLSignature signature = svtExtensionData.getSignatureData().getSignature();
       XMLDocumentSVTMethod svtMethod = svtExtensionData.getSvtMethod();
 
       NodeList objectNodes = sigElement.getElementsByTagNameNS(XMLDSIG_NS, "Object");
       List<Element> svtObjects = getSvtObjects(objectNodes);
-      // Remove old SVT objects if method is set to replace
-      if (svtMethod.equals(XMLDocumentSVTMethod.REPLACE) || svtMethod.equals(XMLDocumentSVTMethod.REPLACE_ALL)){
+      // Remove old SVT objects if method is set to replace (if we have a new SVT) or replace all.
+      if ((svtMethod.equals(XMLDocumentSVTMethod.REPLACE) && signedJWT != null) || svtMethod.equals(XMLDocumentSVTMethod.REPLACE_ALL)){
         svtObjects.stream().forEach(element -> sigElement.removeChild(element));
       }
+      // No need to continue if we didn't get a new SVT
+      if (signedJWT == null) continue;
 
+      // Create the new SVT XML Signature Object
       Element svtObject = document.createElementNS(XMLDSIG_NS, "Object");
       svtObject.setPrefix("ds");
       sigElement.appendChild(svtObject);
@@ -108,6 +116,7 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
       signatureProperty.setPrefix("ds");
       signatureProperties.appendChild(signatureProperty);
 
+      // If the signature element does not have an Id attribute, then create one.
       String sigId = sigElement.getAttribute("Id");
       if (StringUtils.isEmpty(sigId)){
         sigId = "id_" + new BigInteger(128, new SecureRandom()).toString(16);
@@ -121,6 +130,7 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
       signatureValidationToken.setTextContent(signedJWT.serialize());
     }
 
+    // Return resulting document with updated signature elements
     return XMLDocumentBuilder.getCanonicalDocBytes(document);
   }
 

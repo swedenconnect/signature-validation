@@ -21,6 +21,7 @@ import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.commons.data.SignedDocumentValidationResult;
 import se.idsec.sigval.commons.data.TimeValidationResult;
 import se.idsec.sigval.commons.utils.GeneralCMSUtils;
+import se.idsec.sigval.commons.utils.SVAUtils;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContextFactory;
 import se.idsec.sigval.pdf.svt.PDFSVTValidator;
@@ -236,7 +237,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       cmsSVResult.setSignedData(sigBytes);
 
       //Reaching this point means that the signature is valid and verified through the SVA.
-      SignedData signedData = PDFSVAUtils.getSignedDataFromSignature(sigBytes);
+      SignedData signedData = SVAUtils.getSignedDataFromSignature(sigBytes);
       cmsSVResult.setEtsiAdes(signature.getSubFilter().equalsIgnoreCase(PDFSVAUtils.CADES_SIG_SUBFILETER_LC));
       cmsSVResult.setInvalidSignCert(false);
       cmsSVResult.setClaimedSigningTime(PDFSVAUtils.getClaimedSigningTime(signature.getSignDate(), signedData));
@@ -276,7 +277,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       cmsSVResult.setSignerCertificate(CMSSigCerts.getSigCert());
       cmsSVResult.setSignatureCertificateChain(CMSSigCerts.getChain());
       // Store the svt validated certificates as path of certificate validation results
-      CertificateValidationResult cvr = new DefaultCertificateValidationResult(PDFSVAUtils.getOrderedCertList(svtValResult.getSignerCertificate(), svtValResult.getCertificateChain()));
+      CertificateValidationResult cvr = new DefaultCertificateValidationResult(SVAUtils.getOrderedCertList(svtValResult.getSignerCertificate(), svtValResult.getCertificateChain()));
       cmsSVResult.setCertificateValidationResult(cvr);
 
       // Finalize

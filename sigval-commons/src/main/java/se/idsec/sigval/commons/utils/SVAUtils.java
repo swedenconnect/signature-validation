@@ -1,20 +1,26 @@
 package se.idsec.sigval.commons.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.ECDSAVerifier;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import org.bouncycastle.asn1.ASN1Encodable;
+import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.cms.ContentInfo;
 import org.bouncycastle.asn1.cms.SignedData;
-import org.bouncycastle.asn1.cms.SignerInfo;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.asn1.tsp.TSTInfo;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.util.encoders.Base64;
+import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
+import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
+import se.idsec.sigval.svt.algorithms.SVTAlgoRegistry;
 import se.idsec.sigval.svt.claims.CertReferenceClaims;
 import se.idsec.sigval.svt.claims.SVTClaims;
 
@@ -23,9 +29,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.ECPublicKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,8 +44,10 @@ import java.util.stream.Collectors;
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
+@Slf4j
 public class SVAUtils {
 
+/*
   public static final String SIGNATURE_TYPE = "sig";
   public static final String DOC_TIMESTAMP_TYPE = "docts";
   public static final String SVT_TYPE = "svt";
@@ -44,6 +55,7 @@ public class SVAUtils {
   public static final String PDF_SIG_SUBFILETER_LC = "adbe.pkcs7.detached";
   public static final String CADES_SIG_SUBFILETER_LC = "etsi.cades.detached";
   public static final String TIMESTAMP_SUBFILTER_LC = "etsi.rfc3161";
+*/
 
   public static boolean isSVADocTimestamp(byte[] sigBytes) {
     try {
@@ -107,6 +119,7 @@ public class SVAUtils {
   }
 
 
+/*
   public static List<byte[]> getSignatureCertificateList(byte[] pdSignature) throws IOException {
     SignedData signedData = getSignedDataFromSignature(pdSignature);
     Iterator<ASN1Encodable> iterator = signedData.getCertificates().iterator();
@@ -116,12 +129,15 @@ public class SVAUtils {
     }
     return certList;
   }
+*/
 
+/*
   private static SignerInfo getSignerInfo(SignedData signedData) throws Exception {
     ASN1Encodable signerInfoObj = signedData.getSignerInfos().getObjectAt(0);
     SignerInfo signerInfo = SignerInfo.getInstance(signerInfoObj);
     return signerInfo;
   }
+*/
 
   /**
    * Gets the referenced certificate and certificate chain validated through a SVA {@link CertReferenceClaims} claim
@@ -291,5 +307,78 @@ public class SVAUtils {
     }
     return null;
   }
+
+  /**
+   * Verifies the SVA.
+   *
+   * @param publicKey the public key used to verify the SVA token signature
+   * @throws Exception if validation of SVA fails
+   */
+  public static void verifySVA(SignedJWT signedJWT, PublicKey publicKey) throws Exception {
+    //Check for expiry
+    Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+    if (expirationTime != null) {
+      if (new Date().after(expirationTime)) {
+        throw new RuntimeException("The SVA has expired");
+      }
+    }
+
+    JWSVerifier verifier = publicKey instanceof RSAPublicKey ?
+      new RSASSAVerifier((RSAPublicKey) publicKey) :
+      new ECDSAVerifier((ECPublicKey) publicKey);
+
+    //Verify that the hash algorithm is consistent with the SVA claims
+    JWSAlgorithm algorithm = signedJWT.getHeader().getAlgorithm();
+    SVTAlgoRegistry.AlgoProperties algoParams = SVTAlgoRegistry.getAlgoParams(algorithm);
+
+    DigestAlgorithm svaSigHashAlgo = DigestAlgorithmRegistry.get(algoParams.getDigestAlgoId());
+    SVTClaims svtClaims = getSVTClaims(signedJWT.getJWTClaimsSet());
+    DigestAlgorithm svaClaimsHashAlgo = DigestAlgorithmRegistry.get(svtClaims.getHash_algo());
+    if (!svaSigHashAlgo.equals(svaClaimsHashAlgo)) {
+      throw new IOException(
+        "SVA hahs algo mismatch. SVA algo: " + svaClaimsHashAlgo.getUri() + ", SVA token sig algo: " + svaSigHashAlgo.getUri());
+    }
+    signedJWT.verify(verifier);
+  }
+
+  public static SignedJWT getMostRecentJwt(List<SignedJWT> signedJWTList){
+    if (signedJWTList == null || signedJWTList.isEmpty()){
+      return null;
+    }
+
+    Optional<SignedJWT> signedJWTOptional = signedJWTList.stream()
+      .sorted((o1, o2) -> compareSVTIssueDate(o1, o2))
+      .findFirst();
+
+    return signedJWTOptional.isPresent() ? signedJWTOptional.get() : null;
+  }
+
+  /**
+   * Compare jwt issue date to support sorting to place the most recent item first in the list
+   * @param o1 Signed JWT*
+   * @param o2 Other Signed JWT
+   * @return negative if first date is after (more recent) than second date
+   */
+  public static int compareSVTIssueDate(SignedJWT o1, SignedJWT o2) {
+    Date date1 = getSVTIssueDate(o1);
+    Date date2 = getSVTIssueDate(o2);
+    return date1.before(date2) ? 1 : -1;
+  }
+
+  /**
+   * Obtains the date from SVT JWT
+   * @param o1 SignedJWT
+   * @return the issue date or epoc time if date is not set.
+   */
+  public static Date getSVTIssueDate(SignedJWT o1) {
+    try {
+      return o1.getJWTClaimsSet().getIssueTime();
+    } catch (Exception ex){
+      log.error("Error reading issue time from SVT JWT - {}", ex.getMessage());
+      // Date is missing. Return epoc time
+      return new Date(0);
+    }
+  }
+
 
 }

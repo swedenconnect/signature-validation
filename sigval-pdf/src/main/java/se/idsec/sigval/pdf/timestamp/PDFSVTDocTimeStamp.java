@@ -19,6 +19,7 @@ import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.commons.algorithms.JWSAlgorithmRegistry;
 import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
+import se.idsec.sigval.commons.utils.SVAUtils;
 import se.idsec.sigval.pdf.utils.PDFSVAUtils;
 import se.idsec.sigval.svt.claims.SVTClaims;
 
@@ -63,9 +64,9 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
   @Override
   protected void init() throws Exception {
     super.init();
-    String svajwt = PDFSVAUtils.getSVAJWT(tstInfo);
+    String svajwt = SVAUtils.getSVAJWT(tstInfo);
     this.signedJWT = SignedJWT.parse(svajwt);
-    this.svtClaims = PDFSVAUtils.getSVTClaims(signedJWT.getJWTClaimsSet());
+    this.svtClaims = SVAUtils.getSVTClaims(signedJWT.getJWTClaimsSet());
     signedJWT.getHeader().getAlgorithm();
   }
 
@@ -83,7 +84,8 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
     // Verify cert and signature of SVA
     svaCertValidationResult = new PathValidationResult();
     try {
-      verifySVA(svaSigCert.getPublicKey());
+      SVAUtils.verifySVA(signedJWT, svaSigCert.getPublicKey());
+      svaSignatureValid = true;
       log.debug("SVA signature verification succeeded");
     }
     catch (Exception ex) {
@@ -105,12 +107,12 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
     }
   }
 
-  /**
+/*  *//**
    * Verifies the SVA.
    *
    * @param publicKey the public key used to verify the SVA token signature
    * @throws Exception if validation of SVA fails
-   */
+   *//*
   private void verifySVA(PublicKey publicKey) throws Exception {
     //Check for expiry
     Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
@@ -137,7 +139,7 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
         "SVA hahs algo mismatch. SVA algo: " + svaClaimsHashAlgo.getUri() + ", SVA token sig algo: " + svaSigHashAlgo.getUri());
     }
     svaSignatureValid = signedJWT.verify(verifier);
-  }
+  }*/
 
   /**
    * Obtain SVA validation certificates from the provided SVA

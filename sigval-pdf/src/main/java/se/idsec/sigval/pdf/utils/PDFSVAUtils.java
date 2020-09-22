@@ -15,6 +15,7 @@ import org.bouncycastle.asn1.tsp.TSTInfo;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
 import se.idsec.signservice.security.sign.pdf.configuration.PDFObjectIdentifiers;
+import se.idsec.sigval.commons.utils.SVAUtils;
 import se.idsec.sigval.svt.claims.CertReferenceClaims;
 import se.idsec.sigval.svt.claims.SVTClaims;
 
@@ -44,7 +45,7 @@ public class PDFSVAUtils {
   public static final String PDF_SIG_SUBFILETER_LC = "adbe.pkcs7.detached";
   public static final String CADES_SIG_SUBFILETER_LC = "etsi.cades.detached";
   public static final String TIMESTAMP_SUBFILTER_LC = "etsi.rfc3161";
-
+/*
   public static boolean isSVADocTimestamp(byte[] sigBytes) {
     try {
       TSTInfo tstInfo = getPdfDocTSTInfo(sigBytes);
@@ -104,18 +105,18 @@ public class PDFSVAUtils {
       throw new IOException("Illegal content for PDF signature. Must contain SignedData");
     }
     return SignedData.getInstance(contentInfo.getContent());
-  }
+  }*/
 
   public static byte[] getSignatureValueBytes(PDSignature signature, byte[] signedPdf) throws IOException {
     byte[] contents = signature.getContents(signedPdf);
-    SignedData signedData = getSignedDataFromSignature(contents);
+    SignedData signedData = SVAUtils.getSignedDataFromSignature(contents);
     SignerInfo signerInfo = SignerInfo.getInstance(signedData.getSignerInfos().getObjectAt(0));
     byte[] signatureBytes = signerInfo.getEncryptedDigest().getOctets();
     return signatureBytes;
   }
 
   public static List<byte[]> getSignatureCertificateList(byte[] pdSignature) throws IOException {
-    SignedData signedData = getSignedDataFromSignature(pdSignature);
+    SignedData signedData = SVAUtils.getSignedDataFromSignature(pdSignature);
     Iterator<ASN1Encodable> iterator = signedData.getCertificates().iterator();
     List<byte[]> certList = new ArrayList<>();
     while (iterator.hasNext()) {
@@ -131,7 +132,7 @@ public class PDFSVAUtils {
     case CADES_SIG_SUBFILETER_LC:
       return SIGNATURE_TYPE;
     case TIMESTAMP_SUBFILTER_LC:
-      return isSVADocTimestamp(sigbBytes) ? SVT_TYPE : DOC_TIMESTAMP_TYPE;
+      return SVAUtils.isSVADocTimestamp(sigbBytes) ? SVT_TYPE : DOC_TIMESTAMP_TYPE;
     }
     return UNKNOWN_TYPE;
   }
@@ -167,7 +168,7 @@ public class PDFSVAUtils {
    * @param resultChain              An empty list where a resulting certificate chain will be stored
    * @param messageDigest            message digest instance
    * @return the identified signing certificate
-   */
+   *//*
   public static X509Certificate getSVAReferencedCertificates(
     CertReferenceClaims certRef, List<byte[]> signatureCertificateList,
     List<X509Certificate> resultChain, MessageDigest messageDigest) throws IllegalArgumentException {
@@ -326,6 +327,6 @@ public class PDFSVAUtils {
       }
     }
     return null;
-  }
+  }*/
 
 }

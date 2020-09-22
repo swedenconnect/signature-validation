@@ -16,18 +16,14 @@
 
 package se.idsec.sigval.xml.utils;
 
+import lombok.extern.slf4j.Slf4j;
 import org.w3c.dom.Element;
 import se.idsec.sigval.svt.validation.SignatureSVTValidationResult;
 
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
+@Slf4j
 public class XMLSVAUtils {
-  public static SignatureSVTValidationResult getMatchingSvtValidation(Element signature, byte[] docBytes,
-    List<SignatureSVTValidationResult> svtValidationResultList) {
-    if (svtValidationResultList == null || svtValidationResultList.isEmpty()){
-      return null;
-    }
-    // TODO
-    return null;
-  }
 }

@@ -29,6 +29,7 @@ import se.idsec.sigval.commons.data.SignedDocumentValidationResult;
 import se.idsec.sigval.svt.validation.SignatureSVTValidationResult;
 import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 import se.idsec.sigval.xml.svt.XMLSVTValidator;
+import se.idsec.sigval.xml.svt.XMLSigValInput;
 import se.idsec.sigval.xml.utils.XMLDocumentBuilder;
 import se.idsec.sigval.xml.utils.XMLSVAUtils;
 import se.idsec.sigval.xml.utils.XMLSigUtils;
@@ -61,6 +62,7 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
 
   /**
    * Factory for getting an implementation of the signature context provider providing info about the signed document
+   *
    * @param signatureContextFactory signature context factory
    */
   @Setter private XMLSignatureContextFactory signatureContextFactory;
@@ -84,7 +86,8 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
     this.signatureContextFactory = new DefaultXMLSignatureContextFactory();
   }
 
-  @Override public SignedDocumentValidationResult<ExtendedXmlSigvalResult> extendedResultValidation(Document document) throws SignatureException {
+  @Override public SignedDocumentValidationResult<ExtendedXmlSigvalResult> extendedResultValidation(Document document)
+    throws SignatureException {
     return getConcludingSigVerifyResult(validate(document));
   }
 
@@ -127,23 +130,30 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
    * @param signatures the signatures
    * @return a list of result objects
    */
-  protected List<SignatureValidationResult> validate(final Document document, final List<Element> signatures) throws Exception{
+  protected List<SignatureValidationResult> validate(final Document document, final List<Element> signatures) throws Exception {
 
     try {
       XMLSignatureContext signatureContext = signatureContextFactory.getSignatureContext(document);
-      byte[] docBytes = signatureContext.getDocumentBytes();
 
-      // Attempt SVT validation first
-      List<SignatureSVTValidationResult> svtValidationResultList = xmlsvtValidator == null ? null : xmlsvtValidator.validate(docBytes);
       // Verify all signatures ...
-      //
       List<SignatureValidationResult> results = new ArrayList<>();
       for (Element signature : signatures) {
         SignatureData signatureData = signatureContext.getSignatureData(signature);
-        SignatureSVTValidationResult svtValResult = XMLSVAUtils.getMatchingSvtValidation(signature, docBytes, svtValidationResultList);
+
+        // Attempt SVT validation first
+        XMLSigValInput sigValInput = XMLSigValInput.builder()
+          .signatureElement(signature)
+          .signatureData(signatureData)
+          .build();
+        List<SignatureSVTValidationResult> svtValidationResultList = xmlsvtValidator == null ? null : xmlsvtValidator.validate(sigValInput);
+        SignatureSVTValidationResult svtValResult = svtValidationResultList == null || svtValidationResultList.isEmpty() ? null : svtValidationResultList.get(0);
+
         if (svtValResult == null) {
-            results.add(signatureElementValidator.validateSignature(signature, signatureData));
-        } else {
+          // We have no successful SVT validation. Perform standard validation
+          results.add(signatureElementValidator.validateSignature(signature, signatureData));
+        }
+        else {
+          // We have successful SVT validation. Get the SVT results
           results.add(compileXMLSigValResultsFromSvtValidation(svtValResult, signature, signatureData));
         }
       }
@@ -193,7 +203,8 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
     }
   }
 
-  private SignatureValidationResult compileXMLSigValResultsFromSvtValidation(SignatureSVTValidationResult svtValResult, Element signature, SignatureData signatureData) {
+  private SignatureValidationResult compileXMLSigValResultsFromSvtValidation(SignatureSVTValidationResult svtValResult, Element signature,
+    SignatureData signatureData) {
     //TODO
     return null;
   }
@@ -261,6 +272,5 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
 
     return sigVerifyResult;
   }
-
 
 }
