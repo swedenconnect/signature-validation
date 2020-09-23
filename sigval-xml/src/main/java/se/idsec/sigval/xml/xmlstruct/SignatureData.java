@@ -22,6 +22,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.xml.security.signature.XMLSignature;
 
+import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -36,5 +38,7 @@ public class SignatureData {
   private byte[] signedDocument;
   private byte[] signatureBytes;
   private byte[] signedInfoBytes;
+  private X509Certificate signerCertificate;
+  private List<X509Certificate> signatureCertChain;
 
 }

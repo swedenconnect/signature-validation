@@ -97,7 +97,7 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
       }
     }
   }
-  
+
   /**
    * Obtain SVA validation certificates from the provided SVA
    * If the SVA does not contain any certificates, we will choose the certificate and chain used to sign the timstamp

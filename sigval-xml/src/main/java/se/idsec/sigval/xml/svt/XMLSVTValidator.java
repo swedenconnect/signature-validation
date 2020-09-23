@@ -26,6 +26,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.apache.xml.security.keys.KeyInfo;
 import org.opensaml.xmlsec.signature.J;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -35,20 +36,23 @@ import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.idsec.sigval.commons.utils.SVAUtils;
 import se.idsec.sigval.svt.algorithms.SVTAlgoRegistry;
+import se.idsec.sigval.svt.claims.SVTClaims;
+import se.idsec.sigval.svt.claims.SigReferenceClaims;
+import se.idsec.sigval.svt.claims.SignatureClaims;
+import se.idsec.sigval.svt.claims.SignedDataClaims;
 import se.idsec.sigval.svt.validation.SVTValidator;
 import se.idsec.sigval.svt.validation.SignatureSVTData;
+import se.idsec.sigval.xml.xmlstruct.SignatureData;
 import se.idsec.sigval.xml.xmlstruct.XMLSigConstants;
 
 import java.io.IOException;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -103,15 +107,74 @@ public class XMLSVTValidator extends SVTValidator<XMLSigValInput> implements XML
     // find most recent valid SVT
     SignedJWT mostRecentJwt = SVAUtils.getMostRecentJwt(signedJWTList);
 
+/*
     //Debug
     List<String> svtDates = signedJWTList.stream()
       .map(signedJWT -> SVAUtils.getSVTIssueDate(signedJWT).toString())
       .collect(Collectors.toList());
     String selectedDate = SVAUtils.getSVTIssueDate(mostRecentJwt).toString();
+*/
 
-    //TODO Done with validation and picking last. Now collect data
+    SignatureSVTData signatureSVTData = collectSignatureSVTData(signedDataInput, mostRecentJwt);
+    return Arrays.asList(signatureSVTData);
+  }
 
-    return null;
+  private SignatureSVTData collectSignatureSVTData(XMLSigValInput signedDataInput, SignedJWT mostRecentJwt) throws Exception {
+    SignatureSVTData.SignatureSVTDataBuilder svtDataBuilder = SignatureSVTData.builder();
+    SVTClaims svtClaims = SVAUtils.getSVTClaims(mostRecentJwt.getJWTClaimsSet());
+    DigestAlgorithm digestAlgorithm = DigestAlgorithmRegistry.get(svtClaims.getHash_algo());
+    SignatureData signatureData = signedDataInput.getSignatureData();
+
+    // Set SVT JWT
+    svtDataBuilder.signedJWT(mostRecentJwt);
+
+    // Set signature ref
+    String signatureHash = toBase64Digest(signatureData.getSignatureBytes(), digestAlgorithm);
+    String signedInfoHash = toBase64Digest(signatureData.getSignedInfoBytes(), digestAlgorithm);
+    svtDataBuilder.signatureReference(SigReferenceClaims.builder()
+      .id(signatureData.getSignature().getId())
+      .sig_hash(signatureHash)
+      .sb_hash(signedInfoHash)
+      .build());
+
+    // Check signatrue match
+    List<SignatureClaims> sigClaims = svtClaims.getSig();
+    Optional<SignatureClaims> sigSVTClaimsOptional = sigClaims.stream()
+      .filter(claims -> claims.getSig_ref().getSig_hash().equals(signatureHash))
+      .findFirst();
+
+    if (!sigSVTClaimsOptional.isPresent()) {
+      //There is not SVT record that matches this signature. Skip signature.
+      throw new RuntimeException("The validated SVT claims does not match the present signature");
+    }
+    svtDataBuilder.signatureClaims(sigSVTClaimsOptional.get());
+
+    // Set signed data refs
+    List<SignedDataClaims> signedDataClaimsList = new ArrayList<>();
+    Map<String, byte[]> refDataMap = signatureData.getRefDataMap();
+    Set<String> refs = refDataMap.keySet();
+    for (String ref: refs) {
+      byte[] refData = refDataMap.get(ref);
+      signedDataClaimsList.add(SignedDataClaims.builder()
+        .ref(ref)
+        .hash(toBase64Digest(refData, digestAlgorithm))
+        .build());
+    }
+    svtDataBuilder.signedDataRefList(signedDataClaimsList);
+
+    final Iterator<X509Certificate> iterator = signatureData.getSignatureCertChain().iterator();
+    List<byte[]> certList = new ArrayList<>();
+    while (iterator.hasNext()) {
+      certList.add(iterator.next().getEncoded());
+    }
+    svtDataBuilder.signerCertChain(certList);
+
+    return svtDataBuilder.build();
+  }
+
+  private String toBase64Digest(byte[] bytes, DigestAlgorithm digestAlgorithm) throws NoSuchAlgorithmException {
+    return org.bouncycastle.util.encoders.Base64.toBase64String(
+      digestAlgorithm.getInstance().digest(bytes));
   }
 
   private void verifyJWT(SignedJWT signedJWT) throws Exception {

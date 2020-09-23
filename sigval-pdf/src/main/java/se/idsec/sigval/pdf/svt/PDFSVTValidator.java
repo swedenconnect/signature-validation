@@ -152,6 +152,7 @@ public class PDFSVTValidator extends SVTValidator<byte[]> {
       sigSVTDataList.add(svtDataBuilder.build());
     }
     catch (Exception ex) {
+      log.warn("Error collecting SVT data from signature {}", ex.getMessage());
       return;
     }
   }

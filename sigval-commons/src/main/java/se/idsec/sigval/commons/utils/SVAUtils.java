@@ -331,7 +331,7 @@ public class SVAUtils {
   public static int compareSVTIssueDate(SignedJWT o1, SignedJWT o2) {
     Date date1 = getSVTIssueDate(o1);
     Date date2 = getSVTIssueDate(o2);
-    return date1.before(date2) ? 1 : -1;
+    return date1.after(date2) ? -1 : 1;
   }
 
   /**

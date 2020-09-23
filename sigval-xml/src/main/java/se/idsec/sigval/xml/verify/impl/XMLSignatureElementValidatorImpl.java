@@ -98,7 +98,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
     ExtendedXmlSigvalResult result = new ExtendedXmlSigvalResult();
 
     try {
-      result = validateSignatureElement(signature);
+      result = validateSignatureElement(signature, signatureData);
 
       // If we have a cert path validator installed, perform path validation...
       //
@@ -236,7 +236,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
    * @param signature the signature element
    * @return a validation result
    */
-  public ExtendedXmlSigvalResult validateSignatureElement(final Element signature) {
+  public ExtendedXmlSigvalResult validateSignatureElement(final Element signature, SignatureData signatureData) {
 
     ExtendedXmlSigvalResult result = new ExtendedXmlSigvalResult();
     result.setSignatureElement(signature);
@@ -248,24 +248,14 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       // Locate the certificate that was used to sign ...
       //
       PublicKey validationKey = null;
-
-      if (xmlSignature.getKeyInfo() != null) {
-        final X509Certificate validationCertificate = xmlSignature.getKeyInfo().getX509Certificate();
-        if (validationCertificate != null) {
-          result.setSignerCertificate(validationCertificate);
-
-          // Get hold of any other certs (intermediate and roots)
-          result.setSignatureCertificateChain(this.getAllSignatureCertifictes(xmlSignature.getKeyInfo()));
-
-          validationKey = validationCertificate.getPublicKey();
-        }
-        else {
-          log.info("No certificate found in signature's KeyInfo ...");
-          validationKey = xmlSignature.getKeyInfo().getPublicKey();
-        }
-      }
-      else {
-        log.warn("No KeyInfo element found in Signature ...");
+      X509Certificate validationCertificate = signatureData.getSignerCertificate();
+      if (validationCertificate == null){
+        log.warn("No signing certificate found in signature");
+        validationKey = xmlSignature.getKeyInfo().getPublicKey();
+      } else {
+        result.setSignerCertificate(validationCertificate);
+        result.setSignatureCertificateChain(signatureData.getSignatureCertChain());
+        validationKey = validationCertificate.getPublicKey();
       }
 
       // Check signature ...
@@ -320,12 +310,12 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
     }
   }
 
-  /**
+/*  *//**
    * Extracts all certificates from the supplied KeyInfo.
    *
    * @param keyInfo the KeyInfo
    * @return a list of certificates
-   */
+   *//*
   protected List<X509Certificate> getAllSignatureCertifictes(final KeyInfo keyInfo) {
     List<X509Certificate> additional = new ArrayList<>();
     for (int i = 0; i < keyInfo.lengthX509Data(); i++) {
@@ -348,7 +338,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       }
     }
     return additional;
-  }
+  }*/
 
   /**
    * Utility method for getting hold of the reference URI:s of a {@code SignedInfo} element.

@@ -19,6 +19,10 @@ package se.idsec.sigval.xml.xmlstruct.impl;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.apache.xml.security.exceptions.XMLSecurityException;
+import org.apache.xml.security.keys.KeyInfo;
+import org.apache.xml.security.keys.content.X509Data;
+import org.apache.xml.security.keys.content.x509.XMLX509Certificate;
 import org.apache.xml.security.signature.SignedInfo;
 import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xml.security.signature.XMLSignatureInput;
@@ -26,12 +30,15 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import se.idsec.signservice.security.certificate.CertificateUtils;
 import se.idsec.sigval.xml.utils.XMLDocumentBuilder;
 import se.idsec.sigval.xml.xmlstruct.SignatureData;
 import se.idsec.sigval.xml.xmlstruct.XMLSigConstants;
 import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
 
 import java.io.IOException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.*;
 
 @Slf4j
@@ -181,6 +188,13 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
         .signedDocument(getSignedDocument(referencedDataMap))
         .signatureBytes(signature.getSignatureValue())
         .signedInfoBytes(signature.getSignedInfo().getCanonicalizedOctetStream());
+
+      // Get certs
+      KeyInfo keyInfo = signature.getKeyInfo();
+      if (keyInfo != null){
+        builder.signerCertificate(keyInfo.getX509Certificate())
+          .signatureCertChain(getAllSignatureCertifictes(keyInfo));
+      }
     }
     catch (Exception ex) {
       log.error("Error parsing ref URI from signature");
@@ -233,6 +247,36 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
       log.debug("Failed to obtain transform algorithm: {}", ex.getMessage());
     }
     return null;
+  }
+
+  /**
+   * Extracts all certificates from the supplied KeyInfo.
+   *
+   * @param keyInfo the KeyInfo
+   * @return a list of certificates
+   */
+  protected List<X509Certificate> getAllSignatureCertifictes(final KeyInfo keyInfo) {
+    List<X509Certificate> additional = new ArrayList<>();
+    for (int i = 0; i < keyInfo.lengthX509Data(); i++) {
+      try {
+        final X509Data x509data = keyInfo.itemX509Data(i);
+        if (x509data == null) {
+          continue;
+        }
+        for (int j = 0; j < x509data.lengthCertificate(); j++) {
+          final XMLX509Certificate xmlCert = x509data.itemCertificate(j);
+          if (xmlCert != null) {
+            final X509Certificate cert = CertificateUtils.decodeCertificate(xmlCert.getCertificateBytes());
+            additional.add(cert);
+          }
+        }
+      }
+      catch (XMLSecurityException | CertificateException e) {
+        log.error("Failed to extract X509Certificate from KeyInfo", e);
+        continue;
+      }
+    }
+    return additional;
   }
 
 }
