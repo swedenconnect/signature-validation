@@ -22,6 +22,11 @@ import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 import se.idsec.sigval.xml.xmlstruct.SignatureData;
 import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public interface XMLSignatureElementValidator {
 
   ExtendedXmlSigvalResult validateSignature(final Element signature, final SignatureData signatureData);

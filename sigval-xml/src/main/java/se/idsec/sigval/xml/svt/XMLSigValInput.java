@@ -23,14 +23,23 @@ import lombok.NoArgsConstructor;
 import org.w3c.dom.Element;
 import se.idsec.sigval.xml.xmlstruct.SignatureData;
 
+/**
+ * Input to XML signature element validation
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class XMLSigValInput {
 
+  /** The signature element being validated */
   private Element signatureElement;
+  /** Signature data collected from the signature element */
   private SignatureData signatureData;
+  /** SVT extension strategy */
   private XMLDocumentSVTMethod svtMethod;
 
 }

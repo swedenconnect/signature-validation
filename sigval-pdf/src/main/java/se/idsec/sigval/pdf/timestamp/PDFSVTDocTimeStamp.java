@@ -55,7 +55,7 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
   @Override
   protected void init() throws Exception {
     super.init();
-    String svajwt = SVAUtils.getSVAJWT(tstInfo);
+    String svajwt = SVAUtils.getSVTJWT(tstInfo);
     this.signedJWT = SignedJWT.parse(svajwt);
     this.svtClaims = SVAUtils.getSVTClaims(signedJWT.getJWTClaimsSet());
     signedJWT.getHeader().getAlgorithm();

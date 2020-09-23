@@ -20,6 +20,9 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 
 /**
  * Registered identifiers used for signature validation
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
  */
 public class SigValIdentifiers {
 

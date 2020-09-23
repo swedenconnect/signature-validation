@@ -16,6 +16,15 @@
 
 package se.idsec.sigval.xml.svt;
 
+/**
+ * Enumeration class specifying identifiers for different XML SVT extension strategies
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public enum XMLDocumentSVTMethod {
-  REPLACE, REPLACE_ALL, EXTEND, EXTEND_ALL
+  /** Replace any previous SVT in the XML signatures where a new SVT was successfully created */
+  REPLACE,
+  /** Append a new SVT to any existing SVT tokens */
+  EXTEND;
 }

@@ -47,10 +47,15 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SVAUtils {
 
+  /**
+   * test if a CMS signature is a SVT document timestamp signature
+   * @param sigBytes bytes of the CMS signature
+   * @return true if this is a document timestamp signature containing an SVT
+   */
   public static boolean isSVADocTimestamp(byte[] sigBytes) {
     try {
-      TSTInfo tstInfo = getPdfDocTSTInfo(sigBytes);
-      String svaJwt = getSVAJWT(tstInfo);
+      TSTInfo tstInfo = getCmsSigTSTInfo(sigBytes);
+      String svaJwt = getSVTJWT(tstInfo);
       SignedJWT parsedJWT = SignedJWT.parse(svaJwt);
       SVTClaims svaClaims = getSVTClaims(parsedJWT.getJWTClaimsSet());
       return true;
@@ -60,6 +65,12 @@ public class SVAUtils {
     }
   }
 
+  /**
+   * Get the SVT claims from a JWT claims set
+   * @param jwtClaimsSet the source JWT claims set
+   * @return SVT claims
+   * @throws IOException on parsing errors
+   */
   public static SVTClaims getSVTClaims(JWTClaimsSet jwtClaimsSet) throws IOException {
     try {
       String svaClaimsJson = jwtClaimsSet.getClaim("sig_val_claims").toString();
@@ -72,7 +83,13 @@ public class SVAUtils {
     }
   }
 
-  public static String getSVAJWT(TSTInfo tstInfo) throws IOException {
+  /**
+   * Get the SVT JWT string from time stamp tstInfo
+   * @param tstInfo
+   * @return SVT JWT (Json Web Token)
+   * @throws IOException on parsing errors
+   */
+  public static String getSVTJWT(TSTInfo tstInfo) throws IOException {
     try {
       Extensions extensions = tstInfo.getExtensions();
       Extension svaExt = extensions.getExtension(new ASN1ObjectIdentifier("1.2.752.201.5.2"));
@@ -85,7 +102,13 @@ public class SVAUtils {
 
   }
 
-  public static TSTInfo getPdfDocTSTInfo(byte[] sigBytes) throws IOException {
+  /**
+   * Get timestamp TST ino from CMS signature bytes
+   * @param sigBytes CMS signature bytes
+   * @return TSTInfo from signature bytes
+   * @throws IOException on parsing errors
+   */
+  public static TSTInfo getCmsSigTSTInfo(byte[] sigBytes) throws IOException {
     try {
       SignedData signedData = getSignedDataFromSignature(sigBytes);
       ASN1ObjectIdentifier contentType = signedData.getEncapContentInfo().getContentType();
@@ -100,6 +123,12 @@ public class SVAUtils {
     }
   }
 
+  /**
+   * Get the CMS SignedData object from a CMS signature
+   * @param sigBytes CMS signature bytes
+   * @return CMS SignedData object
+   * @throws IOException on parsing errors
+   */
   public static SignedData getSignedDataFromSignature(byte[] sigBytes) throws IOException {
     ContentInfo contentInfo = ContentInfo.getInstance(new ASN1InputStream(sigBytes).readObject());
     if (!contentInfo.getContentType().equals(PKCSObjectIdentifiers.signedData)) {
@@ -109,98 +138,12 @@ public class SVAUtils {
   }
 
   /**
-   * Gets the referenced certificate and certificate chain validated through a SVA {@link CertReferenceClaims} claim
-   *
-   * @param certRef                  claims used to retrieve or authenticate certificates
-   * @param signatureCertificateList List of certificate candidates that should match certificate reference data
-   * @param resultChain              An empty list where a resulting certificate chain will be stored
-   * @param messageDigest            message digest instance
-   * @return the identified signing certificate
+   * Get a certificate from byte input
+   * @param certBytes certificate bytes
+   * @return certificate object
+   * @throws CertificateException exception creating certificate
+   * @throws IOException exception parsing data
    */
-  public static X509Certificate getSVAReferencedCertificates(
-    CertReferenceClaims certRef, List<byte[]> signatureCertificateList,
-    List<X509Certificate> resultChain, MessageDigest messageDigest) throws IllegalArgumentException {
-
-    try {
-      String type = certRef.getType();
-      CertReferenceClaims.CertRefType certRefType = CertReferenceClaims.CertRefType.valueOf(type.toLowerCase());
-      switch (certRefType) {
-      case chain:
-        return getEmbeddedChain(certRef, resultChain);
-      case chain_hash:
-        return getReferencedChain(certRef, signatureCertificateList, resultChain, messageDigest);
-      }
-    }
-    catch (Exception ex) {
-      throw new IllegalArgumentException("Unable to parse SVA certificate reference: " + ex.getMessage());
-    }
-    throw new IllegalArgumentException("Unable to find a certificate that match the SVA certificate reference");
-  }
-
-  private static X509Certificate getReferencedChain(CertReferenceClaims certRef, List<byte[]> signatureCertificateList,
-    List<X509Certificate> resultChain, MessageDigest messageDigest) throws Exception {
-    List<String> certRefList = certRef.getRef();
-    if (certRefList == null || certRefList.size() < 1 || certRefList.size() > 2) {
-      throw new IllegalArgumentException("Cert and chain SVA certificate reference must contain 1 or 2 parameters in reference");
-    }
-    String certHashRef = certRefList.get(0);
-    X509Certificate cert;
-    Optional<X509Certificate> certOptional = findMatchingCert(signatureCertificateList, certHashRef, messageDigest);
-
-    if (!certOptional.isPresent()) {
-      throw new IllegalArgumentException("The referenced certificate does not match provided certificates");
-    }
-    cert = certOptional.get();
-
-    if (certRefList.size() == 1) {
-      // We are done. No chain hash was provided
-      resultChain.add(cert);
-      return cert;
-    }
-
-    String chainHashRef = certRefList.get(1);
-    for (byte[] certBytes : signatureCertificateList) {
-      messageDigest.update(certBytes);
-    }
-    String chainHash = Base64.toBase64String(messageDigest.digest());
-    if (!chainHash.equals(chainHashRef)) {
-      throw new IllegalArgumentException("The referenced certificate chain does not match provided certificates");
-    }
-    for (byte[] certBytes : signatureCertificateList) {
-      X509Certificate certOrNull = getCertOrNull(certBytes);
-      if (certOrNull != null) {
-        resultChain.add(certOrNull);
-      }
-    }
-    return cert;
-  }
-
-  private static X509Certificate getEmbeddedChain(CertReferenceClaims certRef, List<X509Certificate> resultChain)
-    throws CertificateException, IOException {
-    List<String> certRefList = certRef.getRef();
-    X509Certificate cert = null;
-    for (int i = 0; i < certRefList.size(); i++) {
-      X509Certificate chainCert = getCertificate(Base64.decode(certRefList.get(i)));
-      resultChain.add(chainCert);
-      if (i == 0) {
-        cert = chainCert;
-      }
-    }
-    if (cert != null) {
-      return cert;
-    }
-    throw new IllegalArgumentException("No valid certificate available in referenced SVA certificate");
-  }
-
-  private static Optional<X509Certificate> findMatchingCert(List<byte[]> signatureCertificateList, String certHashRef,
-    MessageDigest messageDigest) {
-    return signatureCertificateList.stream()
-      .filter(bytes -> Base64.toBase64String(messageDigest.digest(bytes)).equals(certHashRef))
-      .map(bytes -> getCertOrNull(bytes))
-      .filter(x509Certificate -> x509Certificate != null)
-      .findFirst();
-  }
-
   public static X509Certificate getCertificate(byte[] certBytes) throws CertificateException, IOException {
     InputStream inStream = null;
     try {
@@ -214,6 +157,11 @@ public class SVAUtils {
     }
   }
 
+  /**
+   * Get a certificate or null
+   * @param bytes certificate bytes
+   * @return a certificate object, or null if certificate creation failed
+   */
   public static X509Certificate getCertOrNull(byte[] bytes) {
     try {
       CertificateFactory cf = CertificateFactory.getInstance("X.509");
@@ -224,6 +172,12 @@ public class SVAUtils {
     }
   }
 
+  /**
+   * Get an ordered certificate list beginning with leaf cert and ending with parent trust anchor
+   * @param signerCertificate target leaf certificate
+   * @param certificateChain supporting certificate chain
+   * @return ordered list of certificates beginning with target certificate
+   */
   public static List<X509Certificate> getOrderedCertList(byte[] signerCertificate, List<byte[]> certificateChain) {
 
     if (signerCertificate == null){
@@ -265,6 +219,12 @@ public class SVAUtils {
     }
   }
 
+  /**
+   * Get the parent certificate
+   * @param sigCert target certificate
+   * @param chain supporting chain
+   * @return parent certificate if present or null
+   */
   private static X509Certificate getParentCert(X509Certificate sigCert, List<X509Certificate> chain) {
     for (X509Certificate certFromChain: chain){
       try {
@@ -278,7 +238,7 @@ public class SVAUtils {
   }
 
   /**
-   * Verifies the SVA.
+   * Verifies the SVT signature.
    *
    * @param publicKey the public key used to verify the SVA token signature
    * @throws Exception if validation of SVA fails

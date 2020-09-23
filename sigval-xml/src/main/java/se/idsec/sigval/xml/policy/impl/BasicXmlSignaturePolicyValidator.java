@@ -24,22 +24,37 @@ import se.idsec.sigval.svt.claims.ValidationConclusion;
 import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 
 /**
- * Implements a basic signature policy checker
+ * Implements a basic signature policy checker. This policy does not apply any additional validity checks
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-public class BasicPdfSignaturePolicyValidator extends AbstractBasicXMLSignaturePolicyChecks {
-  /** {@inheritDoc} */
+public class BasicXmlSignaturePolicyValidator extends AbstractBasicXMLSignaturePolicyChecks {
+  /**
+   * These additional checks simply accepts the result of the signature validation process and pass on the result.
+   * @param verifyResultSignature result of signature validation process
+   * @return {@link PolicyValidationResult} result
+   */
   @Override protected PolicyValidationResult performAdditionalValidityChecks(ExtendedXmlSigvalResult verifyResultSignature) {
-    return new PolicyValidationResult(
-      PolicyValidationClaims.builder()
-        .pol(getValidationPolicy())
-        .res(ValidationConclusion.PASSED)
-        .msg("OK")
-        .build(),
-      SignatureValidationResult.Status.SUCCESS
-    );
+    if (verifyResultSignature.isSuccess()) {
+      return new PolicyValidationResult(
+        PolicyValidationClaims.builder()
+          .pol(getValidationPolicy())
+          .res(ValidationConclusion.PASSED)
+          .msg("OK")
+          .build(),
+        SignatureValidationResult.Status.SUCCESS
+      );
+    } else {
+      return new PolicyValidationResult(
+        PolicyValidationClaims.builder()
+          .pol(getValidationPolicy())
+          .res(ValidationConclusion.FAILED)
+          .msg(verifyResultSignature.getStatusMessage())
+          .build(),
+        verifyResultSignature.getStatus()
+      );
+    }
   }
 
   /** {@inheritDoc} */

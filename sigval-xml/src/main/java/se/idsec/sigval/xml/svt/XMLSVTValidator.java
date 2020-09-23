@@ -55,22 +55,37 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Implements a validator for SVT tokens on XMS signatures
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Slf4j
 public class XMLSVTValidator extends SVTValidator<XMLSigValInput> implements XMLSigConstants {
   /** Certificate chain validator for SVA tokens **/
   private final CertificateValidator svaCertVerifier;
 
   /**
-   * Supporting certificates used to verify the signature on the SVT. A dey ID is valid ref if it matches on of the certificates in this list.
+   * Supporting certificates used to verify the signature on the SVT. A key ID is valid ref if it matches one of the certificates in this list.
    * If this list is empty, all necessary certificates for verifying the SVT must be present in the header of the SVT.
    */
   private final List<X509Certificate> supportingCertificates;
 
+  /**
+   * Constructor without any supporting validation certificates
+   * @param svaCertVerifier certificate verifier used to verify the SVT signing certificate
+   */
   public XMLSVTValidator(CertificateValidator svaCertVerifier) {
     this.svaCertVerifier = svaCertVerifier;
     this.supportingCertificates = new ArrayList<>();
   }
 
+  /**
+   * Constructor that allows passing of supporting certificates
+   * @param svaCertVerifier certificate verifier used to verify the SVT signing certificate
+   * @param supportingCertificates supporting certificates used to verify the SVT signature
+   */
   public XMLSVTValidator(CertificateValidator svaCertVerifier, List<X509Certificate> supportingCertificates) {
     this.svaCertVerifier = svaCertVerifier;
     this.supportingCertificates = supportingCertificates != null ? supportingCertificates : new ArrayList<>();
@@ -108,7 +123,7 @@ public class XMLSVTValidator extends SVTValidator<XMLSigValInput> implements XML
     SignedJWT mostRecentJwt = SVAUtils.getMostRecentJwt(signedJWTList);
 
 /*
-    //Debug
+    //Debug used to verify sorting order - TODO To be deleted
     List<String> svtDates = signedJWTList.stream()
       .map(signedJWT -> SVAUtils.getSVTIssueDate(signedJWT).toString())
       .collect(Collectors.toList());
@@ -119,6 +134,13 @@ public class XMLSVTValidator extends SVTValidator<XMLSigValInput> implements XML
     return Arrays.asList(signatureSVTData);
   }
 
+  /**
+   * Collects the data from XML signature to compare with SVT token data to validate the signature through the SVT
+   * @param signedDataInput signature validation input for XML signatures
+   * @param mostRecentJwt the most recent SVT JWT
+   * @return Signature SVT data
+   * @throws Exception on any critical errors
+   */
   private SignatureSVTData collectSignatureSVTData(XMLSigValInput signedDataInput, SignedJWT mostRecentJwt) throws Exception {
     SignatureSVTData.SignatureSVTDataBuilder svtDataBuilder = SignatureSVTData.builder();
     SVTClaims svtClaims = SVAUtils.getSVTClaims(mostRecentJwt.getJWTClaimsSet());

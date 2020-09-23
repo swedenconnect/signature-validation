@@ -18,8 +18,6 @@ import se.idsec.sigval.commons.algorithms.NamedCurve;
 import se.idsec.sigval.commons.algorithms.NamedCurveRegistry;
 import se.idsec.sigval.commons.algorithms.PublicKeyType;
 import se.idsec.sigval.commons.data.PubKeyParams;
-import se.idsec.sigval.commons.timestamp.TimeStamp;
-import se.idsec.sigval.svt.claims.TimeValidationClaims;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -28,10 +26,13 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 
 /**
- * Utility methods for CMS verification
+ * Utility methods for processing CMS data
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -56,7 +57,6 @@ public class GeneralCMSUtils {
     X509Certificate sigCert = getCert((X509CertificateHolder) certCollection.iterator().next());
     return new CMSSigCerts(sigCert, certList);
   }
-
 
   /**
    * Obtains a {@link CMSSignedDataParser}
@@ -185,23 +185,16 @@ public class GeneralCMSUtils {
     return cert;
   }
 
-  public static TimeValidationClaims getMatchingTimeValidationClaims(TimeStamp timeStamp, List<TimeValidationClaims> vtList) {
-    try {
-      Optional<TimeValidationClaims> matchOptional = vtList.stream()
-        .filter(verifiedTime -> verifiedTime.getId().equalsIgnoreCase(timeStamp.getTstInfo().getSerialNumber().getValue().toString(16)))
-        .findFirst();
-      return matchOptional.get();
-    }
-    catch (Exception ex) {
-      return null;
-    }
-  }
-
+  /**
+   * Data class for providing certificates supporting a CMS signature
+   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
   public static class CMSSigCerts {
+    /** The signing certificate */
     private X509Certificate sigCert;
+    /** Supporting chain */
     private List<X509Certificate> chain;
   }
 

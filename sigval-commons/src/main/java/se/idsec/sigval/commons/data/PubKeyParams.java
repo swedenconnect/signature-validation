@@ -22,6 +22,11 @@ import lombok.NoArgsConstructor;
 import se.idsec.sigval.commons.algorithms.NamedCurve;
 import se.idsec.sigval.commons.algorithms.PublicKeyType;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -20,6 +20,11 @@ import se.idsec.sigval.commons.data.PolicyValidationResult;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public interface XMLSignaturePolicyValidator {
 
   /**

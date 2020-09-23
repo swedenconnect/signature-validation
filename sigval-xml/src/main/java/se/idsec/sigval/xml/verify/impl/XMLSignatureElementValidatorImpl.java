@@ -21,16 +21,10 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.xml.security.c14n.Canonicalizer;
-import org.apache.xml.security.exceptions.XMLSecurityException;
-import org.apache.xml.security.keys.KeyInfo;
-import org.apache.xml.security.keys.content.X509Data;
-import org.apache.xml.security.keys.content.x509.XMLX509Certificate;
 import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xml.security.signature.XMLSignatureException;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import se.idsec.signservice.security.certificate.CertificateUtils;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.signservice.security.certificate.impl.DefaultCertificateValidationResult;
@@ -55,7 +49,10 @@ import se.idsec.sigval.xml.policy.XMLSignaturePolicyValidator;
 import se.idsec.sigval.xml.svt.XMLSVTValidator;
 import se.idsec.sigval.xml.svt.XMLSigValInput;
 import se.idsec.sigval.xml.verify.XMLSignatureElementValidator;
-import se.idsec.sigval.xml.xmlstruct.*;
+import se.idsec.sigval.xml.xmlstruct.SignatureData;
+import se.idsec.sigval.xml.xmlstruct.XAdESObjectParser;
+import se.idsec.sigval.xml.xmlstruct.XMLSigConstants;
+import se.idsec.sigval.xml.xmlstruct.XadesSignatureTimestampData;
 
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
@@ -72,6 +69,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Slf4j
 public class XMLSignatureElementValidatorImpl implements XMLSignatureElementValidator, XMLSigConstants {
 

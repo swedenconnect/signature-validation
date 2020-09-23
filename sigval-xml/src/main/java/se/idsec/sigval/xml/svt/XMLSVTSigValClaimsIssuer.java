@@ -37,6 +37,12 @@ import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of the {@link AbstractSVTSigValClaimsIssuer} class for collecting XML claims data from an XML signature
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Slf4j
 public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLSigValInput> {
 
@@ -67,8 +73,7 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
     ExtendedXmlSigvalResult sigResult = signatureVerifier.validateSignature(sigValInput.getSignatureElement(),
       signatureData);
 
-    XMLDocumentSVTMethod svtMethod = sigValInput.getSvtMethod();
-    if (isIssueSVT(sigResult, svtMethod)) {
+    if (isIssueSVT(sigResult)) {
       SignatureClaims claimsData = SignatureClaims.builder()
         .sig_ref(getSigRefData(signatureData, hashAlgoUri))
         .sig_val(getSignaturePolicyValidations(sigResult))
@@ -88,30 +93,34 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
     return null;
   }
 
-  private boolean isIssueSVT(ExtendedXmlSigvalResult sigResult, XMLDocumentSVTMethod svtMethod) {
+  /**
+   * Test if a new SVT should be issued for a particular signature
+   * @param sigResult The result of validating this signature.
+   * @return true if an SVT should be issued (if possible) and false if a null result should be enforced.
+   */
+  private boolean isIssueSVT(ExtendedXmlSigvalResult sigResult) {
 
-    boolean svtValidated = sigResult.getSvtJWT() != null;
-    boolean validSig = false;
+    boolean validationPolicyPassed = false;
     List<PolicyValidationClaims> validationPolicyResultList = sigResult.getValidationPolicyResultList();
     if (validationPolicyResultList != null){
-      validSig = validationPolicyResultList.stream()
+      validationPolicyPassed = validationPolicyResultList.stream()
         .filter(policyValidationClaims -> policyValidationClaims.getRes().equals(ValidationConclusion.PASSED))
         .findFirst()
         .isPresent();
     }
 
-    switch (svtMethod){
-
-    case REPLACE:
-    case EXTEND:
-      return  !svtValidated || !validSig;
-    case REPLACE_ALL:
-    case EXTEND_ALL:
-      return true;
-    }
-    return false;
+    // We only issue SVT tokes if signature validation passed.
+    return validationPolicyPassed;
   }
 
+  /**
+   * Obtain the document reference hash values
+   * @param refDataMap a data map of signed bytes, keyed by the reference URLs pointing to each XML fragment
+   * @param hashAlgoUri algorithm URI for the selected hash algorithm
+   * @return List of {@link SignedDataClaims}
+   * @throws IOException on error parsing data
+   * @throws NoSuchAlgorithmException on unrecognized hash algorithm
+   */
   private List<SignedDataClaims> getDocRefHashes(Map<String, byte[]> refDataMap, String hashAlgoUri)
     throws IOException, NoSuchAlgorithmException {
 
@@ -137,6 +146,14 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
     return signedDataClaimsList;
   }
 
+  /**
+   * Obtain signature reference data, uniquely identifies the target XML signature
+   * @param signatureData signature data collected for this signature
+   * @param hashAlgoUri algorithm URI for the hash algorithm
+   * @return {@link SigReferenceClaims}
+   * @throws IOException on error parsing data
+   * @throws NoSuchAlgorithmException on unrecognized hash algorithm
+   */
   private SigReferenceClaims getSigRefData(SignatureData signatureData, String hashAlgoUri) throws IOException, NoSuchAlgorithmException{
     byte[] signatureBytes = signatureData.getSignatureBytes();
     byte[] signedInfoBytes = signatureData.getSignedInfoBytes();

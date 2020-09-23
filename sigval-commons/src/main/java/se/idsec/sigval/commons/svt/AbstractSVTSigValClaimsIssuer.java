@@ -42,6 +42,9 @@ import java.util.List;
  * Abstract implementation of the SVT signature validation claims issuer providing some basic common functions
  * that may be common to several implementations of SVT issuer. E.g. for XML and PDF
  * @param <T> The signature validation input data class
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
  */
 @Slf4j
 public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SVTIssuer<T> {

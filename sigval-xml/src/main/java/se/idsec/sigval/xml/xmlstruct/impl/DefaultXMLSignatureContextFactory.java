@@ -22,6 +22,11 @@ import se.idsec.sigval.xml.xmlstruct.XMLSignatureContextFactory;
 
 import java.io.IOException;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public class DefaultXMLSignatureContextFactory implements XMLSignatureContextFactory {
 
   /** {@inheritDoc} */

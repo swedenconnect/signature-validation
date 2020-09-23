@@ -26,6 +26,11 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

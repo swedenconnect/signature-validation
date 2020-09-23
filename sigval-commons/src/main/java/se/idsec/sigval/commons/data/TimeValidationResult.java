@@ -23,6 +23,11 @@ import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.sigval.commons.timestamp.TimeStamp;
 import se.idsec.sigval.svt.claims.TimeValidationClaims;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

@@ -35,10 +35,13 @@ import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Slf4j
-public class XAdESObjectParser {
-
-  private static final String XADES_NS = "http://uri.etsi.org/01903/v1.3.2#";
+public class XAdESObjectParser implements XMLSigConstants {
 
   @Getter private QualifyingProperties qualifyingProperties;
   @Getter private Date claimedSigningTime;
@@ -49,7 +52,7 @@ public class XAdESObjectParser {
   public XAdESObjectParser(Element sigNode, SignatureData signatureData) throws XMLSecurityException, JAXBException {
 
     qualifyingProperties = null;
-    NodeList qpNodes = sigNode.getElementsByTagNameNS(XADES_NS, "QualifyingProperties");
+    NodeList qpNodes = sigNode.getElementsByTagNameNS(XADES_NAMESPACE, "QualifyingProperties");
 
     for (int i=0 ; i< qpNodes.getLength() ; i++){
       JAXBContext jaxbContext = getXAdESContext();

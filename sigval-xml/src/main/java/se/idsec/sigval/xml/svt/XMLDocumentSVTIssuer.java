@@ -22,7 +22,6 @@ import lombok.Data;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.apache.xml.security.signature.XMLSignature;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -41,6 +40,12 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Implements functions to issue SVT for signed XML documents and to extend the signatures of the XML document with SVT tokens
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Slf4j
 public class XMLDocumentSVTIssuer implements XMLSigConstants {
 
@@ -52,6 +57,14 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
     this.signatureContextFactory = new DefaultXMLSignatureContextFactory();
   }
 
+  /**
+   * Issues Signature Validation Tokens to signatures of an XML document and extends the document signatures with the SVT tokens.
+   * @param document The signed document to extend
+   * @param svtModel model providing basic SVT parameters
+   * @param svtMethod specifying the extension strategy as defined by options declared in {@link XMLDocumentSVTMethod}
+   * @return bytes of signed XML document extended with SVT
+   * @throws Exception on critical errors that prevents the document from being extended as requested
+   */
   public byte[] issueSvt(Document document, SVTModel svtModel, XMLDocumentSVTMethod svtMethod) throws Exception {
 
     List<Element> signatures = XMLSigUtils.getSignatures(document);
@@ -100,7 +113,7 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
       NodeList objectNodes = sigElement.getElementsByTagNameNS(XMLDSIG_NS, "Object");
       List<Element> svtObjects = getSvtObjects(objectNodes);
       // Remove old SVT objects if method is set to replace (if we have a new SVT) or replace all.
-      if ((svtMethod.equals(XMLDocumentSVTMethod.REPLACE) && signedJWT != null) || svtMethod.equals(XMLDocumentSVTMethod.REPLACE_ALL)){
+      if (svtMethod.equals(XMLDocumentSVTMethod.REPLACE) && signedJWT != null){
         svtObjects.stream().forEach(element -> sigElement.removeChild(element));
       }
       // No need to continue if we didn't get a new SVT

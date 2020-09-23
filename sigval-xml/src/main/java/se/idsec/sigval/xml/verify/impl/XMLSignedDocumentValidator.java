@@ -41,11 +41,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Slf4j
 public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentValidator {
-
-  /** XAdES namespace URI. */
-  private static final String XADES_NAMESPACE = "http://uri.etsi.org/01903/v1.3.2#";
 
   /** Validator for individual signatures */
   private final XMLSignatureElementValidator signatureElementValidator;

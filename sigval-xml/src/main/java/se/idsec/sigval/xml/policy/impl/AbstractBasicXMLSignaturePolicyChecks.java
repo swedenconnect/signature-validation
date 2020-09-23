@@ -29,7 +29,7 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 
 /**
- * Abstract implementation of a PDF signature policy checker
+ * Abstract implementation of a PDF signature policy checker implementing the {@link XMLSignaturePolicyValidator} interface
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -38,7 +38,7 @@ import java.util.List;
 public abstract class AbstractBasicXMLSignaturePolicyChecks implements XMLSignaturePolicyValidator {
 
   /**
-   * Validate the signature according to a defined policy.
+   * Validate the signature according to the defined policy.
    *
    * @param verifyResultSignature the verification result of the signature
    * @return {@link PolicyValidationResult} for this signature

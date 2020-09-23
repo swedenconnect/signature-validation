@@ -23,6 +23,9 @@ import java.util.List;
 
 /**
  * Interface for a timestamp policy verifier
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
  */
 public interface TimeStampPolicyVerifier {
 

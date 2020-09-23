@@ -23,6 +23,11 @@ import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 
 import java.security.SignatureException;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public interface ExtendedXMLSignedDocumentValidator extends XMLSignatureValidator {
 
   /**

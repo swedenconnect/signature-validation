@@ -18,7 +18,6 @@ package se.idsec.sigval.xml.xmlstruct;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import se.idsec.sigval.xml.xmlstruct.impl.DefaultXMLSignatureContext;
 
 import java.io.IOException;
 

@@ -26,6 +26,9 @@ import java.util.zip.ZipInputStream;
 
 /**
  * Enumeration of document types
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
  */
 @AllArgsConstructor
 public enum DocType {

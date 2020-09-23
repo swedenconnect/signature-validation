@@ -24,6 +24,12 @@ import se.idsec.signservice.security.sign.SignatureValidationResult;
 
 import java.util.List;
 
+/**
+ *
+ * @param <R> implementation of {@link ExtendedSigValResult}
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
