@@ -28,6 +28,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
+ * Registry over supported named EC curves.
+ *
+ * Any EC curve can be specified using the defined curve parameters of EC cryptography.
+ * Some curves with specific parameters have been assigned OID identifiers. These are called "named curves"
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -52,10 +56,20 @@ public class NamedCurveRegistry {
     registerCurve(DefaultCurve.brainpoolP512r1);
   }
 
+  /**
+   * Internal function to register default curves
+   * @param curve the curve to register
+   */
   private static void registerCurve(DefaultCurve curve){
     registerCurve(curve.getOid(), curve.getKeyLen());
   }
 
+  /**
+   * Register new named curve
+   * @param oid Object Identifier
+   * @param keyLen key length
+   * @return true if the named cuve was added to the registry
+   */
   public static boolean registerCurve(ASN1ObjectIdentifier oid, int keyLen){
     if (namedCurveMap.containsKey(oid)){
       return false;
@@ -64,6 +78,12 @@ public class NamedCurveRegistry {
     return true;
   }
 
+  /**
+   * Get supported named curve based on Object Identifier
+   * @param oid Object Identifier
+   * @return named curve
+   * @throws NoSuchAlgorithmException if the requested curve was not in the registry
+   */
   public static NamedCurve get(ASN1ObjectIdentifier oid) throws NoSuchAlgorithmException {
     if (oid == null){
       throw new NoSuchAlgorithmException("Null curve oid");
@@ -80,7 +100,9 @@ public class NamedCurveRegistry {
     throw new NoSuchAlgorithmException("EC Curve with oid " + oid.getId() + " is not registered");
   }
 
-
+  /**
+   * Default named curve for the registry
+   */
   @AllArgsConstructor
   @Getter
   public enum DefaultCurve {

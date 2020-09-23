@@ -31,6 +31,7 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 
 /**
+ * Safe document builder class for parsing XML data but also providing some function for converting XML documents back to text
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)

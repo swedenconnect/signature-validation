@@ -17,6 +17,7 @@
 package se.idsec.sigval.xml.xmlstruct;
 
 /**
+ * Constants related to XML signatures
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)

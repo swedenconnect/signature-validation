@@ -21,6 +21,7 @@ import lombok.Getter;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 
 /**
+ * Data class for named EC curves
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -29,7 +30,9 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 @AllArgsConstructor
 public class NamedCurve {
 
+  /** ASN.1 Object Identifier of the named curve */
   private ASN1ObjectIdentifier oid;
+  /** key length in bits of a key using this curve */
   private int keyLen;
 }
 

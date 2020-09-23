@@ -36,6 +36,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * Parser for parsing XAdES object data
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -43,12 +44,24 @@ import java.util.stream.Collectors;
 @Slf4j
 public class XAdESObjectParser implements XMLSigConstants {
 
+  /** XAdES Qualifying properties if present */
   @Getter private QualifyingProperties qualifyingProperties;
+  /** Claimed signing time if present */
   @Getter private Date claimedSigningTime;
+  /** List of XAdES signed certificate hashes */
   @Getter List<DigestAlgAndValueType> certHashList;
+  /** Signature policy identifier if present */
   @Getter SignaturePolicyIdentifier signaturePolicyIdentifier;
+  /** List of signature timestamps if present */
   @Getter List<XadesSignatureTimestampData> signatureTimeStampDataList;
 
+  /**
+   * Constructor
+   * @param sigNode The signature element node to parse for XAdES data
+   * @param signatureData signature data collected for this signature
+   * @throws XMLSecurityException on general errors
+   * @throws JAXBException on XML parsing errors
+   */
   public XAdESObjectParser(Element sigNode, SignatureData signatureData) throws XMLSecurityException, JAXBException {
 
     qualifyingProperties = null;
@@ -71,6 +84,11 @@ public class XAdESObjectParser implements XMLSigConstants {
     }
   }
 
+  /**
+   * Indicates if this is a XAdES signature and the signed signature reference match the signature certificate
+   * @param signerCert the signer certificate of this signature
+   * @return
+   */
   public boolean isXadesVerified(X509Certificate signerCert){
     if (certHashList == null || certHashList.isEmpty()){
       return false;
@@ -87,7 +105,6 @@ public class XAdESObjectParser implements XMLSigConstants {
     }
     return false;
   }
-
 
   private void parseQualifyingProperties() {
 

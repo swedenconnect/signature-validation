@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Signature data for an XML signature
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -37,13 +38,21 @@ import java.util.Map;
 @Builder
 public class SignatureData {
 
+  /** XMLSignature object for the signature */
   private XMLSignature signature;
+  /** map holding reference URI values and the bytes of data referenced/signed from each URI */
   private Map<String, byte[]> refDataMap;
+  /** true if this signature covers the whole XML document where the signature is located */
   private boolean coversWholeDoc;
+  /** the signed canonical bytes of the document signed by this signature */
   private byte[] signedDocument;
+  /** The signature value bytes of this signature */
   private byte[] signatureBytes;
+  /** The canonical SignedInfo bytes that are hashed and signed by this signature */
   private byte[] signedInfoBytes;
+  /** The signer certificate */
   private X509Certificate signerCertificate;
+  /** The full certificate path provided with the signature */
   private List<X509Certificate> signatureCertChain;
 
 }

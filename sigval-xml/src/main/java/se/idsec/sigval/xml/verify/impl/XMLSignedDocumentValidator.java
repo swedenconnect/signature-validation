@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
+ * XML Document signature validator for validating signatures on XML documents
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -67,11 +68,13 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
     this.signatureContextFactory = new DefaultXMLSignatureContextFactory();
   }
 
+  /** {@inheritDoc} */
   @Override public SignedDocumentValidationResult<ExtendedXmlSigvalResult> extendedResultValidation(Document document)
     throws SignatureException {
     return getConcludingSigVerifyResult(validate(document));
   }
 
+  /** {@inheritDoc} */
   @Override public List<SignatureValidationResult> validate(Document document) throws SignatureException {
     // First locate all signature elements ...
     //
@@ -85,6 +88,7 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
     }
   }
 
+  /** {@inheritDoc} */
   @Override public List<SignatureValidationResult> validate(Document document, XMLSignatureLocation signatureLocation)
     throws SignatureException {
     if (signatureLocation == null) {

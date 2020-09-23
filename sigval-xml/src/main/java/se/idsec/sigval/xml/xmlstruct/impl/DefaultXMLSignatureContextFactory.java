@@ -23,6 +23,7 @@ import se.idsec.sigval.xml.xmlstruct.XMLSignatureContextFactory;
 import java.io.IOException;
 
 /**
+ * Default factory class providing instances of XMLSignatureContext.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Utility class for common functions related to XML signature processing
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -32,6 +33,11 @@ import java.util.List;
 @Slf4j
 public class XMLSigUtils {
 
+  /**
+   * Get the signature elements of an XML document
+   * @param document XML document
+   * @return signature elements
+   */
   public static List<Element> getSignatures(Document document) {
     NodeList signatureElements = document.getElementsByTagNameNS(javax.xml.crypto.dsig.XMLSignature.XMLNS, "Signature");
     if (signatureElements.getLength() == 0) {

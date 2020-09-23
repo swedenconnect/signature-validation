@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
+ * Registry for JWS signing algorithms
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -43,6 +44,12 @@ public class JWSAlgorithmRegistry {
     register(XMLSignature.ALGO_ID_SIGNATURE_ECDSA_SHA512, JWSAlgorithm.ES512);
   }
 
+  /**
+   * Register a new JWS signing algorithm
+   * @param uri URI identifier for the signing algorithm
+   * @param algorithm the new JWS algorithm
+   * @return true if the algorithm was added to the registry
+   */
   public static boolean register(String uri, JWSAlgorithm algorithm){
     if (jwsAlgorithmMap.containsKey(uri)){
       return false;
@@ -51,6 +58,12 @@ public class JWSAlgorithmRegistry {
     return true;
   }
 
+  /**
+   * Get the URI identifier of the JWS algorithm
+   * @param jwsAlgorithm  JWS algorithm
+   * @return URI identifier
+   * @throws NoSuchAlgorithmException if the specified algorithm is not in the registry
+   */
   public static String getUri(JWSAlgorithm jwsAlgorithm) throws NoSuchAlgorithmException {
     if (jwsAlgorithm == null){
       throw new NoSuchAlgorithmException("Null algorithm");
@@ -65,6 +78,12 @@ public class JWSAlgorithmRegistry {
     throw new NoSuchAlgorithmException("Not found JWS Algorithm: " + jwsAlgorithm);
   }
 
+  /**
+   * Get the JWS algorithm for a signature algorithm URI identifier
+   * @param uri URI identifier
+   * @return JWS algorithm
+   * @throws NoSuchAlgorithmException if the specified algorithm is not in the registry
+   */
   public static JWSAlgorithm get(String uri) throws NoSuchAlgorithmException {
     if (uri == null) {
       throw new NoSuchAlgorithmException("Null algorithm");

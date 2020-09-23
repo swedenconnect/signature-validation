@@ -42,6 +42,8 @@ import java.security.cert.X509Certificate;
 import java.util.*;
 
 /**
+ * Provides signature context data related to XML document signatures.
+ * This class is instantiated for a specific XML document and a new instance must be created for each processed XML document.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -58,6 +60,12 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
   private final String rootElementName;
   private final String rootIdAttrVal;
 
+  /**
+   * Constructor
+   *
+   * @param document the XML document from which signature context data is collected
+   * @throws IOException on errors parsing data
+   */
   public DefaultXMLSignatureContext(Document document) throws IOException {
     try {
       this.document = document;
@@ -88,13 +96,13 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
       : defaultVal;
   }
 
-  public byte[] getSignedDocument(Map<String, byte[]> refDataMap) {
+  private byte[] getSignedDocument(Map<String, byte[]> refDataMap) {
 
     try {
       //SignatureData signatureData = getSignatureData(signature, false);
 
       Optional<Document> documentOptional = refDataMap.keySet().stream()
-        .map(s -> refDataMap.get(s))
+        .map(refDataMap::get)
         .map(bytes -> {
           try {
             return XMLDocumentBuilder.getDocument(bytes);
@@ -103,7 +111,7 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
             return null;
           }
         })
-        .filter(parsedFrag -> parsedFrag != null)
+        .filter(Objects::nonNull)
         .filter(parsedFrag -> isFragmentMatchingRootElement(parsedFrag, refDataMap))
         .findFirst();
 
@@ -122,7 +130,7 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
       String nameSpaceUri = signedDocDocumentElement.getNamespaceURI();
       String localName = signedDocDocumentElement.getLocalName();
 
-      boolean nsMatch = false;
+      boolean nsMatch;
       if (rootNamespaceURI == null) {
         nsMatch = nameSpaceUri == null;
       }
@@ -132,7 +140,7 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
 
       boolean elmNameMatch = rootElementName.equals(localName);
 
-      boolean idMatch = false;
+      boolean idMatch;
       if (rootIdAttrVal == null || rootIdAttrVal.isEmpty()) {
         idMatch = refDataMap.containsKey("");
       }
@@ -150,12 +158,13 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
     return false;
   }
 
-  public boolean isCoversWholeDocument(Map<String, byte[]> refDataMap) {
+  private boolean isCoversWholeDocument(Map<String, byte[]> refDataMap) {
     if (refDataMap.containsKey(""))
       return true;
     return refDataMap.containsKey("#" + rootIdAttrVal);
   }
 
+  /** {@inheritDoc} */
   @Override public SignatureData getSignatureData(Element sigNode) throws IOException {
     SignatureData.SignatureDataBuilder builder = SignatureData.builder();
 
@@ -169,7 +178,7 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
         Element refElement = (Element) signatureRefs.item(i);
         String transform = getTransformAlgorithm(refElement);
         if (XMLDSIG_V2_TRANSFORM.equalsIgnoreCase(transform)) {
-          throw new IOException("XMLDsig versioin 2.0 signatures not supported");
+          throw new IOException("XMLDsig version 2.0 signatures not supported");
         }
         String uri = refElement.getAttribute("URI");
         // Make sure id attributes are registered
@@ -179,10 +188,8 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
         try {
           XMLSignatureInput xmlSignatureInput = signedInfo.getReferencedContentAfterTransformsItem(i);
           signedData = xmlSignatureInput.getBytes();
-          int sdf = 0;
         }
         catch (Exception ignored) {
-          int sdf = 0;
           //Its perfectly legal if we don't find a document behind every reference, as long as 1 reference match our signed document
         }
         referencedDataMap.put(uri, signedData);
@@ -198,7 +205,7 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
       KeyInfo keyInfo = signature.getKeyInfo();
       if (keyInfo != null){
         builder.signerCertificate(keyInfo.getX509Certificate())
-          .signatureCertChain(getAllSignatureCertifictes(keyInfo));
+          .signatureCertChain(getAllSignatureCertificates(keyInfo));
       }
     }
     catch (Exception ex) {
@@ -260,7 +267,7 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
    * @param keyInfo the KeyInfo
    * @return a list of certificates
    */
-  protected List<X509Certificate> getAllSignatureCertifictes(final KeyInfo keyInfo) {
+  protected List<X509Certificate> getAllSignatureCertificates(final KeyInfo keyInfo) {
     List<X509Certificate> additional = new ArrayList<>();
     for (int i = 0; i < keyInfo.lengthX509Data(); i++) {
       try {
@@ -278,7 +285,6 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
       }
       catch (XMLSecurityException | CertificateException e) {
         log.error("Failed to extract X509Certificate from KeyInfo", e);
-        continue;
       }
     }
     return additional;

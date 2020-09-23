@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
+ * Registry of supported digest algorithms
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -45,6 +46,12 @@ public class DigestAlgorithmRegistry {
     registerDigestAlgorithm(DigestAlgorithm.ID_SHA3_512, DigestAlgorithm.OID_SHA3_512);
   }
 
+  /**
+   * Register a new supported digest algorithm
+   * @param uri URI identifier
+   * @param oid Object Identifier (OID)
+   * @return true if the digest algorithm was added to the registry
+   */
   public static boolean registerDigestAlgorithm(String uri, ASN1ObjectIdentifier oid){
     if (digestAlgorithmMap.containsKey(uri)){
       return false;
@@ -53,6 +60,12 @@ public class DigestAlgorithmRegistry {
     return true;
   }
 
+  /**
+   * Get registered digest algorithm based on URI identifier
+   * @param uri URI identifier
+   * @return digest algorithm
+   * @throws NoSuchAlgorithmException if the requested digest algorithm is not in the registry
+   */
   public static DigestAlgorithm get(String uri) throws NoSuchAlgorithmException {
     if (uri == null){
       throw new NoSuchAlgorithmException("Null digest algorithm");
@@ -63,6 +76,12 @@ public class DigestAlgorithmRegistry {
     throw new NoSuchAlgorithmException("Digest algorithm "+ uri + " is not registered");
   }
 
+  /**
+   * Get registered digest algorithm based on OID
+   * @param oid Object Identifier (OID)
+   * @return digest algorithm
+   * @throws NoSuchAlgorithmException if the requested digest algorithm is not in the registry
+   */
   public static DigestAlgorithm get(ASN1ObjectIdentifier oid) throws NoSuchAlgorithmException {
     if (oid == null){
       throw new NoSuchAlgorithmException("Null digest algorithm");
@@ -77,6 +96,4 @@ public class DigestAlgorithmRegistry {
     }
     throw new NoSuchAlgorithmException("Digest algorithm "+ oid.getId() + " is not registered");
   }
-
-
 }

@@ -70,6 +70,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
+ * Validator for validating single signature elements within an XML document
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -80,13 +81,14 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
   /** Optional certificate validator. */
   private final CertificateValidator certificateValidator;
 
+  /** A verifier used to verify signature timestamps */
   private final TimeStampPolicyVerifier timeStampPolicyVerifier;
 
+  /** Signature policy validator determine the final validity of the signature based on validation policy */
   private final XMLSignaturePolicyValidator signaturePolicyValidator;
 
   /** An optional validator capable of validating signatures based on provided SVT tokens */
   private final XMLSVTValidator xmlsvtValidator;
-
 
   /**
    * Constructor setting up the validator.

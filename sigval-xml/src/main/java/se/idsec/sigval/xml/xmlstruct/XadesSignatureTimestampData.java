@@ -22,6 +22,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
+ * Data class providing data related to XML signature time stamps
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -32,7 +33,9 @@ import lombok.NoArgsConstructor;
 @Builder
 public class XadesSignatureTimestampData {
 
+  /** The bytes of the time stamp CMS signature bytes (CMS ContentInfo bytes) */
   private byte[] timeStampSignatureBytes;
+  /** The canonicalization method used to get the canonicalized bytes of the signature value element that is hashed by the timestamp */
   private String canonicalizationMethod;
 
 }
