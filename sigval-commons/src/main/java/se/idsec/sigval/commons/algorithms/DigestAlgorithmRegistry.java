@@ -23,6 +23,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public class DigestAlgorithmRegistry {
 
   private static Map<String, DigestAlgorithm> digestAlgorithmMap;

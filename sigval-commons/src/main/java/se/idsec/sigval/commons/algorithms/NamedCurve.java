@@ -20,6 +20,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @Getter
 @AllArgsConstructor
 public class NamedCurve {

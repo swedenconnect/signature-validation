@@ -24,6 +24,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public class JWSAlgorithmRegistry {
 
   private static Map<String, JWSAlgorithm> jwsAlgorithmMap;

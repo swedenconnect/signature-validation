@@ -28,6 +28,11 @@ import org.bouncycastle.operator.DefaultAlgorithmNameFinder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 @AllArgsConstructor
 public class DigestAlgorithm {
   /** Finder for converting OIDs and AlgorithmIdentifiers into strings. */

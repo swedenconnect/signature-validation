@@ -27,6 +27,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public class NamedCurveRegistry {
 
   private static Map<ASN1ObjectIdentifier, NamedCurve> namedCurveMap;
