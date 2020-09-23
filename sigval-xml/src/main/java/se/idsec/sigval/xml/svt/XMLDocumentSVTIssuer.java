@@ -96,6 +96,7 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
       Element sigElement = svtExtensionData.getElement();
       XMLDocumentSVTMethod svtMethod = svtExtensionData.getSvtMethod();
 
+
       NodeList objectNodes = sigElement.getElementsByTagNameNS(XMLDSIG_NS, "Object");
       List<Element> svtObjects = getSvtObjects(objectNodes);
       // Remove old SVT objects if method is set to replace (if we have a new SVT) or replace all.
@@ -107,13 +108,13 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
 
       // Create the new SVT XML Signature Object
       Element svtObject = document.createElementNS(XMLDSIG_NS, "Object");
-      svtObject.setPrefix("ds");
+      setElementPrefix(svtObject, sigElement);
       sigElement.appendChild(svtObject);
       Element signatureProperties = document.createElementNS(XMLDSIG_NS, "SignatureProperties");
-      signatureProperties.setPrefix("ds");
+      setElementPrefix(signatureProperties, sigElement);
       svtObject.appendChild(signatureProperties);
       Element signatureProperty = document.createElementNS(XMLDSIG_NS, "SignatureProperty");
-      signatureProperty.setPrefix("ds");
+      setElementPrefix(signatureProperty, sigElement);
       signatureProperties.appendChild(signatureProperty);
 
       // If the signature element does not have an Id attribute, then create one.
@@ -132,6 +133,11 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
 
     // Return resulting document with updated signature elements
     return XMLDocumentBuilder.getCanonicalDocBytes(document);
+  }
+
+  private void setElementPrefix(Element target, Element sigElement) {
+    if (StringUtils.isEmpty(sigElement.getPrefix())) return;
+    target.setPrefix(sigElement.getPrefix());
   }
 
   private List<Element> getSvtObjects(NodeList objectNodes) {
