@@ -106,29 +106,21 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
 
     for (SVTExtensionData svtExtensionData:svtExtensionDataList){
       SignedJWT signedJWT = svtExtensionData.getSignedJWT();
-      Element sigElement = svtExtensionData.getElement();
-      XMLDocumentSVTMethod svtMethod = svtExtensionData.getSvtMethod();
-
-
-      NodeList objectNodes = sigElement.getElementsByTagNameNS(XMLDSIG_NS, "Object");
-      List<Element> svtObjects = getSvtObjects(objectNodes);
-      // Remove old SVT objects if method is set to replace (if we have a new SVT) or replace all.
-      if (svtMethod.equals(XMLDocumentSVTMethod.REPLACE) && signedJWT != null){
-        svtObjects.stream().forEach(element -> sigElement.removeChild(element));
-      }
-      // No need to continue if we didn't get a new SVT
+      // Abort if we didn't get a new SVT
       if (signedJWT == null) continue;
 
-      // Create the new SVT XML Signature Object
-      Element svtObject = document.createElementNS(XMLDSIG_NS, "Object");
-      setElementPrefix(svtObject, sigElement);
-      sigElement.appendChild(svtObject);
-      Element signatureProperties = document.createElementNS(XMLDSIG_NS, "SignatureProperties");
-      setElementPrefix(signatureProperties, sigElement);
-      svtObject.appendChild(signatureProperties);
+      Element sigElement = svtExtensionData.getElement();
+      XMLDocumentSVTMethod svtMethod = svtExtensionData.getSvtMethod();
+      List<Element> svtSignaturePropertyElements = getSvtSignaturePropertyElements(sigElement, new ArrayList<>());
+      // Remove old SVT objects if method is set to replace (if we have a new SVT) or replace all.
+      if (svtMethod.equals(XMLDocumentSVTMethod.REPLACE) && signedJWT != null){
+        svtSignaturePropertyElements.stream().forEach(element -> removeElement(element));
+      }
+
+      Element targetSignaturePropertiesElement = getTargetSignaturePropertiesElement(document, sigElement);
       Element signatureProperty = document.createElementNS(XMLDSIG_NS, "SignatureProperty");
       setElementPrefix(signatureProperty, sigElement);
-      signatureProperties.appendChild(signatureProperty);
+      targetSignaturePropertiesElement.appendChild(signatureProperty);
 
       // If the signature element does not have an Id attribute, then create one.
       String sigId = sigElement.getAttribute("Id");
@@ -148,25 +140,70 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
     return XMLDocumentBuilder.getCanonicalDocBytes(document);
   }
 
+  /**
+   * Remove element and recursively removes any empty parent left after removal up until the signature element itself
+   * @param elementToRemove element to remove
+   */
+  private void removeElement(Node elementToRemove) {
+    Node parentNode = elementToRemove.getParentNode();
+    parentNode.removeChild(elementToRemove);
+
+    boolean emptyParentElement =
+      parentNode instanceof Element
+      && parentNode.getChildNodes().getLength() == 0
+      && !parentNode.getLocalName().equalsIgnoreCase("Signature");
+
+    if (emptyParentElement){
+      removeElement(parentNode);
+    }
+  }
+
+  private Element getTargetSignaturePropertiesElement(Document document, Element sigElement) {
+    // Try to find an existing signature properties element
+    List<Element> svtSigPropElementList = new ArrayList<>();
+    List<Element> sigPropertiesNodeList = new ArrayList<>();
+    NodeList signaturePropertiesNodes = sigElement.getElementsByTagNameNS(XMLDSIG_NS, "SignatureProperties");
+    for (int i = 0; i<signaturePropertiesNodes.getLength() ; i++){
+      if (signaturePropertiesNodes.item(i) instanceof Element){
+        sigPropertiesNodeList.add((Element) signaturePropertiesNodes.item(i));
+        getSvtSignaturePropertyElements((Element) signaturePropertiesNodes.item(i), svtSigPropElementList);
+      }
+    }
+    if (!svtSigPropElementList.isEmpty()){
+      Node parentNode = svtSigPropElementList.get(0).getParentNode();
+      // If we have a SVT element, then use the sig properties parent node
+      if (parentNode.getLocalName().equalsIgnoreCase("SignatureProperties")) return (Element) parentNode;
+    }
+    if (!sigPropertiesNodeList.isEmpty()){
+      // There was no SVT node, but we have a sig properties node. Use that
+      return sigPropertiesNodeList.get(0);
+    }
+
+    // There was no existing node. Create the new SVT XML SignatureProperties node
+    Element svtObject = document.createElementNS(XMLDSIG_NS, "Object");
+    setElementPrefix(svtObject, sigElement);
+    sigElement.appendChild(svtObject);
+    Element signatureProperties = document.createElementNS(XMLDSIG_NS, "SignatureProperties");
+    setElementPrefix(signatureProperties, sigElement);
+    svtObject.appendChild(signatureProperties);
+    return signatureProperties;
+  }
+
+  private List<Element> getSvtSignaturePropertyElements(Element contextRoot, List<Element> svtSigPropElementList) {
+    NodeList signaturePropertyNodes = contextRoot.getElementsByTagNameNS(XMLDSIG_NS, "SignatureProperty");
+    for (int i = 0; i<signaturePropertyNodes.getLength() ; i++){
+      if (signaturePropertyNodes.item(i) instanceof Element){
+        Element sigPropElement = (Element) signaturePropertyNodes.item(i);
+        int svtCount = sigPropElement.getElementsByTagNameNS(XML_SVT_NS, "SignatureValidationToken").getLength();
+        if (svtCount > 0) svtSigPropElementList.add(sigPropElement);
+      }
+    }
+    return svtSigPropElementList;
+  }
+
   private void setElementPrefix(Element target, Element sigElement) {
     if (StringUtils.isEmpty(sigElement.getPrefix())) return;
     target.setPrefix(sigElement.getPrefix());
-  }
-
-  private List<Element> getSvtObjects(NodeList objectNodes) {
-    List<Element> elementList = new ArrayList<>();
-    if (objectNodes == null) return elementList;
-    for (int i = 0 ; i< objectNodes.getLength(); i++){
-      Node node = objectNodes.item(i);
-      if (node instanceof Element){
-        Element objElement = (Element) node;
-        NodeList svtNodes = objElement.getElementsByTagNameNS(XML_SVT_NS, "SignatureValidationToken");
-        if (svtNodes != null && svtNodes.getLength() > 0){
-          elementList.add(objElement);
-        }
-      }
-    }
-    return elementList;
   }
 
   @Data
