@@ -62,13 +62,12 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
   @Override public byte[] getSignedDocument(final PDSignature signature) throws IllegalArgumentException {
     try {
       int idx = getSignatureRevisionIndex(signature);
-      if (idx == -1) {
+      if (idx < 0) {
         throw new IllegalArgumentException("Signature not found");
       }
-      if (idx < 1) {
-        throw new IllegalArgumentException("No revision found before the signature was added");
-      }
-      return Arrays.copyOf(pdfBytes, PDFDocRevisions.get(idx - 1).getLength());
+      // Note. In previous version, this function returned the doc revision before the signed revision. That is not correct as the signature
+      // also signs all data of the current revision. The current way is compatible with the view function of Adobe reader
+      return Arrays.copyOf(pdfBytes, PDFDocRevisions.get(idx).getLength());
     }
     catch (Exception ex) {
       throw new IllegalArgumentException("Error extracting signed version", ex);
