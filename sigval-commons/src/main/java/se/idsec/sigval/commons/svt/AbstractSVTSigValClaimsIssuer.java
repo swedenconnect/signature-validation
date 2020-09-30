@@ -18,7 +18,6 @@ package se.idsec.sigval.commons.svt;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
-import com.sun.tools.javac.util.Assert;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
@@ -80,7 +79,7 @@ public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SV
 
     CertificateValidationResult certificateValidationResult;
     try {
-      certificateValidationResult = Assert.checkNonNull(sigResult.getCertificateValidationResult());
+      certificateValidationResult = sigResult.getCertificateValidationResult();
     } catch (Exception ex){
       log.error("Unable to obtain the required certificate validation result object", ex);
       throw new IOException("Unable to obtain the required certificate validation result object");
