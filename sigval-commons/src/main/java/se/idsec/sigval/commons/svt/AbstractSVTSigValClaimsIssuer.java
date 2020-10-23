@@ -65,6 +65,10 @@ public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SV
 
   /**
    * Gets the certificate reference claims for signature validation result
+   *
+   * <p>Updated logic 2020-10-23. If chain is using certs from the signature, the same chain is stored
+   * as cert hashes of individual certs in the same order as if complete certs are stored</p>
+   *
    * @param sigResult signature validation result data
    * @param hashAlgoUri the hash algorithm used to hash data
    * @return certificate reference claims
@@ -89,37 +93,28 @@ public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SV
     boolean altered = !isCertPathMatch(validatedCertificatePath, signatureCertificateChain);
     boolean hasValidatedCerts = validatedCertificatePath != null && !validatedCertificatePath.isEmpty();
 
-    if (hasValidatedCerts && altered){
-      // A certificate path other than the one provided in the signature was used for signature validation
-      // Store the examined certificate path
+    MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(hashAlgoUri);
+    if (hasValidatedCerts){
+      // We have a valid cert path. Store certs as complete certs or as cert hash
       List<String> b64Chain = new ArrayList<>();
       for (X509Certificate chainCert: validatedCertificatePath){
-        b64Chain.add(Base64.encodeBase64String(chainCert.getEncoded()));
+        b64Chain.add(Base64.encodeBase64String(
+          // If chain was altered from signature set, provide certs, otherwise provide cert hash
+          altered ? chainCert.getEncoded() : md.digest(chainCert.getEncoded())
+        ));
       }
       return CertReferenceClaims.builder()
-        .type(CertReferenceClaims.CertRefType.chain.name())
+        // If chain was altered from signature set, type is chain, otherwise it is chain_hash
+        .type(altered ? CertReferenceClaims.CertRefType.chain.name() : CertReferenceClaims.CertRefType.chain_hash.name())
         .ref(b64Chain)
         .build();
     }
 
-    // In all other cases, the original signature chain is provided as hash references.
-    MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(hashAlgoUri);
+    // We don't have a valid certificate path. Then just return the signing certificate as the evaluated cert path
     String certHash = Base64.encodeBase64String(md.digest(signerCertificate.getEncoded()));
-    if (signatureCertificateChain == null || signatureCertificateChain.size() < 2){
-      // There is only one signerCertificate. Send it as single reference
-      return CertReferenceClaims.builder()
-        .type(CertReferenceClaims.CertRefType.chain_hash.name())
-        .ref(Arrays.asList(certHash))
-        .build();
-    }
-    // The chain contains more than one signerCertificate. Send chain hash ref
-    for (X509Certificate chainCert: signatureCertificateChain){
-      md.update(chainCert.getEncoded());
-    }
-    String chainHash = Base64.encodeBase64String(md.digest());
     return CertReferenceClaims.builder()
       .type(CertReferenceClaims.CertRefType.chain_hash.name())
-      .ref(Arrays.asList(certHash, chainHash))
+      .ref(Arrays.asList(certHash))
       .build();
   }
 
