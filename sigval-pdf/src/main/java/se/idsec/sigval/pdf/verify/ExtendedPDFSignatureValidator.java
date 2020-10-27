@@ -29,6 +29,7 @@ public interface ExtendedPDFSignatureValidator extends PDFSignatureValidator {
    *
    * @param pdfDocBytes validate the complete PDF document and return concluding validation results for the complete document.
    * @return PDF signature validation result objects
+   * @throws SignatureException errors validating signature
    */
   SignedDocumentValidationResult<ExtendedPdfSigValResult> extendedResultValidation(byte[] pdfDocBytes) throws SignatureException;
 

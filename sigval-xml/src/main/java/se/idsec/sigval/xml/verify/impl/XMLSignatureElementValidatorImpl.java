@@ -92,6 +92,10 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
 
   /**
    * Constructor setting up the validator.
+   *
+   * @param certificateValidator certificate validator
+   * @param signaturePolicyValidator signature policy validator
+   * @param timeStampPolicyVerifier timestamp policy validator
    */
   public XMLSignatureElementValidatorImpl(
     CertificateValidator certificateValidator, XMLSignaturePolicyValidator signaturePolicyValidator,
@@ -101,8 +105,14 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
     this.timeStampPolicyVerifier = timeStampPolicyVerifier;
     this.xmlsvtValidator = null;
   }
+
   /**
    * Constructor setting up the validator.
+   *
+   * @param certificateValidator certificate validator
+   * @param signaturePolicyValidator signature policy validator
+   * @param timeStampPolicyVerifier timestamp policy validator
+   * @param xmlsvtValidator xml SVT validator
    */
   public XMLSignatureElementValidatorImpl(
     CertificateValidator certificateValidator, XMLSignaturePolicyValidator signaturePolicyValidator,
@@ -274,6 +284,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
    * Validates the signature value and checks that the signer certificate is accepted.
    *
    * @param signature the signature element
+   * @param signatureData signature data collected for this signature element
    * @return a validation result
    */
   public ExtendedXmlSigvalResult validateSignatureElement(final Element signature, SignatureData signatureData) {

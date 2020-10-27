@@ -87,8 +87,8 @@ public abstract class AbstractBasicXMLSignaturePolicyChecks implements XMLSignat
    *
    * <p>This function is responsible for processing any certificate validity results such as results of CRL or OCSP checking</p>
    *
-   * @param verifyResultSignature
-   * @return
+   * @param verifyResultSignature result of signature validation
+   * @return result of extended validation
    */
   protected abstract PolicyValidationResult performAdditionalValidityChecks(ExtendedXmlSigvalResult verifyResultSignature);
 

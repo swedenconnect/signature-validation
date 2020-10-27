@@ -101,9 +101,9 @@ public abstract class AbstractBasicPDFSignaturePolicyChecks implements PDFSignat
    *
    * <p>This function is responsible for processing any certificate validity results such as results of CRL or OCSP checking</p>
    *
-   * @param verifyResultSignature
-   * @param signatureContext
-   * @return
+   * @param verifyResultSignature signature validation results
+   * @param signatureContext signature context data
+   * @return results after extended validation checks
    */
   protected abstract PolicyValidationResult performAdditionalValidityChecks(ExtendedPdfSigValResult verifyResultSignature,
     PDFSignatureContext signatureContext);

@@ -29,7 +29,7 @@ public class PDFDocTimeStamp extends TimeStamp {
    * <p>
    * Other functions must be used to assure that the signature in question belongs to the same document as the document timestamp.
    *
-   * @param signature
+   * @param signature PDF signature
    * @return true if this signature falls within the byte range of the signed data of this document timestamp.
    */
   public boolean isSignatureCovered(PDSignature signature) {

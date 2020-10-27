@@ -62,6 +62,8 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
 
   /**
    * Constructor setting up the validator
+   *
+   * @param signatureElementValidator signature element validator
    */
   public XMLSignedDocumentValidator(XMLSignatureElementValidator signatureElementValidator) {
     this.signatureElementValidator = signatureElementValidator;
@@ -114,6 +116,7 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
    * @param document   the document containing the signatures
    * @param signatures the signatures
    * @return a list of result objects
+   * @throws Exception on errors validating signature
    */
   protected List<SignatureValidationResult> validate(final Document document, final List<Element> signatures) throws Exception {
 

@@ -124,7 +124,11 @@ public class PDFSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<byte
    * Performs the basic calculation of the hash of signed data in a PDF document, signed by a particular signature
    *
    * @param sig Signature
+   * @param signedDocument signed document
+   * @param hashAlgoUri hash algorithm URI identifier
    * @return Signed document data hashes
+   * @throws IOException parsing errors
+   * @throws NoSuchAlgorithmException unsupported algorithm
    */
   protected SignedDataClaims calculateDocRefHash(PDSignature sig, byte[] signedDocument, String hashAlgoUri) throws IOException, NoSuchAlgorithmException {
     MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(hashAlgoUri);

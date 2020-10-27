@@ -1,1 +1,0 @@
-/Users/stefan/.jenv/versions/11.0/bin/javadoc @options @packages

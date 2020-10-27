@@ -57,7 +57,8 @@ public class PDFDocTimstampProcessor {
    *
    * @param pdfDocumentBytes          the document to sign
    * @param pdfSignatureProvider the PDFBox signature provider
-   * @return a result
+   * @param svt signature validation token
+   * @return the extended document
    * @throws SignatureException for signature errors
    */
   public static Result createSVTSealedPDF(

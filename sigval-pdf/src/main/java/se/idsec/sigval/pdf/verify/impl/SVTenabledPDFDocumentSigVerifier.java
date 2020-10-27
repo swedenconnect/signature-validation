@@ -77,6 +77,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
    * Constructor if no SVT validation is supported
    *
    * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVA
+   * @param pdfSignatureContextFactory factory for creating an instance of signature context for the validated document
    */
   public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureValidator pdfSingleSignatureValidator, PDFSignatureContextFactory pdfSignatureContextFactory) {
     this.pdfSingleSignatureValidator = pdfSingleSignatureValidator;

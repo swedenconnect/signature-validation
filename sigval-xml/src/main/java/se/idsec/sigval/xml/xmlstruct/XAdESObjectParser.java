@@ -87,7 +87,7 @@ public class XAdESObjectParser implements XMLSigConstants {
   /**
    * Indicates if this is a XAdES signature and the signed signature reference match the signature certificate
    * @param signerCert the signer certificate of this signature
-   * @return
+   * @return true if this is a XAdES signature and the signed signature reference match the signature certificate
    */
   public boolean isXadesVerified(X509Certificate signerCert){
     if (certHashList == null || certHashList.isEmpty()){

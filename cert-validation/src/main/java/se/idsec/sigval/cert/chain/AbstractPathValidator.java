@@ -113,6 +113,7 @@ public abstract class AbstractPathValidator implements Runnable {
    * Validates a certificate path
    *
    * @return {@link PathValidationResult}
+   * @throws ExtendedCertPathValidatorException errors encountered while validation certificate path
    */
   public abstract PathValidationResult validateCertificatePath() throws ExtendedCertPathValidatorException;
 }

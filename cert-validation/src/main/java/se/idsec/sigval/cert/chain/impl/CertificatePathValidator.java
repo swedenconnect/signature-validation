@@ -53,8 +53,6 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
   protected static final PathBuilder PATH_BUILDER = new BasicPathBuilder();
   /**
    * Force the underlying validation operations to be performed in a single thread.
-   *
-   * @param singleThreaded set to true to perform all validation tasks in a single thread.
    */
   @Setter protected boolean singleThreaded;
   /** Result list of certificate status checks */

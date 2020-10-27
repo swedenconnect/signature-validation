@@ -36,6 +36,7 @@ public interface ExtendedXMLSignedDocumentValidator extends XMLSignatureValidato
    *
    * @param document validate the complete PDF document and return concluding validation results for the complete document.
    * @return XML signature validation result objects
+   * @throws SignatureException error validating signed document
    */
   SignedDocumentValidationResult<ExtendedXmlSigvalResult> extendedResultValidation(Document document) throws SignatureException;
 

@@ -21,6 +21,7 @@ public interface PDFSignaturePolicyValidator {
    * the signature was time stamped before the certificate was revoked</p>
    *
    * @param verifyResultSignature The result of signature validation
+   * @param signatureContext signature context data
    * @return {@link PolicyValidationClaims} result
    */
   PolicyValidationResult validatePolicy(ExtendedPdfSigValResult verifyResultSignature, PDFSignatureContext signatureContext);

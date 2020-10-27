@@ -67,7 +67,6 @@ public interface XMLSignatureContext {
   /**
    * Returns the bytes of the signed document
    * @return bytes of the signed document
-   * @throws IOException on error parsing the document content
    */
   byte[] getDocumentBytes();
 

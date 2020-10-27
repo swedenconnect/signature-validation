@@ -80,7 +80,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
-                    <source>8</source>
+                    <detectJavaApiLink>false</detectJavaApiLink>
                     <doctitle>Certificate Extensions - ${project.version}</doctitle>
                     <windowtitle>Certificate Extensions - ${project.version}</windowtitle>
                     <links>

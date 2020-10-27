@@ -56,8 +56,9 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
    * @param algorithm    the algorithm used to sign the SVT as well as selecting the Hash algorithm used to generate SVT hash values
    * @param privateKey   private key used to sign the SVT
    * @param certificates certificates supporting the SVT signature
-   * @throws NoSuchAlgorithmException
-   * @throws JOSEException
+   * @param signatureVerifier verifier of XML signature elements
+   * @throws NoSuchAlgorithmException unsupported algorithm
+   * @throws JOSEException JOSE exception
    */
   public XMLSVTSigValClaimsIssuer(JWSAlgorithm algorithm, Object privateKey,
     List<X509Certificate> certificates, XMLSignatureElementValidator signatureVerifier) throws NoSuchAlgorithmException, JOSEException {

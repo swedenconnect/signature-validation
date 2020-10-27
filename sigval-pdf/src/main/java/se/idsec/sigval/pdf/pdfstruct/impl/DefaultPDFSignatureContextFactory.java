@@ -22,7 +22,7 @@ import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContextFactory;
 import java.io.IOException;
 
 /**
- * Default implementation of the {@@link PDFSignatureContextFactory} providing a base PDF signature context for
+ * Default implementation of the {@link PDFSignatureContextFactory} providing a base PDF signature context for
  * signed PDF documents to determine whether updates to a PDF document after it was signed can be considered safe
  * with respect to visual content.
  *

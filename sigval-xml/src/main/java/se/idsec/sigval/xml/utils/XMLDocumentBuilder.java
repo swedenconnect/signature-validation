@@ -86,6 +86,7 @@ public class XMLDocumentBuilder {
    *
    * @param doc The doc being processed
    * @return Test representation of the XML document
+   * @throws IOException errors parsing document
    */
   public static String getDocText(Document doc) throws IOException {
     if (doc == null) {
@@ -119,7 +120,7 @@ public class XMLDocumentBuilder {
    *
    * @param doc The XML document being processed.
    * @return The bytes of the xml document
-   * @throws TransformerException
+   * @throws TransformerException transformer error
    */
   public static byte[] getCanonicalDocBytes(Document doc) throws TransformerException {
     ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -164,11 +165,18 @@ public class XMLDocumentBuilder {
    *
    * @param xmlFile The XML file being parsed
    * @return XML String
+   * @throws ParserConfigurationException parser configuration errors
+   * @throws SAXException XML parsing errors
+   * @throws IOException other data parsing errors
    */
   public static String getParsedXMLText(File xmlFile) throws ParserConfigurationException, SAXException, IOException {
     return getDocText(loadXMLContent(xmlFile));
   }
 
+  /**
+   * Getter for a safe document builder factory
+   * @return safe document builder factory
+   */
   public static DocumentBuilderFactory getDbFactory() {
     return safeDocBuilderFactory;
   }

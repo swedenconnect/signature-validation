@@ -18,11 +18,13 @@ public interface PDFSingleSignatureValidator {
 
   /**
    * Verifies the signature on a PDF document
-   * @param signature
-   * @param pdfDocument
-   * @param documentTimestamps
-   * @return
-   * @throws Exception
+   *
+   * @param signature PDF signature
+   * @param pdfDocument PDF document
+   * @param documentTimestamps document timestamps of the signed PDF document
+   * @param signatureContext signature context data
+   * @return Signature validation result
+   * @throws Exception on errors during signature validation
    */
   ExtendedPdfSigValResult verifySignature (PDSignature signature, byte[] pdfDocument, List<PDFDocTimeStamp> documentTimestamps, PDFSignatureContext signatureContext) throws Exception;
 
