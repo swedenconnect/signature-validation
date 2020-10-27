@@ -89,7 +89,7 @@ public class InhibitAnyPolicy extends ASN1Object {
      * SkipCerts ::= INTEGER (0..MAX)
      * </pre>
      *
-     * @return
+     * @return ASN.1 object of the extension
      */
     @Override
     public ASN1Primitive toASN1Primitive() {

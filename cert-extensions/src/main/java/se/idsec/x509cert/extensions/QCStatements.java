@@ -133,7 +133,7 @@ public class QCStatements extends ASN1Object {
      * }
      * </pre>
      *
-     * @return
+     * @return ASN.1 object of the extension
      */
     @Override
     public ASN1Primitive toASN1Primitive() {

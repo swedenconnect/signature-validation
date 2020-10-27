@@ -85,7 +85,7 @@ public class SVAUtils {
 
   /**
    * Get the SVT JWT string from time stamp tstInfo
-   * @param tstInfo
+   * @param tstInfo timestamp data
    * @return SVT JWT (Json Web Token)
    * @throws IOException on parsing errors
    */
@@ -240,6 +240,7 @@ public class SVAUtils {
   /**
    * Verifies the SVT signature.
    *
+   * @param signedJWT signed JWT holding the SVT
    * @param publicKey the public key used to verify the SVA token signature
    * @throws Exception if validation of SVA fails
    */

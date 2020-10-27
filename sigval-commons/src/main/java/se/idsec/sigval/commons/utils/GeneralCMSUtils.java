@@ -43,6 +43,8 @@ public class GeneralCMSUtils {
   /**
    * Extracts signing certificate and supporting certificate chain
    *
+   * @param cmsSignedDataParser {@link CMSSignedDataParser} object holding certificate data
+   * @return signing certificate and supporting certificate chain
    * @throws Exception is certificate extraction fails
    */
   public static CMSSigCerts extractCertificates(CMSSignedDataParser cmsSignedDataParser) throws Exception {
@@ -76,7 +78,8 @@ public class GeneralCMSUtils {
    * Retrieves Public key parameters from a public key
    *
    * @param pubKey    The public key
-   * @throws IOException
+   * @return public key parameters
+   * @throws IOException error obtaining public key parameters
    */
   public static PubKeyParams getPkParams(PublicKey pubKey) throws IOException {
 
@@ -166,8 +169,8 @@ public class GeneralCMSUtils {
    *
    * @param certHolder the cert holder object
    * @return X509Certificate object
-   * @throws IOException
-   * @throws CertificateException
+   * @throws IOException error parsing input data
+   * @throws CertificateException certificate parsing error
    */
   public static X509Certificate getCert(X509CertificateHolder certHolder) throws IOException, CertificateException {
     X509Certificate cert;

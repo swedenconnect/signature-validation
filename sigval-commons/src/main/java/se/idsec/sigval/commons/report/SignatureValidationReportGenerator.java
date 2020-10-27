@@ -33,7 +33,7 @@ public interface SignatureValidationReportGenerator<R extends Object, T extends 
    * @param signatureValidationResult results from signature validation
    * @param documentName optional document name that should be used in the report
    * @param mimeType Mime type of the signed document data
-   * @return
+   * @return signature validation report
    */
   R generateSignatureValidationReport(final T signatureValidationResult, final String documentName, final String mimeType);
 }

@@ -55,8 +55,8 @@ public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SV
    * @param algorithm    the algorithm used to sign the SVT as well as selecting the Hash algorithm used to generate SVT hash values
    * @param privateKey   private key used to sign the SVT
    * @param certificates certificates supporting the SVT signature
-   * @throws NoSuchAlgorithmException
-   * @throws JOSEException
+   * @throws NoSuchAlgorithmException unsupported algorithm
+   * @throws JOSEException JOSE exception
    */
   public AbstractSVTSigValClaimsIssuer(JWSAlgorithm algorithm, Object privateKey,
     List<X509Certificate> certificates) throws NoSuchAlgorithmException, JOSEException {

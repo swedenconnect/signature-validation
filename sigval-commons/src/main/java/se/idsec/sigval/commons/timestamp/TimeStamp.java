@@ -27,6 +27,8 @@ import java.util.List;
 
 /**
  * This class parse validates and holds the essential information about a RFC 3161 timestamp.
+ * This class implements a special case of timestamp processing related to PDF/CMS signature validation where we have access to the data
+ * that was timestamped. Verification is performed on the signature on the timestamp as well as that it matches the timestamped data.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -47,6 +49,14 @@ public class TimeStamp {
   protected CertificateValidationResult certificateValidationResult;
   protected Exception exception;
 
+  /**
+   * Loads and verifies a timestamp.
+   *
+   * @param timeStampSigBytes the CMS signature bytes holding the RFC 3161 timestamp
+   * @param timestampedData the data that was hashed and timestamped
+   * @param tsPolicyVerifier a verifier capable of validating the signature on the timestamp
+   * @throws Exception on errors parsing timestamp
+   */
   public TimeStamp(byte[] timeStampSigBytes, byte[] timestampedData, TimeStampPolicyVerifier tsPolicyVerifier) throws Exception {
     this.timestampedData = timestampedData;
     this.tsPolicyVerifier = tsPolicyVerifier;
@@ -54,6 +64,10 @@ public class TimeStamp {
     init();
   }
 
+  /**
+   * Test if a valid timestamp was loaded
+   * @return true if the loaded data contained a valid timestamp
+   */
   public boolean hasVerifiedTimestamp(){
     boolean policyValid = false;
     if (policyValidationClaimsList.isEmpty()){
@@ -69,6 +83,7 @@ public class TimeStamp {
 
   /**
    * Override this method with extended initializations
+   * @throws Exception on errors during initialization
    */
   protected void init() throws Exception {
     try {
@@ -78,7 +93,7 @@ public class TimeStamp {
       certList = sigCerts.getChain();
       tstInfo = SVAUtils.getCmsSigTSTInfo(timeStampSigBytes);
       verifyTsSignature();
-      verifyTsMessageImprint(cmsSignedDataParser);
+      verifyTsMessageImprint();
       sigValid = true;
       TimeStampPolicyVerificationResult policyVerificationResult = tsPolicyVerifier.verifyTsPolicy(timeStampSigBytes, tstInfo,
         sigCert, certList);
@@ -93,11 +108,14 @@ public class TimeStamp {
       log.debug("Exception while parsing timestamp: {}", ex.getMessage());
       exception = ex;
       sigValid = false;
-      return;
     }
   }
 
-  protected void verifyTsMessageImprint(CMSSignedDataParser cmsSignedDataParser) throws Exception {
+  /**
+   * Verifies if the timestamped data matches the timestamp
+   * @throws Exception errors parsing timestamp data
+   */
+  protected void verifyTsMessageImprint() throws Exception {
     MessageImprint messageImprint = tstInfo.getMessageImprint();
     AlgorithmIdentifier tsHashAlgoId = messageImprint.getHashAlgorithm();
     MessageDigest md = DigestAlgorithmRegistry.get(tsHashAlgoId.getAlgorithm()).getInstance();

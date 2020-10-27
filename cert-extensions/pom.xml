@@ -76,6 +76,18 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <doctitle>Certificate Extensions - ${project.version}</doctitle>
+                    <windowtitle>Certificate Extensions - ${project.version}</windowtitle>
+                    <links>
+                        <link>https://idsec-solutions.github.io/sig-validation-base/javadoc/cert-extensions/</link>
+                    </links>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

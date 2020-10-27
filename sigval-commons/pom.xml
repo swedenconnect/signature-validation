@@ -67,5 +67,20 @@
         </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <doctitle>Signature Validation Commons - ${project.version}</doctitle>
+                    <windowtitle>Signature Validation Commons - ${project.version}</windowtitle>
+                    <links>
+                        <link>https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-commons/</link>
+                    </links>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

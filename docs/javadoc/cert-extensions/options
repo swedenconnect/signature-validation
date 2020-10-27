@@ -1,0 +1,28 @@
+-classpath
+'/Users/stefan/.m2/repository/org/projectlombok/lombok/1.18.12/lombok-1.18.12.jar:/Users/stefan/.m2/repository/org/slf4j/slf4j-api/1.7.30/slf4j-api-1.7.30.jar:/Users/stefan/.m2/repository/org/bouncycastle/bcpkix-jdk15on/1.65/bcpkix-jdk15on-1.65.jar:/Users/stefan/.m2/repository/org/bouncycastle/bcprov-jdk15on/1.65/bcprov-jdk15on-1.65.jar:/Users/stefan/.m2/repository/se/swedenconnect/schemas/cert/authcontextinfo10-jaxb/1.0.1/authcontextinfo10-jaxb-1.0.1.jar:/Users/stefan/.m2/repository/se/swedenconnect/schemas/xmlsec-jaxb-workaround/1.0.1/xmlsec-jaxb-workaround-1.0.1.jar:/Users/stefan/.m2/repository/org/apache/santuario/xmlsec/2.1.4/xmlsec-2.1.4.jar:/Users/stefan/.m2/repository/com/fasterxml/woodstox/woodstox-core/5.0.3/woodstox-core-5.0.3.jar:/Users/stefan/.m2/repository/org/codehaus/woodstox/stax2-api/3.1.4/stax2-api-3.1.4.jar:/Users/stefan/.m2/repository/commons-codec/commons-codec/1.12/commons-codec-1.12.jar:/Users/stefan/.m2/repository/jakarta/xml/bind/jakarta.xml.bind-api/2.3.2/jakarta.xml.bind-api-2.3.2.jar:/Users/stefan/.m2/repository/jakarta/activation/jakarta.activation-api/1.2.1/jakarta.activation-api-1.2.1.jar:/Users/stefan/.m2/repository/org/glassfish/jaxb/jaxb-runtime/2.3.2/jaxb-runtime-2.3.2.jar:/Users/stefan/.m2/repository/org/glassfish/jaxb/txw2/2.3.2/txw2-2.3.2.jar:/Users/stefan/.m2/repository/com/sun/istack/istack-commons-runtime/3.0.8/istack-commons-runtime-3.0.8.jar:/Users/stefan/.m2/repository/org/jvnet/staxex/stax-ex/1.8.1/stax-ex-1.8.1.jar:/Users/stefan/.m2/repository/com/sun/xml/fastinfoset/FastInfoset/1.2.16/FastInfoset-1.2.16.jar:/Users/stefan/.m2/repository/se/swedenconnect/schemas/saml-jaxb/1.0.1/saml-jaxb-1.0.1.jar:/Users/stefan/.m2/repository/javax/xml/bind/jaxb-api/2.3.1/jaxb-api-2.3.1.jar:/Users/stefan/.m2/repository/javax/activation/javax.activation-api/1.2.0/javax.activation-api-1.2.0.jar:/Users/stefan/.m2/repository/org/jvnet/annox/annox/1.0.2/annox-1.0.2.jar:/Users/stefan/.m2/repository/org/apache/commons/commons-lang3/3.2.1/commons-lang3-3.2.1.jar:/Users/stefan/.m2/repository/commons-io/commons-io/2.7/commons-io-2.7.jar:/Users/stefan/.m2/repository/com/google/code/javaparser/javaparser/1.0.11/javaparser-1.0.11.jar:/Users/stefan/.m2/repository/org/jvnet/jaxb2_commons/jaxb2-basics/0.12.0/jaxb2-basics-0.12.0.jar:/Users/stefan/.m2/repository/org/jvnet/jaxb2_commons/jaxb2-basics-tools/0.12.0/jaxb2-basics-tools-0.12.0.jar:/Users/stefan/.m2/repository/commons-beanutils/commons-beanutils/1.9.3/commons-beanutils-1.9.3.jar:/Users/stefan/.m2/repository/commons-collections/commons-collections/3.2.2/commons-collections-3.2.2.jar:/Users/stefan/.m2/repository/org/slf4j/jcl-over-slf4j/1.7.7/jcl-over-slf4j-1.7.7.jar:/Users/stefan/.m2/repository/org/jvnet/jaxb2_commons/jaxb2-basics-annotate/1.1.0/jaxb2-basics-annotate-1.1.0.jar:/Users/stefan/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.11.0/jackson-annotations-2.11.0.jar:/Users/stefan/.m2/repository/org/jvnet/jaxb2_commons/jaxb2-commons-lang/2.4/jaxb2-commons-lang-2.4.jar:/Users/stefan/.m2/repository/org/jvnet/jaxb2_commons/jaxb2-basics-runtime/1.11.1/jaxb2-basics-runtime-1.11.1.jar'
+-encoding
+'UTF-8'
+-protected
+-source
+'8'
+-sourcepath
+'/Users/stefan/GitHub/idsec/sigvalidation/sig-validation-base/cert-extensions/src/main/java'
+-author
+-bottom
+'Copyright &#169; 2020 <a href="https://www.idsec.se">IDsec Solutions AB</a>. All rights reserved.'
+-charset
+'UTF-8'
+-d
+'/Users/stefan/GitHub/idsec/sigvalidation/sig-validation-base/cert-extensions/target/site/apidocs'
+-docencoding
+'UTF-8'
+-doctitle
+'Certificate Extensions - 1.0.0'
+-link
+'https://idsec-solutions.github.io/sig-validation-base/javadoc/cert-extensions'
+-linkoffline
+'https://docs.oracle.com/javase/8/docs/api' '/Users/stefan/GitHub/idsec/sigvalidation/sig-validation-base/cert-extensions/target/javadoc-bundle-options'
+-use
+-version
+-windowtitle
+'Certificate Extensions - 1.0.0'

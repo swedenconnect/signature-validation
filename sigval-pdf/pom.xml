@@ -42,6 +42,17 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <doctitle>Signature Validation PDF - ${project.version}</doctitle>
+                    <windowtitle>Signature Validation PDF - ${project.version}</windowtitle>
+                    <links>
+                        <link>https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-pdf/</link>
+                    </links>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
