@@ -163,7 +163,7 @@ ExtendedPDFSignatureValidator pdfSignatureValidator(
 The following replaceable components are used to construct the signature verifier:
 
 Component | Description
---- | ---
+---|---
 `TimeStampPolicyVerifier`  |  A verifier capable of validating timestamps against a defined validation policy
 `PDFSignaturePolicyValidator`  |  This is a policy validator which examines the signature validation results and applies a validation policy to determine the signature validity.
 `PDFSingleSignatureValidator`  |  This is the main PDF signature validator performing signature validation of individual PDF signatures
