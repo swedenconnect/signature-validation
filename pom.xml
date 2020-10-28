@@ -25,7 +25,7 @@
     <developerConnection>scm:git:https://github.com/idsec-solutions/sig-validation-base.git</developerConnection>
     <url>https://github.com/idsec-solutions/sig-validation-base/tree/master</url>
   </scm>
-  
+
   <organization>
     <name>IDsec Solutions AB</name>
     <url>https://www.idsec.se</url>
@@ -52,89 +52,80 @@
     <java.version>11</java.version>
   </properties>
 
-  <repositories>
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
     <repository>
-      <id>central</id>
-      <name>Maven Central</name>
-      <url>https://repo1.maven.org/maven2/</url>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
     </repository>
-  </repositories>
-
+  </distributionManagement>
 
   <modules>
+    <module>cert-extensions</module>
+    <module>cert-validation</module>
     <module>sigval-commons</module>
     <module>sigval-xml</module>
-    <module>sigval-pdf</module>
-    <module>cert-validation</module>
-    <module>cert-extensions</module>
+    <module>sigval-pdf</module>    
   </modules>
 
   <dependencyManagement>
     <dependencies>
+    
       <dependency>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok</artifactId>
-        <optional>true</optional>
-        <version>1.18.12</version>
+        <groupId>se.idsec.signservice.commons</groupId>
+        <artifactId>signservice-bom</artifactId>
+        <version>1.1.0</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
+      
       <dependency>
-        <groupId>commons-io</groupId>
-        <artifactId>commons-io</artifactId>
-        <version>2.7</version>
+        <groupId>se.idsec.signservice.commons</groupId>
+        <artifactId>signservice-commons</artifactId>
+        <version>1.1.0</version>
+        <type>jar</type>
+        <scope>compile</scope>
       </dependency>
+      
       <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>1.7.30</version>
+        <groupId>se.idsec.signservice.commons</groupId>
+        <artifactId>signservice-xml-commons</artifactId>
+        <version>1.1.0</version>
+        <type>jar</type>
+        <scope>compile</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>se.idsec.signservice.commons</groupId>
+            <artifactId>signservice-commons</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
+      
       <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-simple</artifactId>
-        <version>1.7.30</version>
+        <groupId>se.idsec.signservice.commons</groupId>
+        <artifactId>signservice-pdf-commons</artifactId>
+        <version>1.1.0</version>
+        <type>jar</type>
+        <scope>compile</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>se.idsec.signservice.commons</groupId>
+            <artifactId>signservice-commons</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
-      <!-- Bouncycastle -->
+      
       <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk15on</artifactId>
-        <version>1.65</version>
+        <groupId>se.idsec.sigval</groupId>
+        <artifactId>svt-base</artifactId>
+        <version>1.0.2</version>
+        <type>jar</type>
+        <scope>compile</scope>
       </dependency>
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk15on</artifactId>
-        <version>1.65</version>
-      </dependency>
-      <!-- Jackson -->
-      <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-core</artifactId>
-        <version>2.11.0</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-annotations</artifactId>
-        <version>2.11.0</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-databind</artifactId>
-        <version>2.11.0</version>
-      </dependency>
-      <!-- XML Schemas -->
-      <dependency>
-        <groupId>se.swedenconnect.schemas.cert</groupId>
-        <artifactId>authcontextinfo10-jaxb</artifactId>
-        <version>1.0.1</version>
-      </dependency>
-      <dependency>
-        <groupId>se.swedenconnect.schemas</groupId>
-        <artifactId>etsi-xades-jaxb</artifactId>
-        <version>1.0.1</version>
-      </dependency>
-      <dependency>
-        <groupId>se.swedenconnect.schemas</groupId>
-        <artifactId>etsi-xades-ext-jaxb</artifactId>
-        <version>1.0.1</version>
-      </dependency>
+            
     </dependencies>
 
   </dependencyManagement>
@@ -144,7 +135,6 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.12</version>
       <scope>test</scope>
     </dependency>
 
@@ -208,7 +198,7 @@
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>3.2.0</version>
         </plugin>
-        
+
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-source-plugin</artifactId>
@@ -325,7 +315,7 @@
           <skip>true</skip>
         </configuration>
       </plugin>
-      
+
       <!-- run mvn jacoco:report -->
       <plugin>
         <groupId>org.jacoco</groupId>
@@ -337,11 +327,193 @@
               <goal>prepare-agent</goal>
             </goals>
           </execution>
-        </executions>        
+        </executions>
       </plugin>
 
     </plugins>
 
   </build>
+  
+  <profiles>
+
+    <profile>
+      <id>javadoc</id>
+
+      <build>
+        <plugins>
+
+          <plugin>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>delombok</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>attach-javadoc</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <sourcepath>target/generated-sources/delombok</sourcepath>
+              <additionalparam>-Xdoclint:all -Xdoclint:-missing</additionalparam>
+              <additionalOptions>-Xdoclint:all -Xdoclint:-missing</additionalOptions>
+              <additionalJOptions>
+                <additionalJOption>-Xdoclint:all</additionalJOption>
+                <additionalJOption>-Xdoclint:-missing</additionalJOption>
+                <additionalJOption>--frames</additionalJOption>
+              </additionalJOptions>
+              <links>
+                <link>https://idsec-solutions.github.io/signservice-commons/javadoc/signservice-commons/</link>
+                <link>https://idsec-solutions.github.io/sig-validation-svt/javadoc/</link>
+                <link>https://idsec-solutions.github.io/signservice-commons/javadoc/xml-commons/</link>
+              </links>
+              <detectJavaApiLink>true</detectJavaApiLink>
+            </configuration>
+          </plugin>
+
+        </plugins>
+      </build>
+
+    </profile>
+
+    <profile>
+      <id>release</id>
+
+      <!-- See http://central.sonatype.org/pages/apache-maven.html for setup -->
+
+      <build>
+        <plugins>
+
+          <plugin>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>delombok</goal>
+                </goals>
+                <configuration>
+                  <addOutputDirectory>false</addOutputDirectory>
+                  <sourceDirectory>src/main/java</sourceDirectory>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>process-sources</phase>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+              <execution>
+                <phase>process-test-sources</phase>
+                <id>attach-test-sources</id>
+                <goals>
+                  <goal>test-jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>attach-javadoc</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>aggregate</id>
+                <phase>site</phase>
+                <goals>
+                  <goal>aggregate</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <sourcepath>target/generated-sources/delombok</sourcepath>
+              <additionalparam>-Xdoclint:all -Xdoclint:-missing</additionalparam>
+              <additionalOptions>-Xdoclint:all -Xdoclint:-missing</additionalOptions>
+              <additionalJOptions>
+                <additionalJOption>-Xdoclint:all</additionalJOption>
+                <additionalJOption>-Xdoclint:-missing</additionalJOption>
+                <additionalJOption>--frames</additionalJOption>
+              </additionalJOptions>
+              <links>
+                <link>https://idsec-solutions.github.io/signservice-commons/javadoc/signservice-commons/</link>
+                <link>https://idsec-solutions.github.io/sig-validation-svt/javadoc/</link>
+                <link>https://idsec-solutions.github.io/signservice-commons/javadoc/xml-commons/</link>
+              </links>
+              <detectJavaApiLink>true</detectJavaApiLink>
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.8</version>
+            <extensions>true</extensions>
+            <configuration>
+              <serverId>ossrh</serverId>
+              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+              <autoReleaseAfterClose>false</autoReleaseAfterClose>
+              <!-- 
+                Allows manual inspection of the staging repo before deploying it to the central repo. 
+                Use 'mvn nexus-staging:release -Prelease' to release and 'mvn nexus-staging:drop' to abort. 
+              -->
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>1.6</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </plugin>
+
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+  
 
 </project>

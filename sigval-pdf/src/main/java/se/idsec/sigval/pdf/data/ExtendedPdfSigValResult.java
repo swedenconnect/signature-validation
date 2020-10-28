@@ -16,15 +16,13 @@
 
 package se.idsec.sigval.pdf.data;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+
+import lombok.Getter;
+import lombok.Setter;
 import se.idsec.signservice.security.sign.pdf.PDFSignatureValidationResult;
 import se.idsec.sigval.commons.data.ExtendedSigValResult;
-import se.idsec.sigval.commons.data.TimeValidationResult;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Data class holding the extended signature validation result data from PDF signature validation

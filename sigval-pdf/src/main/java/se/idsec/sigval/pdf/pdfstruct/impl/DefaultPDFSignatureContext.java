@@ -13,20 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package se.idsec.sigval.pdf.pdfstruct.impl;
-
-import lombok.extern.slf4j.Slf4j;
-import org.apache.pdfbox.cos.*;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
-import se.idsec.sigval.pdf.data.PDFConstants;
-import se.idsec.sigval.pdf.pdfstruct.*;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.apache.pdfbox.cos.COSArray;
+import org.apache.pdfbox.cos.COSBase;
+import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSDocument;
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSObject;
+import org.apache.pdfbox.cos.COSObjectKey;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
+
+import se.idsec.sigval.pdf.data.PDFConstants;
+import se.idsec.sigval.pdf.pdfstruct.AcroForm;
+import se.idsec.sigval.pdf.pdfstruct.ObjectArray;
+import se.idsec.sigval.pdf.pdfstruct.ObjectValue;
+import se.idsec.sigval.pdf.pdfstruct.ObjectValueType;
+import se.idsec.sigval.pdf.pdfstruct.PDFDocRevision;
+import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
 
 /**
  * Examines a PDF document and gathers context data used to determine document revisions and if any of those
@@ -35,7 +50,6 @@ import java.util.stream.Collectors;
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-@Slf4j
 public class DefaultPDFSignatureContext implements PDFSignatureContext {
 
   /** The characters indicating end of a PDF document revision */
@@ -226,7 +240,6 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
    * @return
    */
   private PDFDocRevision getRevision(final PDFDocRevision priorRevision) {
-    PDFDocRevision docRevision = new PDFDocRevision();
     int len = priorRevision == null ? pdfBytes.length : priorRevision.getLength() - 5;
 
     String pdfString = new String(Arrays.copyOf(pdfBytes, len), StandardCharsets.ISO_8859_1);

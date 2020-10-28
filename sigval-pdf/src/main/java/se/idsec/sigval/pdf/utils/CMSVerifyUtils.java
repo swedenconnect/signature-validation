@@ -1,38 +1,22 @@
 package se.idsec.sigval.pdf.utils;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
+import java.util.logging.Logger;
+
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
-import org.bouncycastle.asn1.*;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.ASN1TaggedObject;
 import org.bouncycastle.asn1.cms.Attribute;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
-import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cms.CMSException;
 import org.bouncycastle.cms.CMSSignedDataParser;
-import org.bouncycastle.cms.CMSTypedStream;
-import org.bouncycastle.cms.SignerInformation;
-import org.bouncycastle.operator.bc.BcDigestCalculatorProvider;
-import org.bouncycastle.util.CollectionStore;
+
+import lombok.extern.slf4j.Slf4j;
 import se.idsec.signservice.security.sign.pdf.configuration.PDFAlgorithmRegistry;
-import se.idsec.sigval.commons.algorithms.NamedCurve;
-import se.idsec.sigval.commons.algorithms.NamedCurveRegistry;
-import se.idsec.sigval.commons.algorithms.PublicKeyType;
-import se.idsec.sigval.commons.timestamp.TimeStamp;
 import se.idsec.sigval.commons.utils.GeneralCMSUtils;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
-import se.idsec.sigval.svt.claims.TimeValidationClaims;
-
-import java.io.*;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.security.interfaces.RSAPublicKey;
-import java.util.*;
-import java.util.logging.Logger;
 
 /**
  * Utility methods for CMS verification
@@ -91,10 +75,8 @@ public class CMSVerifyUtils {
     if (sigResult.getSignatureAlgorithm() == null) {
       return false;
     }
-    PDFAlgorithmRegistry.PDFSignatureAlgorithmProperties algorithmProperties;
     try {
-      algorithmProperties = PDFAlgorithmRegistry.getAlgorithmProperties(
-        sigResult.getSignatureAlgorithm());
+      PDFAlgorithmRegistry.getAlgorithmProperties(sigResult.getSignatureAlgorithm());
     }
     catch (NoSuchAlgorithmException e) {
       return false;

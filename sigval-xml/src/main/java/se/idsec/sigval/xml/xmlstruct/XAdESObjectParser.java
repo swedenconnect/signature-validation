@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package se.idsec.sigval.xml.xmlstruct;
 
 import lombok.Getter;
@@ -145,8 +144,8 @@ public class XAdESObjectParser implements XMLSigConstants {
       List<Object> objectList = unsignedSignatureProperties.getCounterSignaturesAndSignatureTimeStampsAndCompleteCertificateRefs();
 
       List<XAdESTimeStampType> timeStampTypeList = objectList.stream()
-        .filter(o -> o instanceof JAXBElement)
-        .map(o -> (JAXBElement) o)
+        .filter(o -> JAXBElement.class.isInstance(o))
+        .map(JAXBElement.class::cast)
         .filter(jaxbElement -> isSignatureTimestamp(jaxbElement))
         .map(jaxbElement -> (XAdESTimeStampType)jaxbElement.getValue())
         .collect(Collectors.toList());
@@ -169,13 +168,14 @@ public class XAdESObjectParser implements XMLSigConstants {
     }
   }
 
-  private boolean isSignatureTimestamp(JAXBElement jaxbElement) {
+  private boolean isSignatureTimestamp(JAXBElement<?> jaxbElement) {
     QName qName = jaxbElement.getName();
     return qName.getNamespaceURI().equals("http://uri.etsi.org/01903/v1.3.2#")
       && qName.getLocalPart().equals("SignatureTimeStamp")
       && jaxbElement.getDeclaredType().equals(XAdESTimeStampType.class);
   }
 
+  @SuppressWarnings("unused")
   private JAXBContext getXAdESContextv1() throws JAXBException {
     return se.swedenconnect.schemas.etsi.xades_1_3_2.JAXBContextFactory.createContext();
   }

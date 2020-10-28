@@ -16,26 +16,34 @@
 
 package se.idsec.sigval.xml.svt;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
-import org.bouncycastle.util.encoders.Base64;
-import org.w3c.dom.Element;
-import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
-import se.idsec.sigval.commons.svt.AbstractSVTSigValClaimsIssuer;
-import se.idsec.sigval.svt.claims.*;
-import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
-import se.idsec.sigval.xml.verify.XMLSignatureElementValidator;
-import se.idsec.sigval.xml.xmlstruct.SignatureData;
-import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
-
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.bouncycastle.util.encoders.Base64;
+
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+
+import lombok.Setter;
+import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
+import se.idsec.sigval.commons.svt.AbstractSVTSigValClaimsIssuer;
+import se.idsec.sigval.svt.claims.PolicyValidationClaims;
+import se.idsec.sigval.svt.claims.SVTProfile;
+import se.idsec.sigval.svt.claims.SigReferenceClaims;
+import se.idsec.sigval.svt.claims.SignatureClaims;
+import se.idsec.sigval.svt.claims.SignedDataClaims;
+import se.idsec.sigval.svt.claims.ValidationConclusion;
+import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
+import se.idsec.sigval.xml.verify.XMLSignatureElementValidator;
+import se.idsec.sigval.xml.xmlstruct.SignatureData;
 
 /**
  * Implementation of the {@link AbstractSVTSigValClaimsIssuer} class for collecting XML claims data from an XML signature
@@ -43,7 +51,6 @@ import java.util.stream.Collectors;
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-@Slf4j
 public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLSigValInput> {
 
   /** Signature verifier used to validate XML signatures to determine signature validity */
@@ -53,6 +60,8 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
   @Setter private boolean defaultBasicValidation = false;
 
   /**
+   * Constructor.
+   * 
    * @param algorithm    the algorithm used to sign the SVT as well as selecting the Hash algorithm used to generate SVT hash values
    * @param privateKey   private key used to sign the SVT
    * @param certificates certificates supporting the SVT signature

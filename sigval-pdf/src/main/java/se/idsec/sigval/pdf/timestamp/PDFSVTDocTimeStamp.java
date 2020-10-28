@@ -1,12 +1,22 @@
 package se.idsec.sigval.pdf.timestamp;
 
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jwt.SignedJWT;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
+import java.io.ByteArrayInputStream;
+import java.security.MessageDigest;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.commons.codec.binary.Base64;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+
+import com.nimbusds.jwt.SignedJWT;
+
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.signservice.security.sign.pdf.configuration.PDFAlgorithmRegistry;
@@ -18,15 +28,6 @@ import se.idsec.sigval.commons.algorithms.JWSAlgorithmRegistry;
 import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
 import se.idsec.sigval.commons.utils.SVAUtils;
 import se.idsec.sigval.svt.claims.SVTClaims;
-
-import java.io.ByteArrayInputStream;
-import java.security.MessageDigest;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Object class holding a SVT document timestamp
@@ -126,7 +127,6 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
       String keyID = signedJWT.getHeader().getKeyID();
       if (keyID != null) {
 
-        JWSAlgorithm jwsAlgorithm = signedJWT.getHeader().getAlgorithm();
         ASN1ObjectIdentifier digestAlgoOID = PDFAlgorithmRegistry.getAlgorithmProperties(
           JWSAlgorithmRegistry.getUri(signedJWT.getHeader().getAlgorithm())).getDigestAlgoOID();
         DigestAlgorithm digestAlgorithm = DigestAlgorithmRegistry.get(digestAlgoOID);

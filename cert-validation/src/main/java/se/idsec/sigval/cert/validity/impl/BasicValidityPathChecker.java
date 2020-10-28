@@ -16,16 +16,16 @@
 
 package se.idsec.sigval.cert.validity.impl;
 
-import lombok.extern.slf4j.Slf4j;
+import java.security.cert.X509Certificate;
+import java.util.List;
+
 import org.bouncycastle.asn1.x509.KeyPurposeId;
+
+import lombok.extern.slf4j.Slf4j;
 import se.idsec.sigval.cert.utils.CertUtils;
-import se.idsec.sigval.cert.validity.CertificateValidityChecker;
 import se.idsec.sigval.cert.validity.ValidationStatus;
 import se.idsec.sigval.cert.validity.ValidityPathChecker;
 import se.idsec.sigval.cert.validity.crl.CRLCache;
-
-import java.security.cert.X509Certificate;
-import java.util.List;
 
 /**
  * Checker of the path supporting the validity token (CRL or OCSP response)
@@ -60,6 +60,8 @@ public class BasicValidityPathChecker implements ValidityPathChecker {
       break;
     case CRL:
       checkCrlTrustPath(validityStatus);
+    default:
+      break;
     }
   }
 

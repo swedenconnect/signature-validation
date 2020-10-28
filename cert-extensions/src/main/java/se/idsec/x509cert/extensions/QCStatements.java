@@ -252,6 +252,7 @@ public class QCStatements extends ASN1Object {
     /**
      * Clear all values
      */
+    @SuppressWarnings("unused")
     private void clearAll() {
         setPkixSyntaxV1(false);
         setPkixSyntaxV2(false);
