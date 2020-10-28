@@ -35,7 +35,7 @@ The signature validation modules builds upon the SignService Commons library ava
 
 ##### API documentation
 
-Java API documentation for [se.idsec.sigval.base:cert-extensions](https://idsec-solutions.github.io/sig-validation-base/javadoc/cert-extensions).
+Java API documentation for [se.idsec.sigval.base:cert-extensions](https://idsec-solutions.github.io/sig-validation-base/javadoc/cert-extensions/index.html?overview-summary.html).
 
 ## cert-validation module
 
@@ -54,7 +54,7 @@ Java API documentation for [se.idsec.sigval.base:cert-extensions](https://idsec-
 
 #### API documentation
 
-Java API documentation for [se.idsec.sigval.base:cert-validation](https://idsec-solutions.github.io/sig-validation-base/javadoc/cert-validation).
+Java API documentation for [se.idsec.sigval.base:cert-validation](https://idsec-solutions.github.io/sig-validation-base/javadoc/cert-validation/index.html?overview-summary.html).
 
 ### Usage
 
@@ -75,7 +75,7 @@ CRLCache crlCache(File cacheFolder, long recacheGracePeriod) {
 
 ```
 
-The `recacheGracePeriod` parameter indicates the time in milliseconds before a recently cached CRL is allowed to be re-cached. If the time since last re-cache is less than this time, no re-cacheing is performed even if the re-cache function is called.
+The `recacheGracePeriod` parameter indicates the time in milliseconds before a recently cached CRL is allowed to be re-cached. If the time since last re-cache is less than this time, no re-caching is performed even if the re-cache function is called.
 
 #### Validity Checker
 
@@ -111,7 +111,7 @@ The `crlCache` is a `CRLCache` object according the the example above. The `cert
 
 ##### API documentation
 
-Java API documentation for [se.idsec.sigval.base:sigval-commons](https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-commons).
+Java API documentation for [se.idsec.sigval.base:sigval-commons](https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-commons/index.html?overview-summary.html).
 
 ## sigval-pdf module
 
@@ -130,7 +130,7 @@ Java API documentation for [se.idsec.sigval.base:sigval-commons](https://idsec-s
 
 ##### API documentation
 
-Java API documentation for [se.idsec.sigval.base:sigval-pdf](https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-pdf).
+Java API documentation for [se.idsec.sigval.base:sigval-pdf](https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-pdf/index.html?overview-summary.html).
 
 ### Usage
 
@@ -171,8 +171,8 @@ Component | Description
 The PDF SVT token is created by the SVT claims issuer. This component issues the SVT token which reflects the validation of the PDF signature. The following code example creates the PDF claims issuer:
 
 ```
-PDFSVTSigValClaimsIssuer pdfsvtSigValClaimsIssuer(JWSAlgorithm svtJWSAlgorithm, PrivateKey privateKey, 
-  List<X509Certificate> certificates, ExtendedPDFSignatureValidator pdfSignatureValidator) 
+PDFSVTSigValClaimsIssuer pdfsvtSigValClaimsIssuer(JWSAlgorithm svtJWSAlgorithm, PrivateKey privateKey,
+  List<X509Certificate> certificates, ExtendedPDFSignatureValidator pdfSignatureValidator)
 {
   return new PDFSVTSigValClaimsIssuer(svtJWSAlgorithm, privateKey, certificates, pdfSignatureValidator);
 }
@@ -182,7 +182,7 @@ Finally the signed PDF is extended with a document timestamp which includes the 
 
 ```
 DefaultPDFDocTimestampSignatureInterface timeStampSigner(
-    PrivateKey privateKey, List<X509Certificate> certificates, String sigAlgoUri) 
+    PrivateKey privateKey, List<X509Certificate> certificates, String sigAlgoUri)
 {
   return new DefaultPDFDocTimestampSignatureInterface(privateKey, certificates, sigAlgoUri);
 }
@@ -195,7 +195,7 @@ NOTE that it is recommended to use a complete path to support timestamp token si
 The following code example then issues an SVT token and extends the PDF document with this token based on the SVT issuer and the timestamp signer:
 
 ```
-byte[] extendPDFwithSVT(byte[] signedDoc, SVTModel svtModel, 
+byte[] extendPDFwithSVT(byte[] signedDoc, SVTModel svtModel,
   PDFSVTSigValClaimsIssuer pdfsvtSigValClaimsIssuer,
   DefaultPDFDocTimestampSignatureInterface timeStampSigner) {
 
@@ -224,7 +224,7 @@ byte[] extendPDFwithSVT(byte[] signedDoc, SVTModel svtModel,
 
 ##### API documentation
 
-Java API documentation for [se.idsec.sigval.base:sigval-xml](https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-xml).
+Java API documentation for [se.idsec.sigval.base:sigval-xml](https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-xml/index.html?overview-summary.html).
 
 
 ### Usage
@@ -269,12 +269,12 @@ Component | Description
 
 #### XML SVT issuance
 
-The XML SVT token is created by the SVT claims issuer. This component issues the SVT token which reflects the validation of the PDF signature. The following code example creates the PDF claims issuer:
+The XML SVT token is created by the SVT claims issuer. This component issues the SVT token which reflects the validation of the XML signature. The following code example creates the XML claims issuer:
 
 ```
 XMLSVTSigValClaimsIssuer claimsIssuer(
   JWSAlgorithm svtJWSAlgorithm, PrivateKey privateKey, List<X509Certificate> certificates,
-  XMLSignatureElementValidator xmlSignatureElementValidator) 
+  XMLSignatureElementValidator xmlSignatureElementValidator)
 {
   return new XMLSVTSigValClaimsIssuer(svtJWSAlgorithm, privateKey,
     certificates, xmlSignatureElementValidator);
