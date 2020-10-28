@@ -278,10 +278,10 @@ The following replaceable components are used to construct the signature verifie
 
 Component | Description
 --- | ---
-`TimeStampPolicyVerifier`  |  A verifier capable of validating timestamps against a defined validation policy
-`XMLSignaturePolicyValidator`  |  This is a policy validator which examines the signature validation results and applies a validation policy to determine the signature validity.
-`XMLSignatureElementValidator`  |  This is the main XML signature validator performing signature validation of individual XML signatures
-`XMLSVTValidator`  |  This is a XML SVT validator capable of validating a PDF signature based on an existing SVT token. If no `XMLSVTValidator` is provided, no SVT validation is performed.
+`TimeStampPolicyVerifier` | A verifier capable of validating timestamps against a defined validation policy
+`XMLSignaturePolicyValidator` | This is a policy validator which examines the signature validation results and applies a validation policy to determine the signature validity.
+`XMLSignatureElementValidator` | This is the main XML signature validator performing signature validation of individual XML signatures
+`XMLSVTValidator` | This is a XML SVT validator capable of validating a PDF signature based on an existing SVT token. If no `XMLSVTValidator` is provided, no SVT validation is performed.
 
 #### XML SVT issuance
 
