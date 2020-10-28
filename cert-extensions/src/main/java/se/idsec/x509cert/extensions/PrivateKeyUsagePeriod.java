@@ -84,7 +84,6 @@ public class PrivateKeyUsagePeriod
         for (int i=0;i<seq.size();i++){
             try {
                 ASN1TaggedObject taggedTime = ASN1TaggedObject.getInstance(seq.getObjectAt(i));
-                ASN1Primitive taggedOject = taggedTime.getObject();
                 ASN1GeneralizedTime time = ASN1GeneralizedTime.getInstance(taggedTime, false);
                 int tagNo = taggedTime.getTagNo();
                 if (tagNo==0){

@@ -1,95 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>sigval-base-parent</artifactId>
-        <groupId>se.idsec.sigval.base</groupId>
-        <version>1.0.0</version>
-    </parent>
-    <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <parent>
+    <artifactId>sigval-base-parent</artifactId>
+    <groupId>se.idsec.sigval.base</groupId>
+    <version>1.0.0</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
 
-    <name>Signature Validation Base XML</name>
-    <description>XML signature validation implementation</description>
+  <name>Signature Validation Base XML</name>
+  <description>XML signature validation implementation</description>
 
-    <artifactId>sigval-xml</artifactId>
+  <artifactId>sigval-xml</artifactId>
 
-    <dependencies>
-        <dependency>
-            <groupId>se.idsec.sigval.base</groupId>
-            <artifactId>sigval-commons</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>se.idsec.sigval.base</groupId>
-            <artifactId>cert-validation</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>se.idsec.signservice.commons</groupId>
-            <artifactId>signservice-xml-commons</artifactId>
-            <version>1.0.3</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>se.idsec.signservice.commons</groupId>
-                    <artifactId>signservice-commons</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>commons-codec</groupId>
-                    <artifactId>commons-codec</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.apache.santuario</groupId>
-                    <artifactId>xmlsec</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>se.swedenconnect.schemas</groupId>
-            <artifactId>etsi-xades-jaxb</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.jvnet.jaxb2_commons</groupId>
-                    <artifactId>jaxb2-basics-runtime</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>se.swedenconnect.schemas</groupId>
-            <artifactId>etsi-xades-ext-jaxb</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.jvnet.jaxb2_commons</groupId>
-                    <artifactId>jaxb2-basics-runtime</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-    </dependencies>
+  <dependencies>
+    <dependency>
+      <groupId>se.idsec.sigval.base</groupId>
+      <artifactId>sigval-commons</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>se.idsec.sigval.base</groupId>
+      <artifactId>cert-validation</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>se.idsec.signservice.commons</groupId>
+      <artifactId>signservice-xml-commons</artifactId>
+      <version>1.0.3</version>
+      <exclusions>
+        <exclusion>
+          <groupId>se.idsec.signservice.commons</groupId>
+          <artifactId>signservice-commons</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>commons-codec</groupId>
+          <artifactId>commons-codec</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.santuario</groupId>
+          <artifactId>xmlsec</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>se.swedenconnect.schemas</groupId>
+      <artifactId>etsi-xades-jaxb</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jvnet.jaxb2_commons</groupId>
+          <artifactId>jaxb2-basics-runtime</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>se.swedenconnect.schemas</groupId>
+      <artifactId>etsi-xades-ext-jaxb</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jvnet.jaxb2_commons</groupId>
+          <artifactId>jaxb2-basics-runtime</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <configuration>
-                    <detectJavaApiLink>false</detectJavaApiLink>
-                    <doctitle>Signature Validation XML - ${project.version}</doctitle>
-                    <windowtitle>Signature Validation XML - ${project.version}</windowtitle>
-                    <links>
-                        <link>https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-xml/</link>
-                    </links>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <detectJavaApiLink>false</detectJavaApiLink>
+          <doctitle>Signature Validation XML - ${project.version}</doctitle>
+          <windowtitle>Signature Validation XML - ${project.version}</windowtitle>
+          <links>
+            <link>https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-xml/</link>
+          </links>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
 
 </project>

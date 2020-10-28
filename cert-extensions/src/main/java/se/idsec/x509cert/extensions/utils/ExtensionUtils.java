@@ -38,6 +38,7 @@ public class ExtensionUtils {
    * @param genNames X.509 certificate general names
    * @return presentation string
    */
+  @SuppressWarnings("unused")
   private static String getGeneralNamesString(GeneralNames genNames) {
     GeneralName[] names = genNames.getNames();
     StringBuilder b = new StringBuilder();

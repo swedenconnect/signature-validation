@@ -1,94 +1,112 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  ~ Copyright (c) 2020. IDsec Solutions AB
-  ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~     http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
-  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>sigval-base-parent</artifactId>
-        <groupId>se.idsec.sigval.base</groupId>
-        <version>1.0.0</version>
-    </parent>
-    <modelVersion>4.0.0</modelVersion>
+  <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>cert-extensions</artifactId>
+  <artifactId>cert-extensions</artifactId>
+  <packaging>jar</packaging>
+
+  <parent>
+    <artifactId>sigval-base-parent</artifactId>
+    <groupId>se.idsec.sigval.base</groupId>
     <version>1.0.0</version>
+  </parent>
 
-    <name>X509 Certificate Extensions</name>
-    <description>Certificate extensions library extending Bouncycastle ASN.1</description>
+  <name>IDsec Solutions :: Signature validation :: X.509 Certificate Extensions</name>
+  <description>X.509 Certificate extensions library extending BouncyCastle ASN.1</description>
+  <url>https://github.com/idsec-solutions/sig-validation-base</url>
+  
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  
+  <scm>
+    <connection>scm:git:https://github.com/idsec-solutions/sig-validation-base.git</connection>
+    <developerConnection>scm:git:https://github.com/idsec-solutions/sig-validation-base.git</developerConnection>
+    <url>https://github.com/idsec-solutions/sig-validation-base/tree/master</url>
+  </scm>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcpkix-jdk15on</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>se.swedenconnect.schemas.cert</groupId>
-            <artifactId>authcontextinfo10-jaxb</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.jvnet.jaxb2_commons</groupId>
-                    <artifactId>jaxb2-basics-runtime</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.jvnet.jaxb2_commons</groupId>
-            <artifactId>jaxb2-basics-runtime</artifactId>
-            <version>1.11.1</version>
-        </dependency>
-    </dependencies>
+  <organization>
+    <name>IDsec Solutions AB</name>
+    <url>https://www.idsec.se</url>
+  </organization>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <configuration>
-                    <detectJavaApiLink>false</detectJavaApiLink>
-                    <doctitle>Certificate Extensions - ${project.version}</doctitle>
-                    <windowtitle>Certificate Extensions - ${project.version}</windowtitle>
-                    <links>
-                        <link>https://idsec-solutions.github.io/sig-validation-base/javadoc/cert-extensions/</link>
-                    </links>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+  <developers>
+    <developer>
+      <name>Martin Lindström</name>
+      <email>martin@idsec.se</email>
+      <organization>IDsec Solutions AB</organization>
+      <organizationUrl>https://www.idsec.se</organizationUrl>
+    </developer>
+
+    <developer>
+      <name>Stefan Santesson</name>
+      <email>stefan@idsec.se</email>
+      <organization>IDsec Solutions AB</organization>
+      <organizationUrl>https://www.idsec.se</organizationUrl>
+    </developer>
+  </developers>
+
+  <dependencies>
+
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.jvnet.jaxb2_commons</groupId>
+      <artifactId>jaxb2-basics-runtime</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>se.swedenconnect.schemas.cert</groupId>
+      <artifactId>authcontextinfo10-jaxb</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jvnet.jaxb2_commons</groupId>
+          <artifactId>jaxb2-basics-runtime</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <plugins>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <doctitle>Signature Validation - X.509 Certificate Extensions - ${project.version}</doctitle>
+          <windowtitle>Signature Validation - X.509 Certificate Extensions - ${project.version}</windowtitle>
+        </configuration>
+      </plugin>
+      
+    </plugins>
+    
+  </build>
 
 </project>

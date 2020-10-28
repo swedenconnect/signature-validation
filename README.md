@@ -1,28 +1,28 @@
 ![Logo](https://github.com/idsec-solutions/idsec-solutions.github.io/blob/master/img/idsec.png)
 
-# SVT enhanced Signature Validation
+# SVT Enhanced Signature Validation
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Core components for validating electronis signatures and to extend signed documents with Signature Validation Tokens (SVT). This includes the following independent modules:
+Core components for validating electronic signatures and to extend signed documents with Signature Validation Tokens (SVT). This includes the following independent modules:
 
 Module | Description | Depends on
 ---|--- | ---
-cert-extensions |  Extensions to Bouncycastle to create and process some X.509 certificate extensions | ---
-cert-validatioin  | Functions to support certificate validation with certificate path building and certificate revocation checking  | cert-extensions
-sigval-commons  | Common functions to support signature validation and SVT creation independent of signed document format |  cert-validation
-sigval-pdf  | Signature validation and SVT creation for PDF documents  | sigval-commons
-sigval-xml  | Signature validation and SVT creation for XML documents  | sigval-commons
+cert-extensions |  Extensions to BouncyCastle to create and process X.509 certificate extensions. | -
+cert-validation  | Functions to support certificate validation with certificate path building and certificate revocation checking.  | cert-extensions
+sigval-commons  | Common functions to support signature validation and SVT creation independent of signed document format. |  cert-validation
+sigval-pdf  | Signature validation and SVT creation for PDF documents.  | sigval-commons
+sigval-xml  | Signature validation and SVT creation for XML documents.  | sigval-commons
 
-The signature validation modules builds upon the Signservice Commons library available from [signservice-commons on GitHub](https://github.com/idsec-solutions/signservice-commons).
+The signature validation modules builds upon the SignService Commons library available from [signservice-commons](https://github.com/idsec-solutions/signservice-commons) on GitHub.
 
 ---
 
-# cert-extensions module
+## cert-extensions module
 
 ### Maven
 
-This project is currently not deployed at maven central. The source code must be built locally and then imported to your project as:
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.idsec.sigval.base/cert-extensions/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.idsec.sigval.base/cert-extensions)
 
 ```
 <dependency>
@@ -35,13 +35,13 @@ This project is currently not deployed at maven central. The source code must be
 
 ##### API documentation
 
-Java API documentation for [**se.idsec.sigval.base:cert-extensions**](https://idsec-solutions.github.io/sig-validation-base/javadoc/cert-extensions).
+Java API documentation for [se.idsec.sigval.base:cert-extensions](https://idsec-solutions.github.io/sig-validation-base/javadoc/cert-extensions).
 
-# cert-validation module
+## cert-validation module
 
 ### Maven
 
-This project is currently not deployed at maven central. The source code must be built locally and then imported to your project as:
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.idsec.sigval.base/cert-validation/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.idsec.sigval.base/cert-validation)
 
 ```
 <dependency>
@@ -54,29 +54,32 @@ This project is currently not deployed at maven central. The source code must be
 
 #### API documentation
 
-Java API documentation for [**se.idsec.sigval.base:cert-validation**](https://idsec-solutions.github.io/sig-validation-base/javadoc/cert-validation).
+Java API documentation for [se.idsec.sigval.base:cert-validation](https://idsec-solutions.github.io/sig-validation-base/javadoc/cert-validation).
 
 ### Usage
-The main feature provided by this module is the certificate validity checker implementation and its supporting implementation of certificate path building and certificate status checking
 
-#### CRL cache
-The CRLCache is an intefrace which provides the basic functions to locate a CRL based on URL or a CRLDistributionPoint extension from an X.509 certificate as well as a function to update cached CRL data.
+The main feature provided by this module is the certificate validity checker implementation and its supporting implementation of certificate path building and certificate status checking.
 
-The default implementation CRLCacheImpl implements a cache where downloaded CRL:s are cached and stored in a specified location.
+#### CRL Cache
 
-The following code demonstrate creation of a CRL cache.
+The [CRLCache](https://github.com/idsec-solutions/sig-validation-base/blob/master/cert-validation/src/main/java/se/idsec/sigval/cert/validity/crl/CRLCache.java) is an interface that provides the basic functions to locate a CRL based on an URL or a CRLDistributionPoint extension from an X.509 certificate as well as a function to update cached CRL data.
+
+The default implementation [CRLCacheImpl](https://github.com/idsec-solutions/sig-validation-base/blob/master/cert-validation/src/main/java/se/idsec/sigval/cert/validity/crl/impl/CRLCacheImpl.java) implements a cache where downloaded CRL:s are cached and stored in a specified location.
+
+The following code demonstrate creation of a CRL cache:
 
 ```
-CRLCache crlCache(File cacheFolder, long recacheGracePeiod) {
-  return new CRLCacheImpl(cacheFolderFile, recacheGracePeiod);
+CRLCache crlCache(File cacheFolder, long recacheGracePeriod) {
+  return new CRLCacheImpl(cacheFolderFile, recacheGracePeriod);
 }
 
 ```
 
-The recacheGracePeiod parameter indicates the time in ms before a recently cached CRL is allowed to be recached. If the time since last recache is less than this time, no recache is performed even if the recache function is called.
+The `recacheGracePeriod` parameter indicates the time in milliseconds before a recently cached CRL is allowed to be re-cached. If the time since last re-cache is less than this time, no re-cacheing is performed even if the re-cache function is called.
 
-#### Validity checker
-The StatusCheckingCertificateValidatorImpl class implements the CertificateValidator intefrace to provide certificate validatioin based on CRL and OCSP certificate status checking as well as PKIX path validation.
+#### Validity Checker
+
+The [StatusCheckingCertificateValidatorImpl](https://github.com/idsec-solutions/sig-validation-base/blob/master/cert-validation/src/main/java/se/idsec/sigval/cert/chain/impl/StatusCheckingCertificateValidatorImpl.java) class implements the [CertificateValidator](https://github.com/idsec-solutions/signservice-commons/blob/master/commons/signservice-commons/src/main/java/se/idsec/signservice/security/certificate/CertificateValidator.java) interface to provide certificate validation based on CRL and OCSP certificate status checking as well as PKIX path validation.
 
 The following code demonstrate creation of a certificate validator:
 
@@ -89,13 +92,13 @@ CertificateValidator certificateValidator(
 }
 ```
 
-The crlCache is a CRLCache according the the example above. The certStore is a java.security.cert.CertStore holding any intermediary certificates available to the certificate path builder and the defaultTrustAnchors provides default trust anchor certificates for the path validator. These certificates are allways available/trusted by the certificate validator in addition to any certificates specified at functioin calls to the validator.
+The `crlCache` is a `CRLCache` object according the the example above. The `certStore` is a `java.security.cert.CertStore` holding any intermediary certificates available to the certificate path builder and the `defaultTrustAnchors` provides default trust anchor certificates for the path validator. These certificates are always available/trusted by the certificate validator in addition to any certificates specified at function calls to the validator.
 
-# sigval-commons module
+## sigval-commons module
 
 ### Maven
 
-This project is currently not deployed at maven central. The source code must be built locally and then imported to your project as:
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.idsec.sigval.base/sigval-commons/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.idsec.sigval.base/sigval-commons)
 
 ```
 <dependency>
@@ -108,15 +111,13 @@ This project is currently not deployed at maven central. The source code must be
 
 ##### API documentation
 
-Java API documentation for [**se.idsec.sigval.base:sigval-commons**](https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-commons).
+Java API documentation for [se.idsec.sigval.base:sigval-commons](https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-commons).
 
-
-
-# sigval-pdf module
+## sigval-pdf module
 
 ### Maven
 
-This project is currently not deployed at maven central. The source code must be built locally and then imported to your project as:
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.idsec.sigval.base/sigval-pdf/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.idsec.sigval.base/sigval-pdf)
 
 ```
 <dependency>
@@ -129,32 +130,28 @@ This project is currently not deployed at maven central. The source code must be
 
 ##### API documentation
 
-Java API documentation for [**se.idsec.sigval.base:sigval-pdf**](https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-pdf).
+Java API documentation for [se.idsec.sigval.base:sigval-pdf](https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-pdf).
 
 ### Usage
 
-The PDF module provides the functionality to validate PDF signatures and to issue SVT tokens to signed PDF documents.
+The PDF module provides the functionality to validate PDF signatures and to issue SVT tokens for signed PDF documents.
 
 #### PDF signature validation
 
 The following code example creates a PDF signature validator:
 
 ```
-ExtendedPDFSignatureValidator pdfSignatureValidator(
-  CertificateValidator certificateValidator) {
+ExtendedPDFSignatureValidator pdfSignatureValidator(CertificateValidator certificateValidator) {
 
-  TimeStampPolicyVerifier timeStampPolicyVerifier =
-    new BasicTimstampPolicyVerifier(certificateValidator)
+  TimeStampPolicyVerifier timeStampPolicyVerifier = new BasicTimstampPolicyVerifier(certificateValidator)
   PDFSignaturePolicyValidator signaturePolicyValidator = new PkixPdfSignaturePolicyValidator();
   PDFSingleSignatureValidator pdfSignatureVerifier = new PDFSingleSignatureValidatorImpl(
-    certificateValidator, signaturePolicyValidator,
-    timeStampPolicyVerifier);
+    certificateValidator, signaturePolicyValidator, timeStampPolicyVerifier);
 
   // Setup SVT validator
-  PDFSVTValidator pdfsvtValidator = new PDFSVTValidator(
-    certificateValidator, timeStampPolicyVerifier);
+  PDFSVTValidator pdfsvtValidator = new PDFSVTValidator(certificateValidator, timeStampPolicyVerifier);
 
-  // Get the pdf validator
+  // Get the PDF validator
   return new SVTenabledPDFDocumentSigVerifier(
     pdfSignatureVerifier, pdfsvtValidator, DefaultPDFSignatureContextFactory());
 }
@@ -164,9 +161,9 @@ The following replaceable components are used to construct the signature verifie
 
 Component | Description
 ---|---
-`TimeStampPolicyVerifier`  |  A verifier capable of validating timestamps against a defined validation policy
+`TimeStampPolicyVerifier`  |  A verifier capable of validating timestamps against a defined validation policy.
 `PDFSignaturePolicyValidator`  |  This is a policy validator which examines the signature validation results and applies a validation policy to determine the signature validity.
-`PDFSingleSignatureValidator`  |  This is the main PDF signature validator performing signature validation of individual PDF signatures
+`PDFSingleSignatureValidator`  |  This is the main PDF signature validator performing signature validation of individual PDF signatures.
 `PDFSVTValidator`  |  This is a PDF SVT validator capable of validating a PDF signature based on an existing SVT token. If no `PDFSVTValidator` is provided, no SVT validation is performed.
 
 #### PDF SVT issuance
@@ -174,11 +171,10 @@ Component | Description
 The PDF SVT token is created by the SVT claims issuer. This component issues the SVT token which reflects the validation of the PDF signature. The following code example creates the PDF claims issuer:
 
 ```
-PDFSVTSigValClaimsIssuer pdfsvtSigValClaimsIssuer(
-    JWSAlgorithm svtJWSAlgorithm, PrivateKey privateKey, List<X509Certificate> certificates,
-    ExtendedPDFSignatureValidator pdfSignatureValidator){
-  return new PDFSVTSigValClaimsIssuer(
-    svtJWSAlgorithm, privateKey, certificates, pdfSignatureValidator);
+PDFSVTSigValClaimsIssuer pdfsvtSigValClaimsIssuer(JWSAlgorithm svtJWSAlgorithm, PrivateKey privateKey, 
+  List<X509Certificate> certificates, ExtendedPDFSignatureValidator pdfSignatureValidator) 
+{
+  return new PDFSVTSigValClaimsIssuer(svtJWSAlgorithm, privateKey, certificates, pdfSignatureValidator);
 }
 ```
 
@@ -186,24 +182,20 @@ Finally the signed PDF is extended with a document timestamp which includes the 
 
 ```
 DefaultPDFDocTimestampSignatureInterface timeStampSigner(
-    PrivateKey privateKey, List<X509Certificate> certificates, String sigAlgoUri){
-  return new DefaultPDFDocTimestampSignatureInterface(
-    privateKey,
-    certificates,
-    sigAlgoUri);
+    PrivateKey privateKey, List<X509Certificate> certificates, String sigAlgoUri) 
+{
+  return new DefaultPDFDocTimestampSignatureInterface(privateKey, certificates, sigAlgoUri);
 }
 ```
 
 The private key, certificates and algorithm declarations provided to the creation of both SVT issuer and timestamp signer is the private key used to sign and the certificate used to validate the respective token/timestamp as well as the algorithm used to sign them.
 
-NOTE that it is recommended to use a complete path to support timestamp token siging, while an SVT normally is issued directly from a trust anchor cert in order to avoid path validation of SVT tokens.
+NOTE that it is recommended to use a complete path to support timestamp token signing, while an SVT normally is issued directly from a trust anchor cert in order to avoid path validation of SVT tokens.
 
 The following code example then issues an SVT token and extends the PDF document with this token based on the SVT issuer and the timestamp signer:
 
 ```
-byte[] extendPDFwithSVT(
-  byte[] signedDoc,
-  SVTModel svtModel,
+byte[] extendPDFwithSVT(byte[] signedDoc, SVTModel svtModel, 
   PDFSVTSigValClaimsIssuer pdfsvtSigValClaimsIssuer,
   DefaultPDFDocTimestampSignatureInterface timeStampSigner) {
 
@@ -212,19 +204,15 @@ byte[] extendPDFwithSVT(
 
   // Extend PDF document
   return PDFDocTimstampProcessor.createSVTSealedPDF(
-    signedDoc,
-    signedSvtJWT.serialize(),
-    timeStampSigner).getDocument();
+    signedDoc, signedSvtJWT.serialize(), timeStampSigner).getDocument();
 }
 ```
 
-
-
-# sigval-xml module
+## sigval-xml module
 
 ### Maven
 
-This project is currently not deployed at maven central. The source code must be built locally and then imported to your project as:
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.idsec.sigval.base/sigval-xml/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.idsec.sigval.base/sigval-xml)
 
 ```
 <dependency>
@@ -236,15 +224,14 @@ This project is currently not deployed at maven central. The source code must be
 
 ##### API documentation
 
-Java API documentation for [**se.idsec.sigval.base:sigval-xml**](https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-xml).
+Java API documentation for [se.idsec.sigval.base:sigval-xml](https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-xml).
 
----
 
 ### Usage
 
 The XML module provides the functionality to validate XML signatures and to issue SVT tokens to signed XML documents.
 
-#### XML signature validatioin
+#### XML signature validation
 
 The following code example creates an XML signature validator:
 
@@ -256,10 +243,8 @@ ExtendedXMLSignedDocumentValidator xmlSignedDocumentValidator() {
 XMLSignatureElementValidator xmlSignatureElementValidator(
   CertificateValidator certificateValidator){
 
-  TimeStampPolicyVerifier timeStampPolicyVerifier =
-     new BasicTimstampPolicyVerifier(certificateValidator)
-  XMLSignaturePolicyValidator xmlSignaturePolicyValidator =
-     new PkixXmlSignaturePolicyValidator();
+  TimeStampPolicyVerifier timeStampPolicyVerifier = new BasicTimstampPolicyVerifier(certificateValidator)
+  XMLSignaturePolicyValidator xmlSignaturePolicyValidator = new PkixXmlSignaturePolicyValidator();
 
   // Setup SVT validator
   XMLSVTValidator xmlSvtValidator = new XMLSVTValidator(certificateValidator, null);
@@ -273,14 +258,13 @@ XMLSignatureElementValidator xmlSignatureElementValidator(
 }
 ```
 
-
 The following replaceable components are used to construct the signature verifier:
 
 Component | Description
 ---|---
-`TimeStampPolicyVerifier` | A verifier capable of validating timestamps against a defined validation policy
+`TimeStampPolicyVerifier` | A verifier capable of validating timestamps against a defined validation policy.
 `XMLSignaturePolicyValidator` | This is a policy validator which examines the signature validation results and applies a validation policy to determine the signature validity.
-`XMLSignatureElementValidator` | This is the main XML signature validator performing signature validation of individual XML signatures
+`XMLSignatureElementValidator` | This is the main XML signature validator performing signature validation of individual XML signatures.
 `XMLSVTValidator` | This is a XML SVT validator capable of validating a PDF signature based on an existing SVT token. If no `XMLSVTValidator` is provided, no SVT validation is performed.
 
 #### XML SVT issuance
@@ -290,13 +274,10 @@ The XML SVT token is created by the SVT claims issuer. This component issues the
 ```
 XMLSVTSigValClaimsIssuer claimsIssuer(
   JWSAlgorithm svtJWSAlgorithm, PrivateKey privateKey, List<X509Certificate> certificates,
-  XMLSignatureElementValidator xmlSignatureElementValidator
-  ) {
-  return new XMLSVTSigValClaimsIssuer(
-    svtJWSAlgorithm,
-    privateKey,
-    certificates,
-    xmlSignatureElementValidator);
+  XMLSignatureElementValidator xmlSignatureElementValidator) 
+{
+  return new XMLSVTSigValClaimsIssuer(svtJWSAlgorithm, privateKey,
+    certificates, xmlSignatureElementValidator);
 }
 ```
 
@@ -308,17 +289,15 @@ XMLDocumentSVTIssuer xmlDocumentSVTIssuer(XMLSVTSigValClaimsIssuer claimsIssuer)
 }
 ```
 
-The private key, certificates and algorithm declarations provided to the creation of the SVT issueris the private key used to sign and the certificate used to validate the SVT tokenand the algorithm used to sign it.
+The private key, certificates and algorithm declarations provided to the creation of the SVT issuer is the private key used to sign and the certificate used to validate the SVT token and the algorithm used to sign it.
 
 NOTE that it is recommended to issue an SVT directly from a trust anchor cert in order to avoid path validation of SVT tokens.
 
 The following code example then issues an SVT token and extends the XML document with SVT tokens based on the SVT issuer:
 
 ```
-byte[] extendXMLwithSVT(
-  Document signedXmlDocument,
-  SVTModel svtModel,
-  XMLDocumentSVTIssuer xmlDocumentSVTIssuer) {
+byte[] extendXMLwithSVT(Document signedXmlDocument,
+  SVTModel svtModel, XMLDocumentSVTIssuer xmlDocumentSVTIssuer) {
 
   // Extend XML document
   return xmlDocumentSVTIssuer.issueSvt(
@@ -328,7 +307,7 @@ byte[] extendXMLwithSVT(
 }
 ```
 
-The XMLDocumentSVTMethod parameter instructs the SVT issuer what to do if a current SVT is already present in the XML signature. a value of `XMLDocumentSVTMethod.REPLACE` will replace the existing SVT while the value `XMLDocumentSVTMethod.EXTEND` as shown in the example will simply add the new SVT after the old one.
+The `XMLDocumentSVTMethod` parameter instructs the SVT issuer what to do if a current SVT is already present in the XML signature. a value of `XMLDocumentSVTMethod.REPLACE` will replace the existing SVT while the value `XMLDocumentSVTMethod.EXTEND` as shown in the example will simply add the new SVT after the old one.
 
 ---
 
