@@ -140,7 +140,8 @@ The PDF module provides the functionality to validate PDF signatures and to issu
 The following code example creates a PDF signature validator:
 
 ```
-ExtendedPDFSignatureValidator pdfSignatureValidator(CertificateValidator certificateValidator) {
+ExtendedPDFSignatureValidator pdfSignatureValidator(
+  CertificateValidator certificateValidator) {
 
   TimeStampPolicyVerifier timeStampPolicyVerifier =
     new BasicTimstampPolicyVerifier(certificateValidator)
@@ -162,7 +163,7 @@ ExtendedPDFSignatureValidator pdfSignatureValidator(CertificateValidator certifi
 The following replaceable components are used to construct the signature verifier:
 
 Component | Description
---- | ----
+--- | ---
 `TimeStampPolicyVerifier`  |  A verifier capable of validating timestamps against a defined validation policy
 `PDFSignaturePolicyValidator`  |  This is a policy validator which examines the signature validation results and applies a validation policy to determine the signature validity.
 `PDFSingleSignatureValidator`  |  This is the main PDF signature validator performing signature validation of individual PDF signatures
@@ -276,7 +277,7 @@ XMLSignatureElementValidator xmlSignatureElementValidator(
 The following replaceable components are used to construct the signature verifier:
 
 Component | Description
---- | ----
+--- | ---
 `TimeStampPolicyVerifier`  |  A verifier capable of validating timestamps against a defined validation policy
 `XMLSignaturePolicyValidator`  |  This is a policy validator which examines the signature validation results and applies a validation policy to determine the signature validity.
 `XMLSignatureElementValidator`  |  This is the main XML signature validator performing signature validation of individual XML signatures
