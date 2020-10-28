@@ -17,8 +17,8 @@
 package se.idsec.sigval.cert.chain;
 
 import lombok.Getter;
+import org.bouncycastle.jcajce.provider.asymmetric.x509.CertificateFactory;
 import se.idsec.sigval.cert.validity.ValidationStatus;
-import sun.security.provider.certpath.X509CertPath;
 
 import java.security.cert.*;
 import java.util.ArrayList;
@@ -104,9 +104,10 @@ public class ExtendedCertPathValidatorException extends CertPathValidatorExcepti
     List<X509Certificate> validatedCertificatePath = pathValidationResult.getValidatedCertificatePath();
     if (validatedCertificatePath == null) validatedCertificatePath = new ArrayList<>();
     try {
-      return new X509CertPath(validatedCertificatePath);
+      CertificateFactory cf = new CertificateFactory();
+      return cf.engineGenerateCertPath(validatedCertificatePath);
     }
-    catch (CertificateException e) {
+    catch (Exception e) {
       return null;
     }
   }

@@ -17,6 +17,7 @@ package se.idsec.sigval.cert.chain.impl;
 
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.jcajce.provider.asymmetric.x509.CertificateFactory;
 import se.idsec.sigval.cert.chain.AbstractPathValidator;
 import se.idsec.sigval.cert.chain.ExtendedCertPathValidatorException;
 import se.idsec.sigval.cert.chain.PathBuilder;
@@ -26,7 +27,6 @@ import se.idsec.sigval.cert.validity.ValidationStatus;
 
 import se.idsec.sigval.cert.validity.crl.CRLCache;
 import se.idsec.sigval.cert.validity.impl.BasicCertificateValidityChecker;
-import sun.security.provider.certpath.X509CertPath;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -93,7 +93,8 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
         .findFirst();
       if (taMatchOptional.isPresent()){
         //Target certificate is found among the trust anchors
-        CertPath certPath= new X509CertPath(Arrays.asList(targetCert));
+        CertificateFactory cf = new CertificateFactory();
+        CertPath certPath= cf.engineGenerateCertPath(Arrays.asList(targetCert));
         return PathValidationResult.builder()
           .pkixCertPathBuilderResult(new PKIXCertPathBuilderResult(certPath, taMatchOptional.get(), null, targetCert.getPublicKey()))
           .targetCertificate(targetCert)
