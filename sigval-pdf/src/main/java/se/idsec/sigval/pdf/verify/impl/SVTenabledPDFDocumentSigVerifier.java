@@ -1,9 +1,21 @@
 package se.idsec.sigval.pdf.verify.impl;
 
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
-import lombok.extern.slf4j.Slf4j;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
 import org.apache.commons.codec.binary.Base64;
 import org.apache.pdfbox.io.IOUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -11,6 +23,12 @@ import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.asn1.cms.SignedData;
 import org.bouncycastle.cms.CMSSignedDataParser;
 import org.bouncycastle.cms.CMSTypedStream;
+
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+
+import lombok.extern.slf4j.Slf4j;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.signservice.security.certificate.impl.DefaultCertificateValidationResult;
@@ -23,6 +41,7 @@ import se.idsec.sigval.commons.data.TimeValidationResult;
 import se.idsec.sigval.commons.utils.GeneralCMSUtils;
 import se.idsec.sigval.commons.utils.SVAUtils;
 import se.idsec.sigval.pdf.data.ExtendedPdfSigValResult;
+import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
 import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContextFactory;
 import se.idsec.sigval.pdf.svt.PDFSVTValidator;
 import se.idsec.sigval.pdf.timestamp.PDFDocTimeStamp;
@@ -30,30 +49,12 @@ import se.idsec.sigval.pdf.utils.CMSVerifyUtils;
 import se.idsec.sigval.pdf.utils.PDFSVAUtils;
 import se.idsec.sigval.pdf.verify.ExtendedPDFSignatureValidator;
 import se.idsec.sigval.pdf.verify.PDFSingleSignatureValidator;
-import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
 import se.idsec.sigval.svt.algorithms.SVTAlgoRegistry;
 import se.idsec.sigval.svt.claims.PolicyValidationClaims;
 import se.idsec.sigval.svt.claims.SignatureClaims;
 import se.idsec.sigval.svt.claims.TimeValidationClaims;
 import se.idsec.sigval.svt.claims.ValidationConclusion;
 import se.idsec.sigval.svt.validation.SignatureSVTValidationResult;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SignatureException;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 /**
  * This class provides the functionality to validate signatures on a PDF where the signature validation process is enhanced with validation
@@ -246,7 +247,8 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       byte[] signedDocumentBytes = null;
       try {
         signedDocumentBytes = signatureContext.getSignedDocument(signature);
-      } catch (Exception ex){
+      } 
+      catch (Exception ex){
         log.warn("Error extracting the document version signed by this signature: {}", ex.getMessage());
       }
       cmsSVResult.setSignedDocument(signedDocumentBytes);
@@ -325,34 +327,6 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
     return cmsSVResult;
   }
 
-
-  /**
-   * Note, this function is present already in the SVT Validation class. This will be deleted
-   *
-   * This verifies and returns the validated document timestamp holding the current SVT token used to validate signatures
-   *
-   * @param svtTsSigList list of signatures containing SVT tokens
-   * @param jwtClaimsSet the claims set from the current SVT used to validate signatures
-   * @param pdfDocBytes  the bytes of the validated pdf document
-   * @return PDFDocument timestamp object
-   * @throws IOException
-   * @throws ParseException
-   */
-/*
-  private PDFDocTimeStamp getCurrentSvtTimestamp(List<PDSignature> svtTsSigList, JWTClaimsSet jwtClaimsSet, byte[] pdfDocBytes)
-    throws IOException, ParseException {
-    List<PDFDocTimeStamp> docTimeStampList = pdfSingleSignatureValidator.verifyDocumentTimestamps(svtTsSigList, pdfDocBytes);
-    for (PDFDocTimeStamp docTimeStamp : docTimeStampList) {
-      String svajwt = PDFSVAUtils.getSVAJWT(docTimeStamp.getTstInfo());
-      SignedJWT signedJWT = SignedJWT.parse(svajwt);
-      if (signedJWT.getJWTClaimsSet().getJWTID().equalsIgnoreCase(jwtClaimsSet.getJWTID())) {
-        return docTimeStamp;
-      }
-    }
-    throw new IOException("No matching SVT timestamp is available to support the SVT results");
-  }
-*/
-
   /**
    * Compare if the signature value match any of the listed SVT validation results
    * @param sigValueBytes signature value bytes
@@ -390,6 +364,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
     return (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certBytes));
   }
 
+  @SuppressWarnings("unused")
   private List<X509Certificate> getCertList(List<byte[]> certificateChain) throws CertificateException {
     List<X509Certificate> certList = new ArrayList<>();
     for (byte[] certBytes : certificateChain) {

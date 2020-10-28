@@ -83,12 +83,6 @@
     <dependency>
       <groupId>se.swedenconnect.schemas.cert</groupId>
       <artifactId>authcontextinfo10-jaxb</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>org.jvnet.jaxb2_commons</groupId>
-          <artifactId>jaxb2-basics-runtime</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
 
   </dependencies>

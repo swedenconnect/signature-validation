@@ -16,13 +16,13 @@
 
 package se.idsec.sigval.commons.algorithms;
 
-import com.nimbusds.jose.JWSAlgorithm;
-import org.apache.xml.security.signature.XMLSignature;
-
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
+
+import org.apache.xml.security.signature.XMLSignature;
+
+import com.nimbusds.jose.JWSAlgorithm;
 
 /**
  * Registry for JWS signing algorithms

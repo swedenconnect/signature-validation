@@ -16,21 +16,30 @@
 
 package se.idsec.sigval.xml.svt;
 
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang.StringUtils;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.ECDSAVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.util.Base64;
 import com.nimbusds.jwt.SignedJWT;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.apache.xml.security.keys.KeyInfo;
-import org.opensaml.xmlsec.signature.J;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
@@ -44,16 +53,6 @@ import se.idsec.sigval.svt.validation.SVTValidator;
 import se.idsec.sigval.svt.validation.SignatureSVTData;
 import se.idsec.sigval.xml.xmlstruct.SignatureData;
 import se.idsec.sigval.xml.xmlstruct.XMLSigConstants;
-
-import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.cert.X509Certificate;
-import java.security.interfaces.ECPublicKey;
-import java.security.interfaces.RSAPublicKey;
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Implements a validator for SVT tokens on XMS signatures

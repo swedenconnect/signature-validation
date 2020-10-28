@@ -15,8 +15,16 @@
  */
 package se.idsec.sigval.pdf.timestamp.issue.impl;
 
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.PrivateKey;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
+import java.util.Date;
+import java.util.List;
+
 import org.apache.pdfbox.io.IOUtils;
 import org.bouncycastle.asn1.ASN1Encoding;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -25,7 +33,6 @@ import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaCertStore;
-import org.bouncycastle.cms.CMSAlgorithm;
 import org.bouncycastle.cms.SignerInfoGenerator;
 import org.bouncycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder;
 import org.bouncycastle.operator.ContentSigner;
@@ -37,19 +44,11 @@ import org.bouncycastle.tsp.TimeStampRequestGenerator;
 import org.bouncycastle.tsp.TimeStampToken;
 import org.bouncycastle.tsp.TimeStampTokenGenerator;
 import org.bouncycastle.util.Store;
+
+import lombok.Setter;
 import se.idsec.signservice.security.sign.pdf.configuration.PDFAlgorithmRegistry;
 import se.idsec.sigval.commons.data.SigValIdentifiers;
 import se.idsec.sigval.pdf.timestamp.issue.PDFDocTimestampSignatureInterface;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.PrivateKey;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
-import java.util.Date;
-import java.util.List;
 
 /**
  * Implementation of the PDF box signing interface used to add a document timestamp to a PDF document
@@ -61,7 +60,6 @@ import java.util.List;
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-@Slf4j
 public class DefaultPDFDocTimestampSignatureInterface implements PDFDocTimestampSignatureInterface {
 
   private static final String SVT_TOKEN_EXTENSION_OID = "1.2.752.201.5.2";
@@ -154,7 +152,7 @@ public class DefaultPDFDocTimestampSignatureInterface implements PDFDocTimestamp
       ASN1ObjectIdentifier digestAlgoOID = PDFAlgorithmRegistry.getAlgorithmProperties(algorithm).getDigestAlgoOID();
 
       //List<Certificate> certList = Arrays.asList(certificates);
-      Store certs = new JcaCertStore(certificates);
+      Store<?> certs = new JcaCertStore(certificates);
       org.bouncycastle.asn1.x509.Certificate cert = org.bouncycastle.asn1.x509.Certificate.getInstance(
         ASN1Primitive.fromByteArray(certificates.get(0).getEncoded()));
       byte[] document = IOUtils.toByteArray(content);

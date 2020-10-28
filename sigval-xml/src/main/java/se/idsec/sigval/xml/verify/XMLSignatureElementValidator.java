@@ -17,10 +17,10 @@
 package se.idsec.sigval.xml.verify;
 
 import org.w3c.dom.Element;
+
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.sigval.xml.data.ExtendedXmlSigvalResult;
 import se.idsec.sigval.xml.xmlstruct.SignatureData;
-import se.idsec.sigval.xml.xmlstruct.XMLSignatureContext;
 
 /**
  * Interface for XML signature element validator

@@ -16,15 +16,6 @@
 
 package se.idsec.sigval.cert.validity.crl.impl;
 
-import lombok.extern.java.Log;
-import lombok.extern.slf4j.Slf4j;
-import org.bouncycastle.asn1.x509.CRLDistPoint;
-import se.idsec.sigval.cert.utils.CertUtils;
-import se.idsec.sigval.cert.validity.AbstractValidityChecker;
-import se.idsec.sigval.cert.validity.ValidationStatus;
-import se.idsec.sigval.cert.validity.crl.CRLCache;
-import se.idsec.sigval.cert.validity.crl.CRLInfo;
-
 import java.beans.PropertyChangeListener;
 import java.security.cert.CRLReason;
 import java.security.cert.X509CRL;
@@ -32,6 +23,15 @@ import java.security.cert.X509CRLEntry;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Date;
+
+import org.bouncycastle.asn1.x509.CRLDistPoint;
+
+import lombok.extern.slf4j.Slf4j;
+import se.idsec.sigval.cert.utils.CertUtils;
+import se.idsec.sigval.cert.validity.AbstractValidityChecker;
+import se.idsec.sigval.cert.validity.ValidationStatus;
+import se.idsec.sigval.cert.validity.crl.CRLCache;
+import se.idsec.sigval.cert.validity.crl.CRLInfo;
 
 /**
  * The general implementation of a CRL checker

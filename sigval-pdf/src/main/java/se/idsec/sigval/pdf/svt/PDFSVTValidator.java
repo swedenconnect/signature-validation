@@ -1,12 +1,24 @@
 package se.idsec.sigval.pdf.svt;
 
-import com.nimbusds.jwt.SignedJWT;
-import lombok.extern.slf4j.Slf4j;
+import java.security.MessageDigest;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+
 import org.apache.commons.codec.binary.Base64;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.asn1.cms.SignedData;
 import org.bouncycastle.asn1.cms.SignerInfo;
+
+import com.nimbusds.jwt.SignedJWT;
+
+import lombok.extern.slf4j.Slf4j;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithm;
 import se.idsec.sigval.commons.algorithms.DigestAlgorithmRegistry;
@@ -14,14 +26,14 @@ import se.idsec.sigval.commons.timestamp.TimeStampPolicyVerifier;
 import se.idsec.sigval.commons.utils.SVAUtils;
 import se.idsec.sigval.pdf.timestamp.PDFSVTDocTimeStamp;
 import se.idsec.sigval.pdf.utils.PDFSVAUtils;
-import se.idsec.sigval.pdf.verify.PDFSingleSignatureValidator;
-import se.idsec.sigval.svt.claims.*;
+import se.idsec.sigval.svt.claims.PolicyValidationClaims;
+import se.idsec.sigval.svt.claims.SVTClaims;
+import se.idsec.sigval.svt.claims.SigReferenceClaims;
+import se.idsec.sigval.svt.claims.SignatureClaims;
+import se.idsec.sigval.svt.claims.SignedDataClaims;
+import se.idsec.sigval.svt.claims.ValidationConclusion;
 import se.idsec.sigval.svt.validation.SVTValidator;
 import se.idsec.sigval.svt.validation.SignatureSVTData;
-
-import java.security.MessageDigest;
-import java.text.ParseException;
-import java.util.*;
 
 /**
  * Implements a validator of Signature Validation Tokens issued to a signed PDF document

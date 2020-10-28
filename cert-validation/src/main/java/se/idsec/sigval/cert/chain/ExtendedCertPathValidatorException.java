@@ -35,6 +35,9 @@ import java.util.List;
  */
 public class ExtendedCertPathValidatorException extends CertPathValidatorException {
 
+  /** For serialization  */
+  private static final long serialVersionUID = 4401265197086994174L;
+  
   @Getter private PathValidationResult pathValidationResult;
 
   /**
@@ -75,12 +78,14 @@ public class ExtendedCertPathValidatorException extends CertPathValidatorExcepti
     }
     List<ValidationStatus> validationStatusList = pathValidationResult.getValidationStatusList();
     for (int i = validationStatusList.size() - 1; i >= 0; i--) {
-      switch (validationStatusList.get(i).getValidity()){
+      switch (validationStatusList.get(i).getValidity()) {
       case REVOKED:
         return BasicReason.REVOKED;
       case INVALID:
       case UNKNOWN:
         return BasicReason.UNDETERMINED_REVOCATION_STATUS;
+      default:
+        break;
       }
     }
     return BasicReason.UNSPECIFIED;

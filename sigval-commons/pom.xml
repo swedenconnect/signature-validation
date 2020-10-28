@@ -110,24 +110,25 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-    </dependency>    
+    </dependency>
     
   </dependencies>
 
   <build>
     <plugins>
+    
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
-          <detectJavaApiLink>false</detectJavaApiLink>
           <doctitle>Signature Validation Commons - ${project.version}</doctitle>
           <windowtitle>Signature Validation Commons - ${project.version}</windowtitle>
           <links>
-            <link>https://idsec-solutions.github.io/sig-validation-base/javadoc/sigval-commons/</link>
+            <link>https://idsec-solutions.github.io/sig-validation-base/javadoc/cert-validation/</link>
           </links>
         </configuration>
       </plugin>
+      
     </plugins>
   </build>
 

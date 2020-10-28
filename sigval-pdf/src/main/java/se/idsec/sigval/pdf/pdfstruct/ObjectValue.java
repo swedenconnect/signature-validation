@@ -113,8 +113,8 @@ public class ObjectValue {
    */
   private void getObjectValue(COSBase objectValue) {
     try {
-      switch (type){
-
+      
+      switch (type) {
       case COSObject:
         value = ((COSObject)objectValue).getObjectNumber();
         break;
@@ -142,8 +142,13 @@ public class ObjectValue {
       case COSNumber:
         value = ((COSNumber)objectValue).longValue();
         break;
+      default:
+        type = ObjectValueType.Error;
+        value = null;
+        break;
       }
-    } catch (Exception ex){
+    } 
+    catch (Exception ex) {
       type = ObjectValueType.Error;
       value = null;
     }
