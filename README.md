@@ -1,4 +1,4 @@
-![Logo](https://github.com/idsec-solutions/idsec-solutions.github.io/blob/master/img/idsec.png)
+![Logo](https://idsec-solutions.github.io/signservice-integration-api/img/idsec.png)
 
 # SVT Enhanced Signature Validation
 
