@@ -135,21 +135,23 @@ Java API documentation for [**se.idsec.sigval.base:sigval-pdf**](https://idsec-s
 
 The PDF module provides the functionality to validate PDF signatures and to issue SVT tokens to signed PDF documents.
 
-#### PDF signature validatioin
+#### PDF signature validation
 
 The following code example creates a PDF signature validator:
 
 ```
 ExtendedPDFSignatureValidator pdfSignatureValidator(CertificateValidator certificateValidator) {
 
-  TimeStampPolicyVerifier timeStampPolicyVerifier = BasicTimstampPolicyVerifier(certificateValidator)
+  TimeStampPolicyVerifier timeStampPolicyVerifier =
+    new BasicTimstampPolicyVerifier(certificateValidator)
   PDFSignaturePolicyValidator signaturePolicyValidator = new PkixPdfSignaturePolicyValidator();
   PDFSingleSignatureValidator pdfSignatureVerifier = new PDFSingleSignatureValidatorImpl(
     certificateValidator, signaturePolicyValidator,
     timeStampPolicyVerifier);
 
   // Setup SVT validator
-  PDFSVTValidator pdfsvtValidator = new PDFSVTValidator(certificateValidator, timeStampPolicyVerifier);
+  PDFSVTValidator pdfsvtValidator = new PDFSVTValidator(
+    certificateValidator, timeStampPolicyVerifier);
 
   // Get the pdf validator
   return new SVTenabledPDFDocumentSigVerifier(
@@ -174,7 +176,8 @@ The PDF SVT token is created by the SVT claims issuer. This component issues the
 PDFSVTSigValClaimsIssuer pdfsvtSigValClaimsIssuer(
     JWSAlgorithm svtJWSAlgorithm, PrivateKey privateKey, List<X509Certificate> certificates,
     ExtendedPDFSignatureValidator pdfSignatureValidator){
-  return new PDFSVTSigValClaimsIssuer(svtJWSAlgorithm, privateKey, certificates, pdfSignatureValidator);
+  return new PDFSVTSigValClaimsIssuer(
+    svtJWSAlgorithm, privateKey, certificates, pdfSignatureValidator);
 }
 ```
 
@@ -249,10 +252,13 @@ ExtendedXMLSignedDocumentValidator xmlSignedDocumentValidator() {
   return new XMLSignedDocumentValidator(xmlSignatureElementValidator);
 }
 
-XMLSignatureElementValidator xmlSignatureElementValidator(CertificateValidator certificateValidator){
+XMLSignatureElementValidator xmlSignatureElementValidator(
+  CertificateValidator certificateValidator){
 
-  TimeStampPolicyVerifier timeStampPolicyVerifier = BasicTimstampPolicyVerifier(certificateValidator)
-  XMLSignaturePolicyValidator xmlSignaturePolicyValidator = new PkixXmlSignaturePolicyValidator();
+  TimeStampPolicyVerifier timeStampPolicyVerifier =
+     new BasicTimstampPolicyVerifier(certificateValidator)
+  XMLSignaturePolicyValidator xmlSignaturePolicyValidator =
+     new PkixXmlSignaturePolicyValidator();
 
   // Setup SVT validator
   XMLSVTValidator xmlSvtValidator = new XMLSVTValidator(certificateValidator, null);
