@@ -277,7 +277,7 @@ XMLSignatureElementValidator xmlSignatureElementValidator(
 The following replaceable components are used to construct the signature verifier:
 
 Component | Description
---- | ---
+---|---
 `TimeStampPolicyVerifier` | A verifier capable of validating timestamps against a defined validation policy
 `XMLSignaturePolicyValidator` | This is a policy validator which examines the signature validation results and applies a validation policy to determine the signature validity.
 `XMLSignatureElementValidator` | This is the main XML signature validator performing signature validation of individual XML signatures
