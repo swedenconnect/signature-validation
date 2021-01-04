@@ -48,13 +48,19 @@ public class QCStatements extends ASN1Object {
     public static final ASN1ObjectIdentifier PKIX_SYNTAX_V2 = QCStatement.id_qcs_pkixQCSyntax_v2;
     public static final ASN1ObjectIdentifier QC_COMPLIANCE = QCStatement.id_etsi_qcs_QcCompliance;
     public static final ASN1ObjectIdentifier QC_SSCD = QCStatement.id_etsi_qcs_QcSSCD;
+    public static final ASN1ObjectIdentifier LIMITVAL = QCStatement.id_etsi_qcs_LimiteValue;
+    public static final ASN1ObjectIdentifier RETENTION_PERIOD = QCStatement.id_etsi_qcs_RetentionPeriod;
+    public static final ASN1ObjectIdentifier PKI_DISCLOSURE = new ASN1ObjectIdentifier("0.4.0.1862.1.5");
     public static final ASN1ObjectIdentifier QC_TYPE = new ASN1ObjectIdentifier("0.4.0.1862.1.6");
     public static final ASN1ObjectIdentifier QC_TYPE_ELECTRONIC_SIGNATURE = new ASN1ObjectIdentifier("0.4.0.1862.1.6.1");
     public static final ASN1ObjectIdentifier QC_TYPE_ELECTRONIC_SEAL = new ASN1ObjectIdentifier("0.4.0.1862.1.6.2");
     public static final ASN1ObjectIdentifier QC_TYPE_WEBSITE_AUTH = new ASN1ObjectIdentifier("0.4.0.1862.1.6.3");
-    public static final ASN1ObjectIdentifier LIMITVAL = QCStatement.id_etsi_qcs_LimiteValue;
-    public static final ASN1ObjectIdentifier RETENTION_PERIOD = QCStatement.id_etsi_qcs_RetentionPeriod;
-    public static final ASN1ObjectIdentifier PKI_DISCLOSURE = new ASN1ObjectIdentifier("0.4.0.1862.1.5");
+    public static final ASN1ObjectIdentifier QC_CC_LEGISLATION = new ASN1ObjectIdentifier("0.4.0.1862.1.7");
+    public static final ASN1ObjectIdentifier ETSI_SEMANTICS_NATURAL = new ASN1ObjectIdentifier("0.4.0.194121.1.1");
+    public static final ASN1ObjectIdentifier ETSI_SEMANTICS_LEGAL = new ASN1ObjectIdentifier("0.4.0.194121.1.2");
+    public static final ASN1ObjectIdentifier ETSI_SEMANTICS_EIDAS_NATURAL = new ASN1ObjectIdentifier("0.4.0.194121.1.3");
+    public static final ASN1ObjectIdentifier ETSI_SEMANTICS_EIDAS_LEGAL = new ASN1ObjectIdentifier("0.4.0.194121.1.4");
+
 
     @Getter @Setter private boolean pkixSyntaxV1;
     @Getter @Setter private boolean pkixSyntaxV2;
@@ -64,11 +70,13 @@ public class QCStatements extends ASN1Object {
     @Getter @Setter private boolean qcType;
     @Getter @Setter private boolean retentionPeriod;
     @Getter @Setter private boolean limitValue;
+    @Getter @Setter private boolean qcCClegislation;
     @Getter @Setter private MonetaryValue monetaryValue;
     @Getter @Setter private List<ASN1ObjectIdentifier> qcTypeIdList = new ArrayList<>();
     @Getter @Setter private BigInteger retentionPeriodVal;
     @Getter @Setter private List<PDSLocation> locationList = new ArrayList<>();
     @Getter @Setter private SemanticsInformation semanticsInfo;
+    @Getter @Setter private List<String> legislationCountryList;
 
     public static QCStatements getInstance(ASN1TaggedObject obj, boolean explicit) {
         return getInstance(ASN1Sequence.getInstance(obj, explicit));
@@ -178,6 +186,13 @@ public class QCStatements extends ASN1Object {
             }
             setStatementVal(qcStatements, PKI_DISCLOSURE, new DERSequence(pdsSeq));
         }
+        if (qcCClegislation) {
+            ASN1EncodableVector countrySequence = new ASN1EncodableVector();
+            for (String country: legislationCountryList){
+                countrySequence.add(new DERPrintableString(country));
+            }
+            setStatementVal(qcStatements, QC_CC_LEGISLATION, new DERSequence(countrySequence));
+        }
 
         return new DERSequence(qcStatements);
     }
@@ -242,6 +257,12 @@ public class QCStatements extends ASN1Object {
                 b.append("    Location\n");
                 b.append("     - URL: ").append(pdsLoc.getUrl()).append("\n");
                 b.append("     - Lang: ").append(pdsLoc.getLang()).append("\n");
+            }
+        }
+        if (qcCClegislation) {
+            b.append("  QC Legislation Countries\n");
+            for (String country: legislationCountryList){
+                b.append("    ").append(country).append("\n");
             }
         }
         //b.append("]\n");
@@ -321,6 +342,15 @@ public class QCStatements extends ASN1Object {
                     String url = DERIA5String.getInstance(locationSeq.getObjectAt(0)).getString();
                     String lang = DERPrintableString.getInstance(locationSeq.getObjectAt(1)).getString();
                     locationList.add(new PDSLocation(lang, url));
+                }
+            }
+            if (statementIdStr.equals(QC_CC_LEGISLATION.getId())) {
+                setQcCClegislation(true);
+                ASN1Sequence qcLegislationSeq = ASN1Sequence.getInstance(statementSeq.getObjectAt(1));
+                legislationCountryList = new ArrayList<>();
+                for (int i = 0; i < qcLegislationSeq.size(); i++) {
+                    String country = DERPrintableString.getInstance(qcLegislationSeq.getObjectAt(i)).getString();
+                    legislationCountryList.add(country);
                 }
             }
 
