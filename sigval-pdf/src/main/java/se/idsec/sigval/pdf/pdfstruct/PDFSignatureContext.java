@@ -46,7 +46,7 @@ public interface PDFSignatureContext {
    * Check if the pdf document was updated after this signature was added to the document, where the new update is not
    * a new signature or document timestamp or is a valid DSS store.
    *
-   * <p>An update to a PDF document applied after the PDF document was signed invalidates any existing signture unless the
+   * <p>An update to a PDF document applied after the PDF document was signed invalidates any existing signature unless the
    * update is not a new signature, document timestamp or a DSS store</p>
    *
    * <p>Some validation policies may require that any new signatures or document timestamps must be trusted and verified
