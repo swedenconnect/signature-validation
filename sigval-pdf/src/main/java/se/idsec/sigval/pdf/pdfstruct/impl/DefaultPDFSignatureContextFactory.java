@@ -16,6 +16,8 @@
 
 package se.idsec.sigval.pdf.pdfstruct.impl;
 
+import lombok.Setter;
+import se.idsec.sigval.pdf.pdfstruct.GeneralSafeObjects;
 import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
 import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContextFactory;
 
@@ -31,8 +33,12 @@ import java.io.IOException;
  */
 public class DefaultPDFSignatureContextFactory implements PDFSignatureContextFactory {
 
+  @Setter private boolean strict;
+
   /** {@inheritDoc} */
   @Override public PDFSignatureContext getPdfSignatureContext(byte[] pdfDocument) throws IOException {
-    return new DefaultPDFSignatureContext(pdfDocument);
+    GeneralSafeObjects safeObjectProvider = strict ? new StrictGeneralSafeObjects() : new DefaultGeneralSafeObjects();
+    DefaultPDFSignatureContext pdfSignatureContext = new DefaultPDFSignatureContext(pdfDocument, safeObjectProvider);
+    return pdfSignatureContext;
   }
 }

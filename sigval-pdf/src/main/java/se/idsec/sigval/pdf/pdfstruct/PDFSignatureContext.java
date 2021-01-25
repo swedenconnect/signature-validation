@@ -43,11 +43,12 @@ public interface PDFSignatureContext {
   byte[] getSignedDocument(PDSignature signature) throws IllegalArgumentException;
 
   /**
-   * Check if the pdf document was updated after this signature was added to the document, where the new update is not
-   * a new signature or document timestamp or is a valid DSS store.
+   * Check if the pdf document was updated by unsafe updates after this signature was added to the document, where the new update may
+   * alter the visual content of the document. Allowed updates are new signatures, document timestamps, DSS extensions and safe
+   * context updates such as document info updates in the document trailer caused by re-save by Acrobat reader.
    *
    * <p>An update to a PDF document applied after the PDF document was signed invalidates any existing signature unless the
-   * update is not a new signature, document timestamp or a DSS store</p>
+   * update is not a new signature, document timestamp, a DSS store, or safe metadata update</p>
    *
    * <p>Some validation policies may require that any new signatures or document timestamps must be trusted and verified
    * for it to be an acceptable update to a signed document</p>
@@ -56,7 +57,7 @@ public interface PDFSignatureContext {
    * @return true if the provided signature was updated by a non signature update
    * @throws IllegalArgumentException on failure to test if the signature was updated by a non signature update
    */
-  boolean isSignatureExtendedByNonSignatureUpdates(PDSignature signature) throws IllegalArgumentException;
+  boolean isSignatureExtendedByNonSafeUpdates(PDSignature signature) throws IllegalArgumentException;
 
   /**
    * Test if this signature covers the whole document.
