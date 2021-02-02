@@ -6,7 +6,7 @@
   <groupId>se.idsec.sigval.base</groupId>
   <artifactId>sigval-base-parent</artifactId>
   <packaging>pom</packaging>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
 
   <name>IDsec Solutions :: Parent POM for Signature validation :: Base</name>
   <description>Parent POM for SignService Validation libraries</description>
