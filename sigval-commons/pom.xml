@@ -9,7 +9,7 @@
   <parent>
     <artifactId>sigval-base-parent</artifactId>
     <groupId>se.idsec.sigval.base</groupId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
   </parent>
 
   <name>IDsec Solutions :: Signature validation :: Commons</name>
@@ -56,7 +56,7 @@
     <dependency>
       <groupId>se.idsec.sigval.base</groupId>
       <artifactId>cert-validation</artifactId>
-      <version>1.0.0</version>
+      <version>${project.version}</version>
     </dependency>
     
     <dependency>

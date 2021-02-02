@@ -70,7 +70,7 @@ public abstract class CertificateValidityChecker implements Runnable, PropertyCh
 
   /**
    * Setter for certificate path checker used to validate the certificate validity token
-   * @param validityPathChecker
+   * @param validityPathChecker certificate path checker
    */
   public void setValidityPathChecker(ValidityPathChecker validityPathChecker) {
     this.validityPathChecker = validityPathChecker;

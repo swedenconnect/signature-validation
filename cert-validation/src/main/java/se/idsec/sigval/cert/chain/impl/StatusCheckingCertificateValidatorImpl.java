@@ -91,7 +91,7 @@ public class StatusCheckingCertificateValidatorImpl implements CertificateValida
    * @param additionalCertificates Supporting certificates used to construct a path to trusted certificates
    * @param crls                   Certificate revocation lists. This MUST be null or an empty list
    * @param trustAnchors           Trust anchors provided in addition to the default trust anchors
-   * @return
+   * @return Path validation result
    * @throws CertPathBuilderException           if certificate path building fails
    * @throws ExtendedCertPathValidatorException if certificate validation fails
    * @throws GeneralSecurityException           never thrown but required by interface

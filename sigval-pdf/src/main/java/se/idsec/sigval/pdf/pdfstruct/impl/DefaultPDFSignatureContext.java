@@ -15,33 +15,17 @@
  */
 package se.idsec.sigval.pdf.pdfstruct.impl;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.apache.pdfbox.cos.COSArray;
-import org.apache.pdfbox.cos.COSBase;
-import org.apache.pdfbox.cos.COSDictionary;
-import org.apache.pdfbox.cos.COSDocument;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.cos.COSObject;
-import org.apache.pdfbox.cos.COSObjectKey;
+import lombok.Setter;
+import org.apache.pdfbox.cos.*;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
-
 import se.idsec.sigval.pdf.data.PDFConstants;
-import se.idsec.sigval.pdf.pdfstruct.AcroForm;
-import se.idsec.sigval.pdf.pdfstruct.ObjectArray;
-import se.idsec.sigval.pdf.pdfstruct.ObjectValue;
-import se.idsec.sigval.pdf.pdfstruct.ObjectValueType;
-import se.idsec.sigval.pdf.pdfstruct.PDFDocRevision;
-import se.idsec.sigval.pdf.pdfstruct.PDFSignatureContext;
+import se.idsec.sigval.pdf.pdfstruct.*;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Examines a PDF document and gathers context data used to determine document revisions and if any of those
@@ -60,15 +44,20 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
   List<PDFDocRevision> PDFDocRevisions;
   /** Document signatures */
   List<PDSignature> signatures = new ArrayList<>();
+  /** Provider of objects safe to update without altering the visual content of the document */
+  private final GeneralSafeObjects safeObjectProvider;
 
   /**
    * Constructor
    *
    * @param pdfBytes the bytes of a PDF document
+   * @param safeObjectProvider provider of the logic to identify safe objects in the PDF documents that may be altered
+   *                           without changing the visual content of the document
    * @throws IOException if theis docuemnt is not a well formed PDF document
    */
-  public DefaultPDFSignatureContext(final byte[] pdfBytes) throws IOException {
+  public DefaultPDFSignatureContext(final byte[] pdfBytes, GeneralSafeObjects safeObjectProvider) throws IOException {
     this.pdfBytes = pdfBytes;
+    this.safeObjectProvider = safeObjectProvider;
     extractPdfRevisionData();
   }
 
@@ -89,7 +78,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
   }
 
   /** {@inheritDoc} */
-  @Override public boolean isSignatureExtendedByNonSignatureUpdates(final PDSignature signature) throws IllegalArgumentException {
+  @Override public boolean isSignatureExtendedByNonSafeUpdates(final PDSignature signature) throws IllegalArgumentException {
     try {
       int idx = getSignatureRevisionIndex(signature);
       if (idx == -1) {
@@ -99,8 +88,9 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
         // Loop as long as index indicates that there is a later revision (index < revisions -1)
         PDFDocRevision pdfDocRevision = PDFDocRevisions.get(i + 1);
         if (!pdfDocRevision.isSignature() && !pdfDocRevision.isValidDSS()) {
-          //A later revsion exist that is NOT a signature, document timestamp or valid DSS (Digital Signature Store)
-          return true;
+          // A later revision exist that is NOT a signature, document timestamp)
+          // Return true if this update is not a safe update
+          return !pdfDocRevision.isSafeUpdate();
         }
       }
       // We did not find any later revisions that are not a signature or document timestamp
@@ -287,7 +277,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     return root.getObjectNumber();
   }
 
-  private static void getXrefUpdates(PDFDocRevision revData, PDFDocRevision lastRevData) {
+  private void getXrefUpdates(PDFDocRevision revData, PDFDocRevision lastRevData) {
     revData.setLegalRootObject(true);
     revData.setRootUpdate(false);
     revData.setNonRootUpdate(false);
@@ -366,38 +356,21 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     revData.setAddedRootItems(addedRootItems);
     revData.setSafeObjects(safeObjects);
 
-    //Check changed root items
+    //Check changed root items for unsupported changes.
+    //In this implementation only the Acroform are allowed to have changed content in the root dictionary
     boolean unsupportedRootItemUpdate = revData.getChangedRootItems().stream()
-      .filter(name -> !name.equals(COSName.ACRO_FORM))
-      .findFirst().isPresent();
+      .anyMatch(name -> !name.equals(COSName.ACRO_FORM));
+
+    // Append the safeObjectList with other known safe objects
+    safeObjectProvider.addGeneralSafeObjects(revData);
 
     // Check changed cross references against safe objects
     boolean unsafeRefupdate = revData.getChangedXref().keySet().stream()
-      .map(cosObjectKey -> cosObjectKey.getNumber())
-      .filter(id ->
+      .map(COSObjectKey::getNumber)
+      .anyMatch(id ->
         id != revData.getRootObjectId() &&
           !safeObjects.contains(id)
-      )
-      .findFirst().isPresent();
-
-    /**
-     * A revision is considered a valid DSS update if:
-     *
-     *   - There is an update to the root object
-     *   - There is no change to any other pre-existing xref other than to the root object
-     *   - The updated root object has legal content
-     *   - There are no changed root items
-     *   - There is exactly 1 new root item
-     *   - The new item in the root is a pointer to a DSS object
-     */
-    revData.setValidDSS(
-      revData.isRootUpdate()
-        && !revData.isNonRootUpdate()
-        && revData.isLegalRootObject()
-        && revData.getChangedRootItems().size() == 0
-        && revData.getAddedRootItems().size() == 1
-        && revData.getAddedRootItems().get(0).getName().equals("DSS")
-    );
+      );
 
     /**
      * A new revision is considered safe with regard to not containing visual data changes when added after a signature if:
@@ -406,18 +379,45 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
      *     o Objects containing the content of AcroForms
      *     o Objects holding Font inside DR dictionary inside Acroform
      *     o Objects referenced under OpenAction in the root
-     *   - The update is on of the following:
-     *     o A signature
-     *     o A document timestamp
-     *     o A DSS store
+     *     o Other safe ojects according to the GeneralSafeObject interface implementation
      */
     revData.setSafeUpdate(
       !unsupportedRootItemUpdate
         && !unsafeRefupdate
         && revData.isLegalRootObject()
-        && (revData.isSignature() || revData.isDocumentTimestamp() || revData.isValidDSS())
     );
 
+    /**
+     * A revision is considered a valid DSS update if:
+     *
+     *   - There is an update to the root object
+     *   - There is no change to any other pre-existing xref other than to the root object
+     *   - The updated root object has legal content
+     *   - There are no changed root items
+     *   - There is 1 or 2 new root item where DSS object is mandatory and Extension is optional
+     *   - The new item in the root is a pointer to a DSS object or DSS + Extension object
+     */
+    revData.setValidDSS(
+      revData.isRootUpdate()
+        && revData.isSafeUpdate()
+        && revData.isLegalRootObject()
+        && revData.getChangedRootItems().size() == 0
+        && (
+          (revData.getAddedRootItems().size() == 1 && addedRootItemsContains(revData.getAddedRootItems(), "DSS"))
+          ||(revData.getAddedRootItems().size() == 2 && addedRootItemsContains(revData.getAddedRootItems(), "DSS", "Extensions")))
+    );
+
+  }
+
+  private static boolean addedRootItemsContains(List<COSName> addedRootItems, String... matchNames) {
+    if (addedRootItems == null) return false;
+    for (String matchName : matchNames){
+      if(addedRootItems.stream()
+        .noneMatch(cosName -> cosName.getName().equalsIgnoreCase(matchName))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static void addSafeObjects(COSName key, COSBase value, List<Long> safeObjects, COSDocument cosDocument) {

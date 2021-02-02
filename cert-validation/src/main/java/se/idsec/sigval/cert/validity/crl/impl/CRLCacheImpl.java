@@ -127,7 +127,7 @@ public class CRLCacheImpl implements CRLCache {
    *   <li>If several sources are present, only the first successful source will be cached</li>
    * </ul>
    *
-   * @param crlDistributionPointExt
+   * @param crlDistributionPointExt CRL distribution point extension
    * @return CRL
    * @throws IOException on error to obtain the CRL from this extension
    */

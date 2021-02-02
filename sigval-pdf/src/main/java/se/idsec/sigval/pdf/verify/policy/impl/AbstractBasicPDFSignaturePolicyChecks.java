@@ -63,9 +63,9 @@ public abstract class AbstractBasicPDFSignaturePolicyChecks implements PDFSignat
       );
     }
 
-    // Check for non signature alterations to the document afters signing
-    if (signatureContext.isSignatureExtendedByNonSignatureUpdates(verifyResultSignature.getPdfSignature())) {
-      log.debug("Signed document has been altered since signed");
+    // Check for unsafe alterations to the document afters signing
+    if (signatureContext.isSignatureExtendedByNonSafeUpdates(verifyResultSignature.getPdfSignature())) {
+      log.debug("Signed document has been altered since it was signed");
       return new PolicyValidationResult(
         builder.res(ValidationConclusion.FAILED)
           .msg("Document content was altered after signing")
@@ -80,7 +80,7 @@ public abstract class AbstractBasicPDFSignaturePolicyChecks implements PDFSignat
       log.debug("No valid certificate path was found");
       return new PolicyValidationResult(
         builder.res(ValidationConclusion.INDETERMINATE)
-          .msg("Document content was altered after signing")
+          .msg("No valid certificate path was found")
           .build(),
         SignatureValidationResult.Status.ERROR_NOT_TRUSTED
       );
