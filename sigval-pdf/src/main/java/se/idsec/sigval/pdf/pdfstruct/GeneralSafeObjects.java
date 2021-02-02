@@ -16,8 +16,13 @@
 
 package se.idsec.sigval.pdf.pdfstruct;
 
-import java.util.List;
-
+/**
+ * Interface for implementations of functions to locate and add safe objects that can be modified in a PDF document without changing the
+ * visual content of the document
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
 public interface GeneralSafeObjects {
 
   /**
@@ -30,7 +35,7 @@ public interface GeneralSafeObjects {
    * and to alter metadata and/or info object in the document trailer.
    * </p>
    *
-   * @param revData
+   * @param revData PDF document revision data
    */
   void addGeneralSafeObjects(PDFDocRevision revData);
 

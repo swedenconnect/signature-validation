@@ -51,6 +51,8 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
    * Constructor
    *
    * @param pdfBytes the bytes of a PDF document
+   * @param safeObjectProvider provider of the logic to identify safe objects in the PDF documents that may be altered
+   *                           without changing the visual content of the document
    * @throws IOException if theis docuemnt is not a well formed PDF document
    */
   public DefaultPDFSignatureContext(final byte[] pdfBytes, GeneralSafeObjects safeObjectProvider) throws IOException {
