@@ -16,8 +16,12 @@
 
 package se.idsec.sigval.cert.validity.ocsp;
 
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.bouncycastle.cert.ocsp.*;
@@ -37,10 +41,13 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.Principal;
+import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Certificate verifier based on OCSP
@@ -49,9 +56,11 @@ import java.util.List;
  * @author Stefan Santesson (stefan@idsec.se)
  */
 @Slf4j
-public class OCSPCertificateVerifier extends AbstractValidityChecker {
+public class OCSPCertificateVerifier extends AbstractValidityChecker implements OCSPDataLoader {
 
+  /** Event identifier used to identify this process */
   public static final String EVENT_ID = "ocsp-validity";
+  /** Response status code names */
   public static final String[] RESPONSE_STATUS = new String[]{
     "SUCCESSFUL",
     "MALFORMED_REQUEST",
@@ -62,15 +71,34 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
     "UNAUTHORIZED"
   };
 
+  /** The data loader used to get OCSP responses */
+  @Setter OCSPDataLoader ocspDataLoader;
+  /** timeout in milliseconds for making connections to an OCSP responder */
+  @Setter protected int connectTimeout = 1000;
+  /** timeout in milliseconds for obtaining an OCSP response */
+  @Setter protected int readTimeout = 3000;
+  /** boolean deciding if a nonce is included in the OCSP request */
+  @Setter boolean includeNonce = true;
+  /** Random source for nonce generation */
+  public static final Random RNG = new SecureRandom();
+
+  /** {@inheritDoc} */
   public OCSPCertificateVerifier(X509Certificate certificate, X509Certificate issuer,
     PropertyChangeListener... propertyChangeListeners) {
     super(certificate, issuer, EVENT_ID, propertyChangeListeners);
+    this.ocspDataLoader = this;
   }
 
+  /** {@inheritDoc} */
   @Override public ValidationStatus checkValidity() {
     return checkValidity(new Date());
   }
 
+  /**
+   * Check validity based on a specific validation date
+   * @param validationDate validation date
+   * @return validation status
+   */
   public ValidationStatus checkValidity(Date validationDate) {
     ValidationStatus status = ValidationStatus.builder()
       .certificate(certificate)
@@ -98,10 +126,11 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
         certificate.getSerialNumber());
 
       // Generate OCSP request
-      OCSPReq ocspReq = generateOCSPRequest(certificateId);
+      byte[] nonce = getNonce();
+      OCSPReq ocspReq = generateOCSPRequest(certificateId, nonce);
 
       // Get OCSP response from server
-      OCSPResp ocspResp = requestOCSPResponse(ocspUrl, ocspReq);
+      OCSPResp ocspResp = ocspDataLoader.requestOCSPResponse(ocspUrl, ocspReq, connectTimeout, readTimeout);
       if (ocspResp.getStatus() != OCSPRespBuilder.SUCCESSFUL) {
         log.warn("OCSP response is invalid from {}", ocspUrl);
         status.setValidity(CertificateValidity.INVALID);
@@ -112,6 +141,8 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
       boolean foundResponse = false;
       BasicOCSPResp basicOCSPResp = (BasicOCSPResp) ocspResp.getResponseObject();
       checkResponseSignature(basicOCSPResp, status);
+
+      checkNonce(basicOCSPResp, nonce);
 
       SingleResp[] singleResps = basicOCSPResp.getResponses();
       for (SingleResp singleResp : singleResps) {
@@ -164,8 +195,53 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
     return status;
   }
 
-  private void checkResponseSignature(BasicOCSPResp basicOCSPResp, ValidationStatus status) throws OperatorCreationException, OCSPException,
-    CertificateException {
+  /**
+   * Checks the nonce received in a OCSP response against the nonce sent in the request
+   * @param basicOCSPResp OCSP response
+   * @param nonce nonce sent in the request
+   * @throws IOException if nonce validation fails
+   */
+  private void checkNonce(BasicOCSPResp basicOCSPResp, byte[] nonce) throws IOException {
+    Extension nonceExtension = basicOCSPResp.getExtension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce);
+    if (nonceExtension == null){
+      // OCSP responders are not required to provide nonce in the response. Absent response is therefore allowed here.
+      return;
+    }
+    // There is a nonce in the response. Now this must match the request
+    if (nonce == null){
+      throw new IOException("There is a nonce in the response but no nonce was sent in the request");
+    }
+    byte[] responseNonce = nonceExtension.getExtnValue().getOctets();
+    if (responseNonce == null || responseNonce.length > 1024){
+      throw new IOException("Response nonce has illegal content");
+    }
+    if (Arrays.equals(nonce, responseNonce)){
+      return;
+    }
+    throw new IOException("Nonce in request does not match nonce provided in the response");
+  }
+
+  /**
+   * Generate a new nonce value if configuration activated nonce
+   * @return nonce or null if no nonce is to be included
+   */
+  private byte[] getNonce() {
+    if (!includeNonce) {
+      return null;
+    }
+    byte[] nonceBytes = new byte[20];
+    RNG.nextBytes(nonceBytes);
+    return nonceBytes;
+  }
+
+  /**
+   * Checks the OCSP response signature value
+   * @param basicOCSPResp OCSP response
+   * @param status the validation status for this OCSP response
+   * @throws CertificateException error parsing certificates
+   */
+  private void checkResponseSignature(BasicOCSPResp basicOCSPResp, ValidationStatus status)
+    throws CertificateException {
     X509CertificateHolder[] responeCerts = basicOCSPResp.getCerts();
     List<X509Certificate> certList = CertUtils.getCertificateList(responeCerts);
     if (certList.isEmpty()) {
@@ -181,30 +257,37 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
           status.setStatusSignatureValid(true);
           log.debug("Attempt to use the certificate from {} to verify OCSP response succeeded", cert.getSubjectDN());
         }
-      } catch (Exception ex){
+      } catch (OperatorCreationException | OCSPException ex){
         log.debug("Attempt to use the certificate from {} to verify OCSP response failed", cert.getSubjectDN());
       }
     }
   }
 
-  private OCSPReq generateOCSPRequest(CertificateID certificateId) throws OCSPException {
+  /**
+   * Create OCSP request
+   * @param certificateId certID according to OCSP
+   * @return OCSP response
+   * @throws OCSPException error creating the OCSP response
+   */
+  protected OCSPReq generateOCSPRequest(CertificateID certificateId, byte[] nonce) throws OCSPException {
     OCSPReqBuilder ocspReqGenerator = new OCSPReqBuilder();
-
-    ocspReqGenerator.addRequest(certificateId);
-
-    OCSPReq ocspReq = ocspReqGenerator.build();
-    return ocspReq;
+    Extensions extensions = (nonce == null)
+      ? null
+      : new Extensions(new Extension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce, false, nonce));
+    ocspReqGenerator.addRequest(certificateId, extensions);
+    return ocspReqGenerator.build();
   }
 
-  public OCSPResp requestOCSPResponse(String url, OCSPReq ocspReq) throws IOException {
+  @Override
+  public OCSPResp requestOCSPResponse(String url, OCSPReq ocspReq, int connectTimeout, int readTimeout) throws IOException {
     byte[] ocspReqData = ocspReq.getEncoded();
 
     HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
     try {
       con.setRequestProperty("Content-Type", "application/ocsp-request");
       con.setRequestProperty("Accept", "application/ocsp-response");
-      con.setConnectTimeout(1000);
-      con.setReadTimeout(3000);
+      con.setConnectTimeout(connectTimeout);
+      con.setReadTimeout(readTimeout);
 
       con.setDoInput(true);
       con.setDoOutput(true);

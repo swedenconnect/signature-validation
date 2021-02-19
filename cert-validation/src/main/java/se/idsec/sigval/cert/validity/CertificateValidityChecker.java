@@ -41,22 +41,25 @@ import java.util.List;
  */
 public abstract class CertificateValidityChecker implements Runnable, PropertyChangeListener{
 
+  public static final String EVENT_ID = "cert-validity";
   private List<PropertyChangeListener> listeners;
-  private String id;
+  private final String id;
   protected List<ValidityChecker> validityCheckers;
   protected ValidityPathChecker validityPathChecker;
-  protected X509Certificate certificate;
-  protected X509Certificate issuer;
+  protected final X509Certificate certificate;
+  protected final X509Certificate issuer;
 
   public CertificateValidityChecker(
     X509Certificate certificate,
     X509Certificate issuer,
     String id,
+    ValidityPathChecker validityPathChecker,
     PropertyChangeListener... propertyChangeListeners) {
 
     this.certificate = certificate;
     this.issuer = issuer;
     this.id = id;
+    this.validityPathChecker = validityPathChecker;
     this.listeners = Arrays.asList(propertyChangeListeners);
   }
 
@@ -66,6 +69,14 @@ public abstract class CertificateValidityChecker implements Runnable, PropertyCh
    */
   public void setValidityCheckers(List<ValidityChecker> validityCheckers) {
     this.validityCheckers = validityCheckers;
+  }
+
+  /**
+   * Getter for validity checkers used to check validity status
+   * @return validity checkers
+   */
+  public List<ValidityChecker> getValidityCheckers() {
+    return validityCheckers;
   }
 
   /**
