@@ -172,10 +172,12 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker implements 
               status.setValidity(CertificateValidity.VALID);
             }
             else {
-              Date revocationDate = ((RevokedStatus) singleResp.getCertStatus()).getRevocationTime();
+              RevokedStatus revokedStatus = (RevokedStatus) singleResp.getCertStatus();
+              Date revocationDate = revokedStatus.getRevocationTime();
               log.debug("OCSP for certificate '{}' is revoked since {}", subject, revocationDate);
               status.setRevocationTime(revocationDate);
               status.setRevocationObjectIssuingTime(singleResp.getThisUpdate());
+              status.setReason(revokedStatus.getRevocationReason());
               status.setValidity(CertificateValidity.REVOKED);
             }
           }
@@ -274,7 +276,8 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker implements 
     Extensions extensions = (nonce == null)
       ? null
       : new Extensions(new Extension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce, false, nonce));
-    ocspReqGenerator.addRequest(certificateId, extensions);
+    ocspReqGenerator.addRequest(certificateId);
+    ocspReqGenerator.setRequestExtensions(extensions);
     return ocspReqGenerator.build();
   }
 

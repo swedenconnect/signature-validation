@@ -100,8 +100,8 @@ public class ValidationStatus {
   private List<X509Certificate> statusSignerCertificateChain;
   /** Indicates if the signature on validation status data is valid and verifies against the specified status signer certificate */
   private boolean statusSignatureValid;
-  /** Indication of a reason for revocation provided as string for display purpose only */
-  private String reason;
+  /** Indication of a reason for revocation according to RFC 5280 */
+  private int reason;
   /** Exception thrown during validation checking */
   private Exception exception;
 
