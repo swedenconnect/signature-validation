@@ -76,7 +76,7 @@ public class CRLValidityChecker extends AbstractValidityChecker {
         builder.revocationTime(crlEntry.getRevocationDate());
         CRLReason reason = crlEntry.getRevocationReason();
         if (reason != null) {
-          builder.reason(reason.name());
+          builder.reason(getReasonCode(reason));
           log.debug("The certificate was revoked with reason: " + reason.name());
         }
       }
@@ -89,6 +89,48 @@ public class CRLValidityChecker extends AbstractValidityChecker {
       builder.exception(ex);
     }
     return builder.build();
+  }
+
+  private int getReasonCode(CRLReason reason) {
+    /**
+     The CRLReason enumeration.
+     CRLReason ::= ENUMERATED {
+     unspecified             (0),
+     keyCompromise           (1),
+     cACompromise            (2),
+     affiliationChanged      (3),
+     superseded              (4),
+     cessationOfOperation    (5),
+     certificateHold         (6),
+     removeFromCRL           (8),
+     privilegeWithdrawn      (9),
+     aACompromise           (10)
+     }
+     */
+
+    switch (reason){
+
+    case KEY_COMPROMISE:
+      return 1;
+    case CA_COMPROMISE:
+      return 2;
+    case AFFILIATION_CHANGED:
+      return 3;
+    case SUPERSEDED:
+      return 4;
+    case CESSATION_OF_OPERATION:
+      return 5;
+    case CERTIFICATE_HOLD:
+      return 6;
+    case REMOVE_FROM_CRL:
+      return 8;
+    case PRIVILEGE_WITHDRAWN:
+      return 9;
+    case AA_COMPROMISE:
+      return 10;
+    default:
+      return 0;
+    }
   }
 
 }

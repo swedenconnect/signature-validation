@@ -43,7 +43,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class BasicCertificateValidityChecker extends CertificateValidityChecker {
 
-  public static final String EVENT_ID = "cert-validity";
   /**
    * Gets the resulting validation results for CRL and OCSP
    *
@@ -70,12 +69,11 @@ public class BasicCertificateValidityChecker extends CertificateValidityChecker 
    */
   public BasicCertificateValidityChecker(X509Certificate certificate, X509Certificate issuer, CRLCache crlCache,
     PropertyChangeListener... propertyChangeListeners) {
-    super(certificate, issuer, EVENT_ID, propertyChangeListeners);
+    super(certificate, issuer, EVENT_ID, new BasicValidityPathChecker(crlCache), propertyChangeListeners);
     this.setValidityCheckers(Arrays.asList(
       new CRLValidityChecker(certificate, issuer, crlCache, this),
       new OCSPCertificateVerifier(certificate, issuer, this)
     ));
-    this.setValidityPathChecker(new BasicValidityPathChecker(crlCache));
   }
 
   /**

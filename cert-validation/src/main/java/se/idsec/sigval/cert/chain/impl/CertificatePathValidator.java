@@ -23,6 +23,7 @@ import se.idsec.sigval.cert.chain.ExtendedCertPathValidatorException;
 import se.idsec.sigval.cert.chain.PathBuilder;
 import se.idsec.sigval.cert.chain.PathValidationResult;
 import se.idsec.sigval.cert.utils.CertUtils;
+import se.idsec.sigval.cert.validity.CertificateValidityChecker;
 import se.idsec.sigval.cert.validity.ValidationStatus;
 
 import se.idsec.sigval.cert.validity.crl.CRLCache;
@@ -38,18 +39,16 @@ import java.util.stream.Collectors;
  * Certificate path validator implementation. This path validator can be executed as a runnable object in a designated Thread
  * The result is delivered to the callback function of any registered PropertyChange listeners. Alternatively, path validation
  * can be executed by calling the validateCertificatePath() function.
- *
+ * <p>
  * The option to set the boolean singleThreaded applies only to underlying validity checks and has nothing to do with whether this
  * path validator itself is executed as a runnable or as a direct function call.
- *
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
 @Slf4j
-public class CertificatePathValidator extends AbstractPathValidator implements PropertyChangeListener {
+public class CertificatePathValidator extends AbstractPathValidator implements PropertyChangeListener, CertificateValidityCheckerFactory {
 
-  public static final String DEFAULT_EVENT_ID = "certPathValidator";
   protected static final PathBuilder PATH_BUILDER = new BasicPathBuilder();
   /**
    * Force the underlying validation operations to be performed in a single thread.
@@ -82,6 +81,8 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     List<TrustAnchor> trustAnchors, CertStore certStore, CRLCache crlCache,
     PropertyChangeListener... propertyChangeListeners) {
     super(targetCert, chain, crlCache, PATH_BUILDER, trustAnchors, certStore, DEFAULT_EVENT_ID, propertyChangeListeners);
+    // By default, use the certificate validity checker implemented in this class
+    this.certificateValidityCheckerFactory = this;
   }
 
   @Override public PathValidationResult validateCertificatePath() throws ExtendedCertPathValidatorException {
@@ -91,10 +92,10 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
       Optional<TrustAnchor> taMatchOptional = trustAnchors.stream()
         .filter(ta -> ta.getTrustedCert().equals(targetCert))
         .findFirst();
-      if (taMatchOptional.isPresent()){
+      if (taMatchOptional.isPresent()) {
         //Target certificate is found among the trust anchors
         CertificateFactory cf = new CertificateFactory();
-        CertPath certPath= cf.engineGenerateCertPath(Arrays.asList(targetCert));
+        CertPath certPath = cf.engineGenerateCertPath(Arrays.asList(targetCert));
         return PathValidationResult.builder()
           .pkixCertPathBuilderResult(new PKIXCertPathBuilderResult(certPath, taMatchOptional.get(), null, targetCert.getPublicKey()))
           .targetCertificate(targetCert)
@@ -108,7 +109,8 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
             .build()))
           .build();
       }
-    } catch (Exception ex){
+    }
+    catch (Exception ex) {
       log.error("Unexpected error while validating directly trusted cert", ex);
     }
 
@@ -130,7 +132,8 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     if (pathBuilderCertPath.size() < 2) {
       // This is an impossible outcome of a successful path validation. Something is wrong in the implementation
       log.error("Successful path validation provided insufficient chain length. Chain length must be at least 2");
-      throw new ExtendedCertPathValidatorException(new RuntimeException("Valid path too short for validity checking. Must be at least length = 2"));
+      throw new ExtendedCertPathValidatorException(
+        new RuntimeException("Valid path too short for validity checking. Must be at least length = 2"));
     }
 
     // We have a trusted path and all certificates pass PKIX path validation rules, including expiry date checking, basic constraints etc.
@@ -142,8 +145,10 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
     else {
       runValidationThreads();
       if (validationStatusList.size() != pathBuilderCertPath.size() - 1) {
-        log.debug("Unable to obtain status information for all certificates in the path. Expected {} results, got {}", pathBuilderCertPath.size() - 1, validationStatusList.size());
-        throw new ExtendedCertPathValidatorException(new RuntimeException("Unable to obtain status information for all certificates in the path"));
+        log.debug("Unable to obtain status information for all certificates in the path. Expected {} results, got {}",
+          pathBuilderCertPath.size() - 1, validationStatusList.size());
+        throw new ExtendedCertPathValidatorException(
+          new RuntimeException("Unable to obtain status information for all certificates in the path"));
       }
     }
 
@@ -156,7 +161,6 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
       .validationStatusList(validationStatusList)
       .targetCertificate(pathBuilderCertPath.get(0))
       .validatedCertificatePath(pathBuilderCertPath);
-
 
     for (int i = pathBuilderCertPath.size() - 2; i >= 0; i--) {
       X509Certificate checkedCert = pathBuilderCertPath.get(i);
@@ -196,6 +200,7 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
 
   /**
    * Override this function to perform additional path validation checks
+   *
    * @param result results of certificate path building
    * @return result of certificate path building after extended path checks
    */
@@ -228,9 +233,9 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
 
     //Start validity threads
     for (int i = 0; i < pathBuilderCertPath.size() - 1; i++) {
-      BasicCertificateValidityChecker validityChecker = new BasicCertificateValidityChecker(
-        pathBuilderCertPath.get(i), pathBuilderCertPath.get(i + 1), crlCache, this);
-      validityChecker.setMaxValidationSeconds(maxValidationSeconds);
+      CertificateValidityChecker validityChecker = certificateValidityCheckerFactory.getCertificateValidityChecker(
+        pathBuilderCertPath.get(i), pathBuilderCertPath.get(i + 1), crlCache, this
+      );
       Thread validityThread = new Thread(validityChecker);
       validityThread.setDaemon(true);
       validityThread.start();
@@ -258,28 +263,43 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
    */
   private void getSingleThreadedValidityStatus() {
     for (int i = 0; i < pathBuilderCertPath.size() - 1; i++) {
-      BasicCertificateValidityChecker validityChecker = new BasicCertificateValidityChecker(
+      CertificateValidityChecker validityChecker = certificateValidityCheckerFactory.getCertificateValidityChecker(
         pathBuilderCertPath.get(i), pathBuilderCertPath.get(i + 1), crlCache);
-      validityChecker.setSingleThreaded(true);
       validationStatusList.add(validityChecker.checkValidity());
     }
   }
 
+  @Override
+  public CertificateValidityChecker getCertificateValidityChecker(X509Certificate certificate, X509Certificate issuer, CRLCache crlCache,
+    PropertyChangeListener... propertyChangeListeners) {
+    BasicCertificateValidityChecker validityChecker = new BasicCertificateValidityChecker(certificate, issuer, crlCache,
+      propertyChangeListeners);
+    if (singleThreaded) {
+      validityChecker.setSingleThreaded(true);
+    }
+    else {
+      validityChecker.setMaxValidationSeconds(maxValidationSeconds);
+    }
+    return validityChecker;
+  }
+
   /**
    * Callback function to collect validation results from validation threads
+   *
    * @param evt event holding validation result data
    */
   @Override public synchronized void propertyChange(PropertyChangeEvent evt) {
     String propertyName = evt.getPropertyName();
-    if (!propertyName.equalsIgnoreCase(BasicCertificateValidityChecker.EVENT_ID)) {
-      log.error("Wrong event ID in certificate validity check event. Expected {}. Found {}", BasicCertificateValidityChecker.EVENT_ID,
+    if (!propertyName.equalsIgnoreCase(CertificateValidityChecker.EVENT_ID)) {
+      log.error("Wrong event ID in certificate validity check event. Expected {}. Found {}", CertificateValidityChecker.EVENT_ID,
         propertyName);
       return;
     }
     if (evt.getNewValue() instanceof ValidationStatus) {
       ValidationStatus validationStatus = (ValidationStatus) evt.getNewValue();
       validationStatusList.add(validationStatus);
-      log.debug("Certificate status validation received for event '{}' with status '{}' for {}", propertyName, validationStatus.getValidity(), validationStatus.getCertificate().getSubjectX500Principal());
+      log.debug("Certificate status validation received for event '{}' with status '{}' for {}", propertyName,
+        validationStatus.getValidity(), validationStatus.getCertificate().getSubjectX500Principal());
     }
     else {
       log.error("Wrong result object in certificate validity check event. Expected {}. Found {}", ValidationStatus.class,

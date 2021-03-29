@@ -18,10 +18,12 @@ package se.idsec.sigval.cert.chain.impl;
 
 import lombok.Setter;
 import se.idsec.signservice.security.certificate.CertificateValidator;
+import se.idsec.sigval.cert.chain.AbstractPathValidator;
 import se.idsec.sigval.cert.chain.ExtendedCertPathValidatorException;
 import se.idsec.sigval.cert.chain.PathValidationResult;
 import se.idsec.sigval.cert.validity.crl.CRLCache;
 
+import java.beans.PropertyChangeListener;
 import java.security.GeneralSecurityException;
 import java.security.cert.*;
 import java.util.ArrayList;
@@ -30,18 +32,30 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * This is an implementation of the Certificate validator interface {@link CertificateValidator} in the sign service commons library
- * This implementation uses the {@link CertificatePathValidator} class to perform path validation. If you need to run path validation
- * in an isolated thread as a runnable object, then use the CertificatePathValidator class directly instead of using this interface implementation.
+ * This is an implementation of the Certificate validator interface {@link CertificateValidator} in the sign service commons library.
+ * An instance of this interface can perform any number of validations based on validation data input.
+ *
+ * This implementation uses an implementation of the Runnable {@link AbstractPathValidator} class to perform path validation.
+ * Because the {@link AbstractPathValidator} is runnable that can be executed in a separate thread, it must be instantiated
+ * for every instance of validation.
+ *
+ * Because this class creates a new {@link CertificatePathValidator} for each instance of path validation, a Factory class is
+ * configured that provides instances of an implementation of the {@link AbstractPathValidator}.
+ * A default implementation of this factory is included here but this can be replaced by a setter.
+ *
+ * If you need to run path validation in an isolated thread as a runnable object, then use the {@link CertificatePathValidator} class directly
+ * instead of using this interface implementation.
  */
-public class StatusCheckingCertificateValidatorImpl implements CertificateValidator {
+public class StatusCheckingCertificateValidatorImpl implements CertificateValidator, CertificatePathValidatorFactory {
 
   /** The CRL cache used to store and retrieve CRL data */
   private final CRLCache crlCache;
-  /** Optional cert store holding aditional supporting certificates but not trust anchors */
+  /** Optional cert store holding additional supporting certificates but not trust anchors */
   private final CertStore certStore;
-  /** default trust anchors allways trusted */
+  /** default trust anchors always trusted */
   private List<X509Certificate> defaultTrustAnchors;
+  /** Provider for the certificate path validator instance for each checked certificate path */
+  @Setter private CertificatePathValidatorFactory certificatePathValidatorFactory;
   /** Setting this to true force revocation checking to be carried out in the main thread in a sequential process */
   @Setter private boolean singleThreaded = false;
 
@@ -56,6 +70,7 @@ public class StatusCheckingCertificateValidatorImpl implements CertificateValida
     this.crlCache = crlCache;
     this.certStore = certStore;
     this.defaultTrustAnchors = Arrays.asList(defaultTrustAnchors);
+    this.certificatePathValidatorFactory = this;
   }
 
   /**
@@ -141,10 +156,8 @@ public class StatusCheckingCertificateValidatorImpl implements CertificateValida
       .map(x509Certificate -> new TrustAnchor(x509Certificate, null))
       .collect(Collectors.toList());
 
-    CertificatePathValidator pathValidator = new CertificatePathValidator(
-      subjectCertificate, additionalCertificates, trustAnchors, certStore, crlCache
-    );
-    pathValidator.setSingleThreaded(singleThreaded);
+    AbstractPathValidator pathValidator = certificatePathValidatorFactory.getPathValidator(
+      subjectCertificate, additionalCertificates, trustAnchors, certStore, crlCache);
 
     try {
       return pathValidator.validateCertificatePath();
@@ -156,6 +169,13 @@ public class StatusCheckingCertificateValidatorImpl implements CertificateValida
       }
       throw ex;
     }
+  }
+
+  @Override public AbstractPathValidator getPathValidator(X509Certificate targetCert, List<X509Certificate> chain,
+    List<TrustAnchor> trustAnchors, CertStore certStore, CRLCache crlCache) {
+    CertificatePathValidator pathValidator = new CertificatePathValidator(targetCert, chain, trustAnchors, certStore, crlCache);
+    pathValidator.setSingleThreaded(singleThreaded);
+    return pathValidator;
   }
 
   @Override public boolean isRevocationCheckingActive() {

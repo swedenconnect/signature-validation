@@ -19,6 +19,7 @@ package se.idsec.sigval.cert.validity.crl;
 import java.io.IOException;
 
 import org.bouncycastle.asn1.x509.CRLDistPoint;
+import se.idsec.sigval.cert.validity.crl.impl.CRLDataLoader;
 
 /**
  * CRL Cache interface
@@ -49,4 +50,5 @@ public interface CRLCache {
    * Update the current cache. Implementations of this function must be thread safe, allowing use of the CRL cache while it is being updated.
    */
   void recache();
+
 }

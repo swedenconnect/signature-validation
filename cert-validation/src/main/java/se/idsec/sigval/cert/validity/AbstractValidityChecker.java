@@ -38,7 +38,7 @@ public abstract class AbstractValidityChecker implements ValidityChecker {
   /**
    * Constructor
    * @param certificate the target certificate being validated
-   * @param issuer issuer certificate for the CA issuign the target certificate
+   * @param issuer issuer certificate for the CA issuing the target certificate
    * @param id event id being returned as the property name to registered listeners.
    * @param propertyChangeListeners optional listeners when performing validation as a {@link Runnable} class
    */

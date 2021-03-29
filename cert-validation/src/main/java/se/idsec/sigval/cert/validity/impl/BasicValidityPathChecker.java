@@ -136,6 +136,8 @@ public class BasicValidityPathChecker implements ValidityPathChecker {
     try {
       if (issuer.equals(statusSignerCertificate)){
         log.debug("The target cert issuer is also the OCSP response issuer {}", issuer.getSubjectX500Principal());
+        // When this is the case, then no further checks on certificate content is needed.
+        return;
       } else {
         statusSignerCertificate.verify(issuer.getPublicKey());
         log.debug("The OCSP certificate {} is issued by the CA that issued the target certificate", statusSignerCertificate.getSubjectX500Principal());

@@ -6,6 +6,7 @@
 
   <artifactId>cert-validation</artifactId>
   <packaging>jar</packaging>
+  <version>1.0.2-SNAPSHOT</version>
 
   <parent>
     <artifactId>sigval-base-parent</artifactId>
@@ -62,7 +63,7 @@
     <dependency>
       <groupId>se.idsec.sigval.base</groupId>
       <artifactId>cert-extensions</artifactId>
-      <version>${project.version}</version>
+      <version>1.0.1</version>
     </dependency>
 
     <dependency>

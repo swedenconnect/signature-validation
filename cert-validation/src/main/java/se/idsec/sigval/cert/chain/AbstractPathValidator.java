@@ -17,6 +17,8 @@ package se.idsec.sigval.cert.chain;
 
 import lombok.Setter;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
+import se.idsec.sigval.cert.chain.impl.CertificatePathValidatorFactory;
+import se.idsec.sigval.cert.chain.impl.CertificateValidityCheckerFactory;
 import se.idsec.sigval.cert.validity.crl.CRLCache;
 
 import java.beans.PropertyChangeEvent;
@@ -53,7 +55,11 @@ import java.util.List;
  */
 public abstract class AbstractPathValidator implements Runnable {
 
+  public static final String DEFAULT_EVENT_ID = "certPathValidator";
   private final List<PropertyChangeListener> listeners;
+  /** Provides the certificate validation checker for each instance of certificate validation */
+  @Setter protected CertificateValidityCheckerFactory certificateValidityCheckerFactory;
+
   /**
    * The id of the event being communicated back to registered property change listeners as property name
    *
@@ -116,4 +122,5 @@ public abstract class AbstractPathValidator implements Runnable {
    * @throws ExtendedCertPathValidatorException errors encountered while validation certificate path
    */
   public abstract PathValidationResult validateCertificatePath() throws ExtendedCertPathValidatorException;
+
 }

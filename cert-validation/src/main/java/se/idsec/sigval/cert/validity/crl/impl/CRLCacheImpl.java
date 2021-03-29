@@ -39,6 +39,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -57,7 +58,7 @@ import java.util.stream.Collectors;
  * @author Stefan Santesson (stefan@idsec.se)
  */
 @Slf4j
-public class CRLCacheImpl implements CRLCache {
+public class CRLCacheImpl implements CRLCache, CRLDataLoader {
 
   private static final ObjectMapper jsonMapper = new ObjectMapper();
   private static final String CACHE_DATA_FILE = "crlCache.json";
@@ -74,6 +75,8 @@ public class CRLCacheImpl implements CRLCache {
   private final File cacheDir;
   private final File tempDir;
   private File crlCacheFile;
+  private final CRLDataLoader crlDataLoader;
+
   /**
    * Setter for connection timout for LDAP and HTTP
    *
@@ -88,11 +91,23 @@ public class CRLCacheImpl implements CRLCache {
   @Setter private int readTimeout;
 
   /**
-   * Constructor for the CRL cache
+   * Constructor for the CRL cache.
+   *
    * @param cacheDataFolder the data folder used to store cache data
    * @param recacheGracePeriod time in milliseconds for the time after last cache instance when first re-cache will be attempted
    */
   public CRLCacheImpl(File cacheDataFolder, long recacheGracePeriod) {
+    this(cacheDataFolder, recacheGracePeriod, null);
+  }
+
+  /**
+   * Constructor for the CRL cache.
+   *
+   * @param cacheDataFolder the data folder used to store cache data
+   * @param recacheGracePeriod time in milliseconds for the time after last cache instance when first re-cache will be attempted
+   * @param crlDataLoader data loader for downloading CRL data or null to use default CRL data loader
+   */
+  public CRLCacheImpl(File cacheDataFolder, long recacheGracePeriod, CRLDataLoader crlDataLoader) {
     this.recacheGracePeriod = recacheGracePeriod;
     this.cacheDir = new File(cacheDataFolder, CACHE_DIR);
     this.tempDir = new File(cacheDataFolder, TEMP_DIR);
@@ -105,6 +120,7 @@ public class CRLCacheImpl implements CRLCache {
     if (!tempDir.exists()) {
       tempDir.mkdirs();
     }
+    this.crlDataLoader = (crlDataLoader == null) ? this : crlDataLoader;
     recache();
   }
 
@@ -304,6 +320,11 @@ public class CRLCacheImpl implements CRLCache {
     }
   }
 
+  /**
+   * Download a CRL based on the CRL cache record
+   * @param crlCacheRecord CRL cache record
+   * @throws Exception errors preventing the CRL from being downloaded
+   */
   private void cacheCrlRecord(CRLCacheRecord crlCacheRecord) throws Exception {
     String urlStr = crlCacheRecord.getUrl();
     if (System.currentTimeMillis() < crlCacheRecord.getLastCache() + recacheGracePeriod) {
@@ -313,17 +334,10 @@ public class CRLCacheImpl implements CRLCache {
     log.debug("Re-caching CRL from: " + urlStr);
     File tempFile = new File(tempDir, crlCacheRecord.getFileName());
     File cacheFile = new File(cacheDir, crlCacheRecord.getFileName());
-    if (urlStr.toLowerCase().startsWith("http")) {
-      URL url = new URL(urlStr);
-      URLConnection connection = url.openConnection();
-      connection.setConnectTimeout(connectTimeout);
-      connection.setReadTimeout(readTimeout);
-      connection.setDefaultUseCaches(true);
-      FileUtils.writeByteArrayToFile(tempFile, IOUtils.toByteArray(connection));
-    }
-    if (urlStr.toLowerCase().startsWith("ldap")) {
-      FileUtils.writeByteArrayToFile(tempFile, downloadCRLFromLDAP(urlStr));
-    }
+
+    byte[] downloadedCrlBytes = crlDataLoader.downloadCrl(urlStr, connectTimeout, readTimeout);
+    FileUtils.writeByteArrayToFile(tempFile, downloadedCrlBytes);
+
     // If data was downloaded but deletion is not done due to exception condition. Then at least remove temp file on exit.
     tempFile.deleteOnExit();
     X509CRL crl = getCachedCrl(tempFile);
@@ -375,6 +389,28 @@ public class CRLCacheImpl implements CRLCache {
     MessageDigest digest = MessageDigest.getInstance("SHA-1");
     return new BigInteger(1, digest.digest(url.getBytes(StandardCharsets.UTF_8))).toString(32) + ".crl";
 
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public byte[] downloadCrl(String urlStr, int connectTimeout, int readTimeout) throws IOException {
+    if (urlStr.toLowerCase().startsWith("http")) {
+      URL url = new URL(urlStr);
+      URLConnection connection = url.openConnection();
+      connection.setConnectTimeout(connectTimeout);
+      connection.setReadTimeout(readTimeout);
+      connection.setDefaultUseCaches(true);
+      return IOUtils.toByteArray(connection);
+    }
+    if (urlStr.toLowerCase().startsWith("ldap")) {
+      try {
+        return downloadCRLFromLDAP(urlStr);
+      }
+      catch (NamingException e) {
+        throw new IOException("Failed to download LDAP CRL", e);
+      }
+    }
+    throw new IOException("Illegal URL for CRL downloads");
   }
 
   /**
