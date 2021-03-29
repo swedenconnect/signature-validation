@@ -6,7 +6,7 @@
 
   <artifactId>cert-validation</artifactId>
   <packaging>jar</packaging>
-  <version>1.0.2-SNAPSHOT</version>
+  <version>1.0.2</version>
 
   <parent>
     <artifactId>sigval-base-parent</artifactId>
