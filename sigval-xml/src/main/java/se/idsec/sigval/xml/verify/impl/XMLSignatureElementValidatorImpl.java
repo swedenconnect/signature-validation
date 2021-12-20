@@ -16,15 +16,33 @@
 
 package se.idsec.sigval.xml.verify.impl;
 
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
-import lombok.extern.slf4j.Slf4j;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.security.PublicKey;
+import java.security.SignatureException;
+import java.security.cert.CertPathBuilderException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
 import org.apache.xml.security.c14n.Canonicalizer;
 import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xml.security.signature.XMLSignatureException;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+
+import lombok.extern.slf4j.Slf4j;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.signservice.security.certificate.impl.DefaultCertificateValidationResult;
@@ -54,23 +72,8 @@ import se.idsec.sigval.xml.xmlstruct.XAdESObjectParser;
 import se.idsec.sigval.xml.xmlstruct.XMLSigConstants;
 import se.idsec.sigval.xml.xmlstruct.XadesSignatureTimestampData;
 
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.security.PublicKey;
-import java.security.SignatureException;
-import java.security.cert.CertPathBuilderException;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
 /**
- * Validator for validating single signature elements within an XML document
+ * Validator for validating single signature elements within an XML document.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -93,13 +96,15 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
   /**
    * Constructor setting up the validator.
    *
-   * @param certificateValidator certificate validator
-   * @param signaturePolicyValidator signature policy validator
-   * @param timeStampPolicyVerifier timestamp policy validator
+   * @param certificateValidator
+   *          certificate validator
+   * @param signaturePolicyValidator
+   *          signature policy validator
+   * @param timeStampPolicyVerifier
+   *          timestamp policy validator
    */
-  public XMLSignatureElementValidatorImpl(
-    CertificateValidator certificateValidator, XMLSignaturePolicyValidator signaturePolicyValidator,
-    TimeStampPolicyVerifier timeStampPolicyVerifier) {
+  public XMLSignatureElementValidatorImpl(final CertificateValidator certificateValidator,
+      final XMLSignaturePolicyValidator signaturePolicyValidator, final TimeStampPolicyVerifier timeStampPolicyVerifier) {
     this.certificateValidator = certificateValidator;
     this.signaturePolicyValidator = signaturePolicyValidator;
     this.timeStampPolicyVerifier = timeStampPolicyVerifier;
@@ -109,14 +114,19 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
   /**
    * Constructor setting up the validator.
    *
-   * @param certificateValidator certificate validator
-   * @param signaturePolicyValidator signature policy validator
-   * @param timeStampPolicyVerifier timestamp policy validator
-   * @param xmlsvtValidator xml SVT validator
+   * @param certificateValidator
+   *          certificate validator
+   * @param signaturePolicyValidator
+   *          signature policy validator
+   * @param timeStampPolicyVerifier
+   *          timestamp policy validator
+   * @param xmlsvtValidator
+   *          xml SVT validator
    */
-  public XMLSignatureElementValidatorImpl(
-    CertificateValidator certificateValidator, XMLSignaturePolicyValidator signaturePolicyValidator,
-    TimeStampPolicyVerifier timeStampPolicyVerifier, XMLSVTValidator xmlsvtValidator) {
+  public XMLSignatureElementValidatorImpl(final CertificateValidator certificateValidator,
+      final XMLSignaturePolicyValidator signaturePolicyValidator,
+      final TimeStampPolicyVerifier timeStampPolicyVerifier,
+      final XMLSVTValidator xmlsvtValidator) {
     this.certificateValidator = certificateValidator;
     this.signaturePolicyValidator = signaturePolicyValidator;
     this.timeStampPolicyVerifier = timeStampPolicyVerifier;
@@ -126,7 +136,8 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
   /**
    * Validates the signature value and checks that the signer certificate is accepted.
    *
-   * @param signature the signature element
+   * @param signature
+   *          the signature element
    * @return a validation result
    */
   @Override
@@ -136,36 +147,38 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
 
     try {
       // Attempt SVT validation first
-      XMLSigValInput sigValInput = XMLSigValInput.builder()
+      final XMLSigValInput sigValInput = XMLSigValInput.builder()
         .signatureElement(signature)
         .signatureData(signatureData)
         .build();
-      List<SignatureSVTValidationResult> svtValidationResultList = xmlsvtValidator == null ? null : xmlsvtValidator.validate(sigValInput);
-      SignatureSVTValidationResult svtValResult = svtValidationResultList == null || svtValidationResultList.isEmpty() ? null : svtValidationResultList.get(0);
+      final List<SignatureSVTValidationResult> svtValidationResultList =
+          this.xmlsvtValidator == null ? null : this.xmlsvtValidator.validate(sigValInput);
+      final SignatureSVTValidationResult svtValResult =
+          svtValidationResultList == null || svtValidationResultList.isEmpty() ? null : svtValidationResultList.get(0);
 
       if (svtValResult != null) {
-        return compileXMLSigValResultsFromSvtValidation(svtValResult, signature, signatureData);
+        return this.compileXMLSigValResultsFromSvtValidation(svtValResult, signature, signatureData);
       }
 
       // If not SVT validation, then perform normal validation
-      result = validateSignatureElement(signature, signatureData);
+      result = this.validateSignatureElement(signature, signatureData);
 
       // If we have a cert path validator installed, perform path validation...
       //
       if (result.isSuccess() && this.certificateValidator != null) {
         try {
-          CertificateValidationResult validatorResult = this.certificateValidator.validate(result.getSignerCertificate(),
+          final CertificateValidationResult validatorResult = this.certificateValidator.validate(result.getSignerCertificate(),
             result.getSignatureCertificateChain(), null);
           result.setCertificateValidationResult(validatorResult);
         }
-        catch (Exception ex) {
+        catch (final Exception ex) {
           // We only set errors if path building failed (no path available to trust anchor).
           // All other status indications are evaluated by the signature policy evaluator.
           if (ex instanceof ExtendedCertPathValidatorException) {
-            ExtendedCertPathValidatorException extEx = (ExtendedCertPathValidatorException) ex;
+            final ExtendedCertPathValidatorException extEx = (ExtendedCertPathValidatorException) ex;
             result.setCertificateValidationResult(extEx.getPathValidationResult());
-            List<X509Certificate> validatedCertificatePath = extEx.getPathValidationResult().getValidatedCertificatePath();
-            if (validatedCertificatePath == null || validatedCertificatePath.isEmpty()){
+            final List<X509Certificate> validatedCertificatePath = extEx.getPathValidationResult().getValidatedCertificatePath();
+            if (validatedCertificatePath == null || validatedCertificatePath.isEmpty()) {
               log.debug("Failed to build certificates to a trusted path");
               result.setError(SignatureValidationResult.Status.ERROR_NOT_TRUSTED, extEx.getMessage(), ex);
             }
@@ -187,7 +200,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
         }
       }
 
-      XAdESObjectParser xAdESObjectParser = new XAdESObjectParser(signature, signatureData);
+      final XAdESObjectParser xAdESObjectParser = new XAdESObjectParser(signature, signatureData);
       result.setSignedDocument(signatureData.getSignedDocument());
       result.setCoversDocument(signatureData.isCoversWholeDoc());
       result.setEtsiAdes(xAdESObjectParser.getQualifyingProperties() != null);
@@ -202,7 +215,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
 
       // Timestamp validation
       List<TimeStamp> timeStampList = new ArrayList<>();
-      List<XadesSignatureTimestampData> signatureTimeStampDataList = xAdESObjectParser.getSignatureTimeStampDataList();
+      final List<XadesSignatureTimestampData> signatureTimeStampDataList = xAdESObjectParser.getSignatureTimeStampDataList();
       if (signatureTimeStampDataList != null && !signatureTimeStampDataList.isEmpty()) {
 
         timeStampList = signatureTimeStampDataList.stream()
@@ -210,10 +223,10 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
             try {
               return new TimeStamp(
                 tsData.getTimeStampSignatureBytes(),
-                getTimestampedBytes(signature, tsData.getCanonicalizationMethod()),
-                timeStampPolicyVerifier);
+                this.getTimestampedBytes(signature, tsData.getCanonicalizationMethod()),
+                this.timeStampPolicyVerifier);
             }
-            catch (Exception ex) {
+            catch (final Exception ex) {
               return null;
             }
           })
@@ -222,16 +235,16 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
           .collect(Collectors.toList());
       }
 
-      List<TimeValidationResult> timeValidationResultList = timeStampList.stream()
-        .map(timeStamp -> getTimeValidationResult(timeStamp))
+      final List<TimeValidationResult> timeValidationResultList = timeStampList.stream()
+        .map(timeStamp -> this.getTimeValidationResult(timeStamp))
         .filter(timeValidationResult -> timeValidationResult != null)
         .collect(Collectors.toList());
       result.setTimeValidationResults(timeValidationResultList);
 
       // Let the signature policy verifier determine the final result path validation
       // The signature policy verifier may accept a revoked cert if signature is timestamped
-      PolicyValidationResult policyValidationResult = signaturePolicyValidator.validatePolicy(result);
-      PolicyValidationClaims policyValidationClaims = policyValidationResult.getPolicyValidationClaims();
+      final PolicyValidationResult policyValidationResult = this.signaturePolicyValidator.validatePolicy(result);
+      final PolicyValidationClaims policyValidationClaims = policyValidationResult.getPolicyValidationClaims();
       if (!policyValidationClaims.getRes().equals(ValidationConclusion.PASSED)) {
         result.setStatus(policyValidationResult.getStatus());
         result.setStatusMessage(policyValidationClaims.getMsg());
@@ -240,7 +253,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       result.setValidationPolicyResultList(Arrays.asList(policyValidationClaims));
 
     }
-    catch (Exception ex) {
+    catch (final Exception ex) {
       log.error("Failed to parse signature {}", ex.getMessage());
       result.setError(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE, "Failed to parse signature data", ex);
     }
@@ -250,60 +263,72 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
   /**
    * Obtains the bytes that should be time stamped by a signature timestamp for a specific signature.
    *
-   * <p>According to XAdES, the signature timestamp is calculated over the canonicalized SignatureValue element</p>
-   * <p>This means that the element itself with element tags and attributes as well as the Base64 encoded signature value
-   * is timestamped, not only the signature bytes. The Canonicalization algorithm used to canonicalize the element value is
-   * specified by the ds:CanonicalizationMethod element inside the xades:SignatureTimestamp element</p>
+   * <p>
+   * According to XAdES, the signature timestamp is calculated over the canonicalized SignatureValue element
+   * </p>
+   * <p>
+   * This means that the element itself with element tags and attributes as well as the Base64 encoded signature value
+   * is timestamped, not only the signature bytes. The Canonicalization algorithm used to canonicalize the element value
+   * is specified by the ds:CanonicalizationMethod element inside the xades:SignatureTimestamp element
+   * </p>
    *
-   * @param signatureElement       signature element
-   * @param canonicalizationMethod canonicalization algorithm uri
+   * @param signatureElement
+   *          signature element
+   * @param canonicalizationMethod
+   *          canonicalization algorithm uri
    * @return canonical signature value element bytes
    */
-  private byte[] getTimestampedBytes(Element signatureElement, String canonicalizationMethod) {
+  private byte[] getTimestampedBytes(final Element signatureElement, final String canonicalizationMethod) {
     try {
-      Node sigValElement = signatureElement.getElementsByTagNameNS(XMLDSIG_NS, "SignatureValue").item(0);
-      Transformer transformer = TransformerFactory.newInstance().newTransformer();
-      ByteArrayOutputStream os = new ByteArrayOutputStream();
+      final Node sigValElement = signatureElement.getElementsByTagNameNS(XMLDSIG_NS, "SignatureValue").item(0);
+      final Transformer transformer = TransformerFactory.newInstance().newTransformer();
+      final ByteArrayOutputStream os = new ByteArrayOutputStream();
       transformer.transform(new DOMSource(sigValElement), new StreamResult(os));
-      byte[] sigValElementBytes = os.toByteArray();
-      Canonicalizer canonicalizer = Canonicalizer.getInstance(canonicalizationMethod);
-      byte[] canonicalizedSigElement = canonicalizer.canonicalize(sigValElementBytes);
-      return canonicalizedSigElement;
+      final byte[] sigValElementBytes = os.toByteArray();
+      final Canonicalizer canonicalizer = Canonicalizer.getInstance(canonicalizationMethod);
+      try (final ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+        canonicalizer.canonicalize(sigValElementBytes, bos, false);
+        return bos.toByteArray();
+      }
     }
-    catch (Exception ex) {
+    catch (final Exception ex) {
       log.debug("Failed to parse signature value element using time stamp canonicalization algorithm", ex);
       return null;
     }
   }
 
-  @Override public CertificateValidator getCertificateValidator() {
-    return certificateValidator;
+  @Override
+  public CertificateValidator getCertificateValidator() {
+    return this.certificateValidator;
   }
 
   /**
    * Validates the signature value and checks that the signer certificate is accepted.
    *
-   * @param signature the signature element
-   * @param signatureData signature data collected for this signature element
+   * @param signature
+   *          the signature element
+   * @param signatureData
+   *          signature data collected for this signature element
    * @return a validation result
    */
-  public ExtendedXmlSigvalResult validateSignatureElement(final Element signature, SignatureData signatureData) {
+  public ExtendedXmlSigvalResult validateSignatureElement(final Element signature, final SignatureData signatureData) {
 
-    ExtendedXmlSigvalResult result = new ExtendedXmlSigvalResult();
+    final ExtendedXmlSigvalResult result = new ExtendedXmlSigvalResult();
     result.setSignatureElement(signature);
 
     try {
       // Parse the signature element.
-      XMLSignature xmlSignature = new XMLSignature(signature, "");
+      final XMLSignature xmlSignature = new XMLSignature(signature, "");
 
       // Locate the certificate that was used to sign ...
       //
       PublicKey validationKey = null;
-      X509Certificate validationCertificate = signatureData.getSignerCertificate();
-      if (validationCertificate == null){
+      final X509Certificate validationCertificate = signatureData.getSignerCertificate();
+      if (validationCertificate == null) {
         log.warn("No signing certificate found in signature");
         validationKey = xmlSignature.getKeyInfo().getPublicKey();
-      } else {
+      }
+      else {
         result.setSignerCertificate(validationCertificate);
         result.setSignatureCertificateChain(signatureData.getSignatureCertChain());
         validationKey = validationCertificate.getPublicKey();
@@ -345,7 +370,8 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       // Next, make sure that the signer is one of the required ...
       //
       if (result.getSignerCertificate() == null) {
-        // If the KeyInfo did not contain a signer certificate, we fail. This validator does not support signatures with absent certificate
+        // If the KeyInfo did not contain a signer certificate, we fail. This validator does not support signatures with
+        // absent certificate
         final String msg = "No signer certificate provided with signature";
         log.info("Signature validation failed - {}", msg);
         result.setError(SignatureValidationResult.Status.ERROR_SIGNER_NOT_ACCEPTED, msg);
@@ -355,7 +381,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       result.setStatus(SignatureValidationResult.Status.SUCCESS);
       return result;
     }
-    catch (Exception e) {
+    catch (final Exception e) {
       result.setError(SignatureValidationResult.Status.ERROR_BAD_FORMAT, e.getMessage(), e);
       return result;
     }
@@ -364,12 +390,13 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
   /**
    * Add verified timestamps to the signature validation results
    *
-   * @param timeStamp the verification results including result data from time stamps embedded in the signature
+   * @param timeStamp
+   *          the verification results including result data from time stamps embedded in the signature
    */
-  private TimeValidationResult getTimeValidationResult(TimeStamp timeStamp) {
+  private TimeValidationResult getTimeValidationResult(final TimeStamp timeStamp) {
 
     // Loop through direct validation results and add signature timestamp results
-    TimeValidationClaims timeValidationClaims = getVerifiedTimeFromTimeStamp(timeStamp,
+    final TimeValidationClaims timeValidationClaims = this.getVerifiedTimeFromTimeStamp(timeStamp,
       SigValIdentifiers.TIME_VERIFICATION_TYPE_SIG_TIMESTAMP);
     if (timeValidationClaims != null) {
       return new TimeValidationResult(timeValidationClaims, timeStamp.getCertificateValidationResult(), timeStamp);
@@ -379,7 +406,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
 
   private TimeValidationClaims getVerifiedTimeFromTimeStamp(final TimeStamp timeStamp, final String type) {
     try {
-      TimeValidationClaims timeValidationClaims = TimeValidationClaims.builder()
+      final TimeValidationClaims timeValidationClaims = TimeValidationClaims.builder()
         .id(timeStamp.getTstInfo().getSerialNumber().getValue().toString(16))
         .iss(timeStamp.getSigCert().getSubjectX500Principal().toString())
         .time(timeStamp.getTstInfo().getGenTime().getDate().getTime() / 1000)
@@ -388,30 +415,34 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
         .build();
       return timeValidationClaims;
     }
-    catch (Exception ex) {
+    catch (final Exception ex) {
       log.error("Error collecting time validation claims data: {}", ex.getMessage());
       return null;
     }
   }
 
   /**
-   * Use the results obtained from SVT validation to produce general signature validation result as if the signature was validated using
-   * complete validation.
+   * Use the results obtained from SVT validation to produce general signature validation result as if the signature was
+   * validated using complete validation.
    *
-   * @param svtValResult  results from SVT validation
-   * @param signature     the signature being validated
-   * @param signatureData data collected about this signature
+   * @param svtValResult
+   *          results from SVT validation
+   * @param signature
+   *          the signature being validated
+   * @param signatureData
+   *          data collected about this signature
    * @return {@link ExtendedXmlSigvalResult} signature validation results
    */
-  private ExtendedXmlSigvalResult compileXMLSigValResultsFromSvtValidation(SignatureSVTValidationResult svtValResult, Element signature,
-    SignatureData signatureData) {
+  private ExtendedXmlSigvalResult compileXMLSigValResultsFromSvtValidation(final SignatureSVTValidationResult svtValResult,
+      final Element signature,
+      final SignatureData signatureData) {
 
-    ExtendedXmlSigvalResult xmlSvResult = new ExtendedXmlSigvalResult();
+    final ExtendedXmlSigvalResult xmlSvResult = new ExtendedXmlSigvalResult();
     xmlSvResult.setSignatureElement(signature);
 
     try {
-      //XAdES data
-      XAdESObjectParser xAdESObjectParser = new XAdESObjectParser(signature, signatureData);
+      // XAdES data
+      final XAdESObjectParser xAdESObjectParser = new XAdESObjectParser(signature, signatureData);
       xmlSvResult.setSignedDocument(signatureData.getSignedDocument());
       xmlSvResult.setCoversDocument(signatureData.isCoversWholeDoc());
       xmlSvResult.setEtsiAdes(xAdESObjectParser.getQualifyingProperties() != null);
@@ -419,34 +450,38 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       xmlSvResult.setClaimedSigningTime(xAdESObjectParser.getClaimedSigningTime());
       xmlSvResult.setSignedDocument(signatureData.getSignedDocument());
 
-      //Get algorithms and public key type. Note that the source of these values is the SVA signature which is regarded as the algorithm
-      //That is effectively protecting the integrity of the signature, superseding the use of the original algorithms.
-      SignedJWT signedJWT = svtValResult.getSignedJWT();
-      JWSAlgorithm svtJwsAlgo = signedJWT.getHeader().getAlgorithm();
+      // Get algorithms and public key type. Note that the source of these values is the SVA signature which is regarded
+      // as the algorithm
+      // That is effectively protecting the integrity of the signature, superseding the use of the original algorithms.
+      final SignedJWT signedJWT = svtValResult.getSignedJWT();
+      final JWSAlgorithm svtJwsAlgo = signedJWT.getHeader().getAlgorithm();
 
-      String algoUri = JWSAlgorithmRegistry.getUri(svtJwsAlgo);
+      final String algoUri = JWSAlgorithmRegistry.getUri(svtJwsAlgo);
       xmlSvResult.setSignatureAlgorithm(algoUri);
-      PubKeyParams pkParams = GeneralCMSUtils.getPkParams(SVAUtils.getCertificate(svtValResult.getSignerCertificate()).getPublicKey());
+      final PubKeyParams pkParams =
+          GeneralCMSUtils.getPkParams(SVAUtils.getCertificate(svtValResult.getSignerCertificate()).getPublicKey());
       xmlSvResult.setPubKeyParams(pkParams);
 
-      //Set signed SVT JWT
+      // Set signed SVT JWT
       xmlSvResult.setSvtJWT(signedJWT);
 
       /**
-       * Set the signature certs as the result certs and set the validated certs as the validated path in cert validation results
-       * The reason for this is that the SVT issuer must decide whether to just include a hash of the certs in the signature
-       * or to include all explicit certs of the validated path. The certificates in the CertificateValidationResult represents the
-       * validated path. If the validation was done by SVT, then the certificates obtained from SVT validation represents the validated path
+       * Set the signature certs as the result certs and set the validated certs as the validated path in cert
+       * validation results The reason for this is that the SVT issuer must decide whether to just include a hash of the
+       * certs in the signature or to include all explicit certs of the validated path. The certificates in the
+       * CertificateValidationResult represents the validated path. If the validation was done by SVT, then the
+       * certificates obtained from SVT validation represents the validated path
        */
       // Get the signature certificates
       xmlSvResult.setSignerCertificate(signatureData.getSignerCertificate());
       xmlSvResult.setSignatureCertificateChain(signatureData.getSignatureCertChain());
       // Store the svt validated certificates as path of certificate validation results
-      CertificateValidationResult cvr = new DefaultCertificateValidationResult(SVAUtils.getOrderedCertList(svtValResult.getSignerCertificate(), svtValResult.getCertificateChain()));
+      final CertificateValidationResult cvr = new DefaultCertificateValidationResult(
+        SVAUtils.getOrderedCertList(svtValResult.getSignerCertificate(), svtValResult.getCertificateChain()));
       xmlSvResult.setCertificateValidationResult(cvr);
 
       // Finalize
-      SignatureClaims signatureClaims = svtValResult.getSignatureClaims();
+      final SignatureClaims signatureClaims = svtValResult.getSignatureClaims();
       if (svtValResult.isSvtValidationSuccess()) {
         xmlSvResult.setStatus(SignatureValidationResult.Status.SUCCESS);
       }
@@ -457,10 +492,10 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       xmlSvResult.setSignatureClaims(signatureClaims);
       xmlSvResult.setValidationPolicyResultList(signatureClaims.getSig_val());
 
-      //Add SVT timestamp that was used to perform this SVT validation to verified times
-      //This ensures that this time stamp gets added when SVT issuance is based on a previous SVT.
-      JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
-      List<TimeValidationClaims> timeValidationClaimsList = signatureClaims.getTime_val();
+      // Add SVT timestamp that was used to perform this SVT validation to verified times
+      // This ensures that this time stamp gets added when SVT issuance is based on a previous SVT.
+      final JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
+      final List<TimeValidationClaims> timeValidationClaimsList = signatureClaims.getTime_val();
       timeValidationClaimsList.add(TimeValidationClaims.builder()
         .iss(jwtClaimsSet.getIssuer())
         .time(jwtClaimsSet.getIssueTime().getTime() / 1000)
@@ -474,10 +509,10 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       xmlSvResult.setTimeValidationResults(timeValidationClaimsList.stream()
         .map(timeValidationClaims -> new TimeValidationResult(
           timeValidationClaims, null, null))
-        .collect(Collectors.toList())
-      );
+        .collect(Collectors.toList()));
 
-    } catch (Exception ex) {
+    }
+    catch (final Exception ex) {
       xmlSvResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
       xmlSvResult.setStatusMessage("Unable to process SVA token or signature data");
       return xmlSvResult;

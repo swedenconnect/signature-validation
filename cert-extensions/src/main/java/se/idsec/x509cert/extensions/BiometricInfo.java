@@ -32,123 +32,138 @@ import org.bouncycastle.util.encoders.Hex;
 import lombok.Getter;
 
 /**
- * BiometricInfo X.509 extension implementation for extending Bouncycastle
+ * BiometricInfo X.509 extension implementation for extending Bouncycastle.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
 public class BiometricInfo extends ASN1Object {
 
-    public static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.1.2");
-    @Getter private List<BiometricData> biometricDataList = new ArrayList<>();
+  public static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.1.2");
 
-    /**
-     * Creates BiometricInfo extension object
-     * @param obj object holding extension data
-     * @return BiometricInfo extension
-     */
-    public static BiometricInfo getInstance(Object obj) {
-        if (obj instanceof BiometricInfo) {
-            return (BiometricInfo) obj;
-        }
-        if (obj != null) {
-            return new BiometricInfo(ASN1Sequence.getInstance(obj));
-        }
-        return null;
-    }
+  @Getter
+  private List<BiometricData> biometricDataList = new ArrayList<>();
 
-    /**
-     * Creates BiometricInfo extension object
-     * @param extensions BiometricInfo extension
-     * @return BiometricInfo extension
-     */
-    public static BiometricInfo fromExtensions(Extensions extensions) {
-        return BiometricInfo.getInstance(extensions.getExtensionParsedValue(OID));
+  /**
+   * Creates BiometricInfo extension object
+   *
+   * @param obj
+   *          object holding extension data
+   * @return BiometricInfo extension
+   */
+  public static BiometricInfo getInstance(final Object obj) {
+    if (obj instanceof BiometricInfo) {
+      return (BiometricInfo) obj;
     }
+    if (obj != null) {
+      return new BiometricInfo(ASN1Sequence.getInstance(obj));
+    }
+    return null;
+  }
 
-    /**
-     * Internal Constructor
-     *
-     * Parse the content of ASN1 sequence to populate set values
-     *
-     * @param seq
-     */
-    private BiometricInfo(ASN1Sequence seq) {
-        this.biometricDataList = new ArrayList<>();
-        try {
-            for (int i = 0; i < seq.size(); i++) {
-                BiometricData biometricData = BiometricData.getInstance(seq.getObjectAt(i));
-                biometricDataList.add(biometricData);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Bad extension content");
-        }
-    }
+  /**
+   * Creates BiometricInfo extension object
+   *
+   * @param extensions
+   *          BiometricInfo extension
+   * @return BiometricInfo extension
+   */
+  public static BiometricInfo fromExtensions(final Extensions extensions) {
+    return BiometricInfo.getInstance(extensions.getExtensionParsedValue(OID));
+  }
 
-    /**
-     * Constructor
-     *
-     * @param biometricDataList List of biometric data
-     */
-    public BiometricInfo(List<BiometricData> biometricDataList) {
-        this.biometricDataList = biometricDataList;
+  /**
+   * Internal Constructor
+   *
+   * Parse the content of ASN1 sequence to populate set values
+   *
+   * @param seq
+   */
+  private BiometricInfo(final ASN1Sequence seq) {
+    this.biometricDataList = new ArrayList<>();
+    try {
+      for (int i = 0; i < seq.size(); i++) {
+        final BiometricData biometricData = BiometricData.getInstance(seq.getObjectAt(i));
+        this.biometricDataList.add(biometricData);
+      }
     }
+    catch (final Exception e) {
+      throw new IllegalArgumentException("Bad extension content");
+    }
+  }
 
-    /**
-     * Produce an object suitable for an ASN1OutputStream.
-     * <pre>
-     * AuthenticationContexts ::= SEQUENCE SIZE (1..MAX) OF
-     *                            AuthenticationContext
-     *
-     * AuthenticationContext ::= SEQUENCE {
-     *     contextType     UTF8String,
-     *     contextInfo     UTF8String OPTIONAL
-     * }
-     * </pre>
-     *
-     * @return ASN.1 object of the extension
-     */
-    @Override
-    public ASN1Primitive toASN1Primitive() {
-        ASN1EncodableVector biometricInfo = new ASN1EncodableVector();
-        for (BiometricData bd: biometricDataList){
-            biometricInfo.add(bd.toASN1Primitive());
-        }
-        return new DERSequence(biometricInfo);
-    }
+  /**
+   * Constructor
+   *
+   * @param biometricDataList
+   *          List of biometric data
+   */
+  public BiometricInfo(final List<BiometricData> biometricDataList) {
+    this.biometricDataList = biometricDataList;
+  }
 
-    /** {@inheritDoc} */
-    @Override
-    public String toString() {
-        StringBuilder b = new StringBuilder();
-        b.append("Biometric Data:\n");
-        for (BiometricData biometricData : biometricDataList) {
-            b.append("    Data Type: ").append(getTypeString(biometricData.getTypeOfBiometricData())).append("\n");
-            b.append("    Hash algorithm: ").append(biometricData.getHashAlgorithm().getAlgorithm().getId()).append("\n");
-            b.append("    Biometric hash: ").append(Hex.toHexString(biometricData.getBiometricDataHash().getOctets())).append("\n");
-            if (biometricData.getSourceDataUri()!=null){
-                b.append("    Source URI: ").append(biometricData.getSourceDataUri().getString()).append("\n");
-            }
-        }
-        return b.toString();
+  /**
+   * Produce an object suitable for an ASN1OutputStream.
+   *
+   * <pre>
+   * AuthenticationContexts ::= SEQUENCE SIZE (1..MAX) OF
+   *                            AuthenticationContext
+   *
+   * AuthenticationContext ::= SEQUENCE {
+   *     contextType     UTF8String,
+   *     contextInfo     UTF8String OPTIONAL
+   * }
+   * </pre>
+   *
+   * @return ASN.1 object of the extension
+   */
+  @Override
+  public ASN1Primitive toASN1Primitive() {
+    final ASN1EncodableVector biometricInfo = new ASN1EncodableVector();
+    for (final BiometricData bd : this.biometricDataList) {
+      biometricInfo.add(bd.toASN1Primitive());
     }
+    return new DERSequence(biometricInfo);
+  }
 
-    /**
-     * Get a string representing the type of biometric data
-     * @param typeOfBiometricData type of biomentric data
-     * @return presentation string representing type
-     */
-    public static String getTypeString(TypeOfBiometricData typeOfBiometricData){
-        if (typeOfBiometricData.isPredefined()){
-            switch (typeOfBiometricData.getPredefinedBiometricType()){
-            case 0:
-                return "Picture";
-            case 1:
-                return "Handwritten signature";
-            default:
-                 return String.valueOf(typeOfBiometricData.getPredefinedBiometricType());
-            }
-        }
-        return typeOfBiometricData.getBiometricDataOid().getId();
+  /** {@inheritDoc} */
+  @Override
+  public String toString() {
+    final StringBuilder b = new StringBuilder();
+    b.append("Biometric Data:").append(System.lineSeparator());
+    for (final BiometricData biometricData : this.biometricDataList) {
+      b.append("    Data Type: ")
+        .append(getTypeString(biometricData.getTypeOfBiometricData())).append(System.lineSeparator());
+      b.append("    Hash algorithm: ")
+        .append(biometricData.getHashAlgorithm().getAlgorithm().getId()).append(System.lineSeparator());
+      b.append("    Biometric hash: ")
+        .append(Hex.toHexString(biometricData.getBiometricDataHash().getOctets())).append(System.lineSeparator());
+      if (biometricData.getSourceDataUriIA5() != null) {
+        b.append("    Source URI: ")
+          .append(biometricData.getSourceDataUriIA5().getString()).append(System.lineSeparator());
+      }
     }
+    return b.toString();
+  }
+
+  /**
+   * Get a string representing the type of biometric data
+   *
+   * @param typeOfBiometricData
+   *          type of biomentric data
+   * @return presentation string representing type
+   */
+  public static String getTypeString(final TypeOfBiometricData typeOfBiometricData) {
+    if (typeOfBiometricData.isPredefined()) {
+      switch (typeOfBiometricData.getPredefinedBiometricType()) {
+      case 0:
+        return "Picture";
+      case 1:
+        return "Handwritten signature";
+      default:
+        return String.valueOf(typeOfBiometricData.getPredefinedBiometricType());
+      }
+    }
+    return typeOfBiometricData.getBiometricDataOid().getId();
+  }
 }
