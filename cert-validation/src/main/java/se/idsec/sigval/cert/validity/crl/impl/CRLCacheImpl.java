@@ -16,30 +16,11 @@
 
 package se.idsec.sigval.cert.validity.crl.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.bouncycastle.asn1.DERIA5String;
-import org.bouncycastle.asn1.x509.*;
-import se.idsec.sigval.cert.validity.crl.CRLCache;
-import se.idsec.sigval.cert.validity.crl.CRLCacheData;
-import se.idsec.sigval.cert.validity.crl.CRLCacheRecord;
-import se.idsec.sigval.cert.validity.crl.CRLInfo;
-
-import javax.naming.Context;
-import javax.naming.NamingException;
-import javax.naming.directory.Attribute;
-import javax.naming.directory.Attributes;
-import javax.naming.directory.DirContext;
-import javax.naming.directory.InitialDirContext;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -47,8 +28,38 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509CRL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
+
+import javax.naming.Context;
+import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.DirContext;
+import javax.naming.directory.InitialDirContext;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.bouncycastle.asn1.DERIA5String;
+import org.bouncycastle.asn1.x509.CRLDistPoint;
+import org.bouncycastle.asn1.x509.DistributionPoint;
+import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.GeneralNames;
+import org.bouncycastle.asn1.x509.ReasonFlags;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import se.idsec.sigval.cert.validity.crl.CRLCache;
+import se.idsec.sigval.cert.validity.crl.CRLCacheData;
+import se.idsec.sigval.cert.validity.crl.CRLCacheRecord;
+import se.idsec.sigval.cert.validity.crl.CRLInfo;
 
 /**
  * CRL cache implementation. Two main functions allows retrieval of a CRL from this cache which adds the CRL to the cache if not present,

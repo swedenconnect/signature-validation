@@ -15,12 +15,6 @@
  */
 package se.idsec.sigval.cert.chain;
 
-import lombok.Setter;
-import se.idsec.signservice.security.certificate.CertificateValidationResult;
-import se.idsec.sigval.cert.chain.impl.CertificatePathValidatorFactory;
-import se.idsec.sigval.cert.chain.impl.CertificateValidityCheckerFactory;
-import se.idsec.sigval.cert.validity.crl.CRLCache;
-
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.security.cert.CertPathValidatorException;
@@ -29,6 +23,11 @@ import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.List;
+
+import lombok.Setter;
+import se.idsec.signservice.security.certificate.CertificateValidationResult;
+import se.idsec.sigval.cert.chain.impl.CertificateValidityCheckerFactory;
+import se.idsec.sigval.cert.validity.crl.CRLCache;
 
 /**
  * Abstract class for implementations of a certificate chain validator

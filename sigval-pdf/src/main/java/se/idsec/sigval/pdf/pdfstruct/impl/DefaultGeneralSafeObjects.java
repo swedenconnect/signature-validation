@@ -16,76 +16,91 @@
 
 package se.idsec.sigval.pdf.pdfstruct.impl;
 
-import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.pdfbox.cos.*;
-import se.idsec.sigval.pdf.pdfstruct.*;
-
 import java.util.Arrays;
 import java.util.List;
+
+import org.apache.pdfbox.cos.COSBase;
+import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSObject;
+
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import se.idsec.sigval.pdf.pdfstruct.Dictionary;
+import se.idsec.sigval.pdf.pdfstruct.GeneralSafeObjects;
+import se.idsec.sigval.pdf.pdfstruct.ObjectValue;
+import se.idsec.sigval.pdf.pdfstruct.ObjectValueType;
+import se.idsec.sigval.pdf.pdfstruct.PDFDocRevision;
 
 @Slf4j
 @NoArgsConstructor
 public class DefaultGeneralSafeObjects implements GeneralSafeObjects {
 
   /** {@inheritDoc} */
-  @Override public void addGeneralSafeObjects(PDFDocRevision revData) {
+  @Override
+  public void addGeneralSafeObjects(final PDFDocRevision revData) {
 
-    //TODO get safe objects
-    List<Long> safeObjects = revData.getSafeObjects();
+    // TODO get safe objects
+    final List<Long> safeObjects = revData.getSafeObjects();
 
     /*
-    First we will look into the root dictionary and locate a DSS, Metadata or Extensions object
-    We will then add the object ID to these objects as safe objects
-    Further, we will add all objects inside the DSS object as safe objects.
+     * First we will look into the root dictionary and locate a DSS, Metadata or Extensions object We will then add the
+     * object ID to these objects as safe objects Further, we will add all objects inside the DSS object as safe
+     * objects.
      */
-    COSBase baseObject = revData.getRootObject().getObject();
+    final COSBase baseObject = revData.getRootObject().getObject();
     if (baseObject instanceof COSDictionary) {
-      COSDictionary rootDic = (COSDictionary) baseObject;
-      addSafeOjects(rootDic, safeObjects, Arrays.asList("DSS", "Extensions", "Metadata"));
-      if (rootDic.containsKey("DSS")){
+      final COSDictionary rootDic = (COSDictionary) baseObject;
+      this.addSafeOjects(rootDic, safeObjects, Arrays.asList("DSS", "Extensions", "Metadata"));
+      if (rootDic.containsKey("DSS")) {
         try {
-          COSObject dss = (COSObject)rootDic.getItem("DSS");
-          Dictionary dssDict = new Dictionary((COSDictionary) dss.getObject());
+          final COSObject dss = (COSObject) rootDic.getItem("DSS");
+          final Dictionary dssDict = new Dictionary((COSDictionary) dss.getObject());
           dssDict.getValueMap().forEach((cosName, objectValue) -> {
-            if (objectValue.getType().equals(ObjectValueType.COSObject)){
-              safeObjects.add((long)objectValue.getValue());
+            if (objectValue.getType().equals(ObjectValueType.COSObject)) {
+              safeObjects.add((long) objectValue.getValue());
             }
           });
-        } catch (Exception ex) {
+        }
+        catch (final Exception ex) {
           log.debug("Error parsing DSS object in PDF revision");
         }
       }
 
       rootDic.entrySet().stream().forEach(cosNameCOSBaseEntry -> {
-        COSBase value = cosNameCOSBaseEntry.getValue();
-        COSName key = cosNameCOSBaseEntry.getKey();
+        final COSBase value = cosNameCOSBaseEntry.getValue();
+        final COSName key = cosNameCOSBaseEntry.getKey();
       });
     }
 
     // Finally, add the /Info object in the trailer as safe object
     try {
-      Dictionary trailer = new Dictionary(revData.getTrailer());
-      ObjectValue infoObj = trailer.getValueByName(COSName.INFO.getName());
+      final Dictionary trailer = new Dictionary(revData.getTrailer());
+      final ObjectValue infoObj = trailer.getValueByName(COSName.INFO.getName());
       if (infoObj != null && infoObj.getType().equals(ObjectValueType.COSObject)) {
-        safeObjects.add((long)infoObj.getValue());
+        safeObjects.add((long) infoObj.getValue());
       }
-    } catch (Exception ex) {
+    }
+    catch (final Exception ex) {
       log.debug("Error parsing INFO object in the PDF trailer");
     }
   }
 
   /**
    * Adds the object ID values of present objects to the list of safe objects
-   * @param rootDic the root dictionary
-   * @param safeObjects the list of safe objects id:s to be amended
-   * @param objNames the names of objects to be added to the list
+   *
+   * @param rootDic
+   *          the root dictionary
+   * @param safeObjects
+   *          the list of safe objects id:s to be amended
+   * @param objNames
+   *          the names of objects to be added to the list
    */
-  private void addSafeOjects(COSDictionary rootDic, List<Long> safeObjects, List<String> objNames) {
+  private void addSafeOjects(final COSDictionary rootDic, final List<Long> safeObjects, final List<String> objNames) {
     objNames.stream()
       .filter(s -> rootDic.containsKey(s))
       .map(s -> new ObjectValue(rootDic.getItem(s)))
       .filter(objectValue -> objectValue.getType().equals(ObjectValueType.COSObject))
-      .forEach(objectValue -> safeObjects.add((long)objectValue.getValue()));
+      .forEach(objectValue -> safeObjects.add((long) objectValue.getValue()));
   }
 }

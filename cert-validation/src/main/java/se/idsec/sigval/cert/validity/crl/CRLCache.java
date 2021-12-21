@@ -19,7 +19,6 @@ package se.idsec.sigval.cert.validity.crl;
 import java.io.IOException;
 
 import org.bouncycastle.asn1.x509.CRLDistPoint;
-import se.idsec.sigval.cert.validity.crl.impl.CRLDataLoader;
 
 /**
  * CRL Cache interface

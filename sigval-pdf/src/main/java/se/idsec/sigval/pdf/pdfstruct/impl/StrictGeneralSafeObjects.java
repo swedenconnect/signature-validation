@@ -17,21 +17,14 @@
 package se.idsec.sigval.pdf.pdfstruct.impl;
 
 import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.pdfbox.cos.COSBase;
-import org.apache.pdfbox.cos.COSDictionary;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.cos.COSObject;
-import se.idsec.sigval.pdf.pdfstruct.*;
+import se.idsec.sigval.pdf.pdfstruct.GeneralSafeObjects;
+import se.idsec.sigval.pdf.pdfstruct.PDFDocRevision;
 
-import java.util.Arrays;
-import java.util.List;
-
-@Slf4j
 @NoArgsConstructor
 public class StrictGeneralSafeObjects implements GeneralSafeObjects {
 
-  @Override public void addGeneralSafeObjects(PDFDocRevision revData) {
+  @Override
+  public void addGeneralSafeObjects(PDFDocRevision revData) {
     // Adding no safe objects
   }
 
