@@ -1,0 +1,44 @@
+/*
+ * Copyright (c) 2020. IDsec Solutions AB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package se.swedenconnect.sigval.pdf.pdfstruct.impl;
+
+import lombok.Setter;
+import se.swedenconnect.sigval.pdf.pdfstruct.GeneralSafeObjects;
+import se.swedenconnect.sigval.pdf.pdfstruct.PDFSignatureContext;
+import se.swedenconnect.sigval.pdf.pdfstruct.PDFSignatureContextFactory;
+
+import java.io.IOException;
+
+/**
+ * Default implementation of the {@link PDFSignatureContextFactory} providing a base PDF signature context for
+ * signed PDF documents to determine whether updates to a PDF document after it was signed can be considered safe
+ * with respect to visual content.
+ *
+ * @author Martin Lindström (martin@idsec.se)
+ * @author Stefan Santesson (stefan@idsec.se)
+ */
+public class DefaultPDFSignatureContextFactory implements PDFSignatureContextFactory {
+
+  @Setter private boolean strict;
+
+  /** {@inheritDoc} */
+  @Override public PDFSignatureContext getPdfSignatureContext(byte[] pdfDocument) throws IOException {
+    GeneralSafeObjects safeObjectProvider = strict ? new StrictGeneralSafeObjects() : new DefaultGeneralSafeObjects();
+    DefaultPDFSignatureContext pdfSignatureContext = new DefaultPDFSignatureContext(pdfDocument, safeObjectProvider);
+    return pdfSignatureContext;
+  }
+}

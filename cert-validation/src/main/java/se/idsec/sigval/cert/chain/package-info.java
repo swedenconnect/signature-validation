@@ -1,1 +1,0 @@
-package se.idsec.sigval.cert.chain;
