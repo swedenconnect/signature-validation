@@ -1,8 +1,8 @@
-se.idsec.sigval.cert.chain
-se.idsec.sigval.cert.chain.impl
-se.idsec.sigval.cert.utils
-se.idsec.sigval.cert.validity
-se.idsec.sigval.cert.validity.crl
-se.idsec.sigval.cert.validity.crl.impl
-se.idsec.sigval.cert.validity.impl
-se.idsec.sigval.cert.validity.ocsp
+se.swedenconnect.sigval.cert.chain
+se.swedenconnect.sigval.cert.chain.impl
+se.swedenconnect.sigval.cert.utils
+se.swedenconnect.sigval.cert.validity
+se.swedenconnect.sigval.cert.validity.crl
+se.swedenconnect.sigval.cert.validity.crl.impl
+se.swedenconnect.sigval.cert.validity.impl
+se.swedenconnect.sigval.cert.validity.ocsp
