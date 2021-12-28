@@ -34,7 +34,7 @@ The signature validation modules builds upon the SignService Commons library ava
 
 ##### API documentation
 
-Java API documentation for [se.swedenconnect.sigval:cert-extensions](https://docs.swedenconnect.se/signature-validation/javadoc/cert-extensions/).
+Java API documentation for [se.swedenconnect.sigval:cert-extensions](https://docs.swedenconnect.se/signature-validation/javadoc/cert-extensions/index.html?overview-summary.html).
 
 ## cert-validation module
 
@@ -52,7 +52,7 @@ Java API documentation for [se.swedenconnect.sigval:cert-extensions](https://doc
 
 #### API documentation
 
-Java API documentation for [se.swedenconnect.sigval:cert-validation](https://docs.swedenconnect.se/signature-validation/javadoc/cert-validation/).
+Java API documentation for [se.swedenconnect.sigval:cert-validation](https://docs.swedenconnect.se/signature-validation/javadoc/cert-validation/index.html?overview-summary.html).
 
 ### Usage
 
@@ -105,7 +105,7 @@ The `crlCache` is a `CRLCache` object according the example above. The `certStor
 
 ##### API documentation
 
-Java API documentation for [se.swedenconnect.sigval:sigval-commons](https://docs.swedenconnect.se/signature-validation/javadoc/sigval-commons/).
+Java API documentation for [se.swedenconnect.sigval:sigval-commons](https://docs.swedenconnect.se/signature-validation/javadoc/sigval-commons/index.html?overview-summary.html).
 
 ## sigval-pdf module
 
@@ -124,7 +124,7 @@ Java API documentation for [se.swedenconnect.sigval:sigval-commons](https://docs
 
 ##### API documentation
 
-Java API documentation for [se.swedenconnect.sigval:sigval-pdf](https://docs.swedenconnect.se/signature-validation/javadoc/sigval-pdf/).
+Java API documentation for [se.swedenconnect.sigval:sigval-pdf](https://docs.swedenconnect.se/signature-validation/javadoc/sigval-pdf/index.html?overview-summary.html).
 
 ### Usage
 
@@ -228,7 +228,7 @@ byte[] extendPDFwithSVT(
 
 ##### API documentation
 
-Java API documentation for [se.swedenconnect.sigval:sigval-xml](https://docs.swedenconnect.se/signature-validation/javadoc/sigval-xml/index.html).
+Java API documentation for [se.swedenconnect.sigval:sigval-xml](https://docs.swedenconnect.se/signature-validation/javadoc/sigval-xml/index.html?overview-summary.html).
 
 
 ### Usage
