@@ -1,8 +1,8 @@
-se.idsec.sigval.commons.algorithms
-se.idsec.sigval.commons.data
-se.idsec.sigval.commons.document
-se.idsec.sigval.commons.report
-se.idsec.sigval.commons.svt
-se.idsec.sigval.commons.timestamp
-se.idsec.sigval.commons.timestamp.impl
-se.idsec.sigval.commons.utils
+se.swedenconnect.sigval.commons.algorithms
+se.swedenconnect.sigval.commons.data
+se.swedenconnect.sigval.commons.document
+se.swedenconnect.sigval.commons.report
+se.swedenconnect.sigval.commons.svt
+se.swedenconnect.sigval.commons.timestamp
+se.swedenconnect.sigval.commons.timestamp.impl
+se.swedenconnect.sigval.commons.utils

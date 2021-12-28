@@ -10,7 +10,7 @@
   <parent>
     <artifactId>sigval-parent</artifactId>
     <groupId>se.swedenconnect.sigval</groupId>
-    <version>1.1.0-SNAPSHOT</version>
+    <version>1.1.0</version>
   </parent>
 
   <name>Sweden Connect :: Signature validation :: PDF</name>
