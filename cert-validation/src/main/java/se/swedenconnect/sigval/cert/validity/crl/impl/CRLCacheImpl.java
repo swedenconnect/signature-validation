@@ -60,6 +60,7 @@ import se.swedenconnect.sigval.cert.validity.crl.CRLCache;
 import se.swedenconnect.sigval.cert.validity.crl.CRLCacheData;
 import se.swedenconnect.sigval.cert.validity.crl.CRLCacheRecord;
 import se.swedenconnect.sigval.cert.validity.crl.CRLInfo;
+import se.swedenconnect.sigval.cert.validity.http.DefaultRevocationDataConnector;
 
 /**
  * CRL cache implementation. Two main functions allows retrieval of a CRL from this cache which adds the CRL to the cache if not present,
@@ -69,7 +70,7 @@ import se.swedenconnect.sigval.cert.validity.crl.CRLInfo;
  * @author Stefan Santesson (stefan@idsec.se)
  */
 @Slf4j
-public class CRLCacheImpl implements CRLCache, CRLDataLoader {
+public class CRLCacheImpl implements CRLCache {
 
   private static final ObjectMapper jsonMapper = new ObjectMapper();
   private static final String CACHE_DATA_FILE = "crlCache.json";
@@ -131,7 +132,7 @@ public class CRLCacheImpl implements CRLCache, CRLDataLoader {
     if (!tempDir.exists()) {
       tempDir.mkdirs();
     }
-    this.crlDataLoader = (crlDataLoader == null) ? this : crlDataLoader;
+    this.crlDataLoader = (crlDataLoader == null) ? new DefaultRevocationDataConnector() : crlDataLoader;
     recache();
   }
 
@@ -400,28 +401,6 @@ public class CRLCacheImpl implements CRLCache, CRLDataLoader {
     MessageDigest digest = MessageDigest.getInstance("SHA-1");
     return new BigInteger(1, digest.digest(url.getBytes(StandardCharsets.UTF_8))).toString(32) + ".crl";
 
-  }
-
-  /** {@inheritDoc} */
-  @Override
-  public byte[] downloadCrl(String urlStr, int connectTimeout, int readTimeout) throws IOException {
-    if (urlStr.toLowerCase().startsWith("http")) {
-      URL url = new URL(urlStr);
-      URLConnection connection = url.openConnection();
-      connection.setConnectTimeout(connectTimeout);
-      connection.setReadTimeout(readTimeout);
-      connection.setDefaultUseCaches(true);
-      return IOUtils.toByteArray(connection);
-    }
-    if (urlStr.toLowerCase().startsWith("ldap")) {
-      try {
-        return downloadCRLFromLDAP(urlStr);
-      }
-      catch (NamingException e) {
-        throw new IOException("Failed to download LDAP CRL", e);
-      }
-    }
-    throw new IOException("Illegal URL for CRL downloads");
   }
 
   /**
