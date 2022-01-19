@@ -22,6 +22,7 @@ import java.util.Map;
 @NoArgsConstructor
 public class DefaultRevocationDataConnector extends GenericHttpConnector implements CRLDataLoader, OCSPDataLoader {
 
+  /** Map holding the standard OCSP HTTP request properties */
   private static final Map<String, String> ocspProperties;
 
   static {
@@ -30,11 +31,13 @@ public class DefaultRevocationDataConnector extends GenericHttpConnector impleme
     ocspProperties.put("Accept", "application/ocsp-response");
   }
 
+  /** {@inheritDoc} */
   @Override public byte[] downloadCrl(String url, int connectTimeout, int readTimeout) throws IOException {
     final HttpResponse httpResponse = getResource(new URL(url), connectTimeout, readTimeout);
     return httpResponse.getData();
   }
 
+  /** {@inheritDoc} */
   @Override public OCSPResp requestOCSPResponse(String url, OCSPReq ocspReq, int connectTimeout, int readTimeout) throws IOException {
     final HttpResponse response = getResource(new URL(url), connectTimeout, readTimeout, ocspReq.getEncoded(), ocspProperties);
     return new OCSPResp(response.getData());

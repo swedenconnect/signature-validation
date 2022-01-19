@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Description
+ * Generic implementation of HTTP GET and POST to support download of revocation data
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -30,9 +30,26 @@ import java.util.Map;
 @NoArgsConstructor
 public class GenericHttpConnector {
 
+  /**
+   * Get resource from URL using HTTP GET
+   * @param requestUrl url for the resource
+   * @param connectTimeout milliseconds allowed to establish an HTTP connection with the resource
+   * @param readTimeout milliseconds allowed to download the resource data
+   * @return response data
+   */
   public HttpResponse getResource(URL requestUrl, int connectTimeout, int readTimeout){
     return getResource(requestUrl, connectTimeout, readTimeout, null, null);
   }
+
+  /**
+   * Get resrouce from URL using either GET or POST. POST is automatically selected if some data to be posted is included as an argument
+   * @param requestUrl url for the resource
+   * @param connectTimeout milliseconds allowed to establish an HTTP connection with the resource
+   * @param readTimeout milliseconds allowed to download the resource data
+   * @param data data to be posted or null to select HTTP GET
+   * @param propertyMap map of HTTP connect properties to add to the HTTP connection. The map key is the property name and the map value is the property value
+   * @return response data
+   */
   public HttpResponse getResource(URL requestUrl, int connectTimeout, int readTimeout, byte[] data, Map<String, String> propertyMap){
     try {
       String method = data == null ? "GET" : "POST";
@@ -96,12 +113,21 @@ public class GenericHttpConnector {
     }
   }
 
+  /**
+   * Provide an SSL context that allows any TLS certificate issuer. No specific trust in the TLS certificate is required as all revocation data is signed
+   * @return {@link SSLContext}
+   * @throws NoSuchAlgorithmException algorithm is not supported
+   * @throws KeyManagementException error handling keys
+   */
   private SSLContext getSSLContext() throws NoSuchAlgorithmException, KeyManagementException {
     final SSLContext sslContext = SSLContext.getInstance("SSL");
     sslContext.init(null, new TrustManager[]{new TrustAllTrustManager()}, new SecureRandom());
     return sslContext;
   }
 
+  /**
+   * Trust manager trusting all certificates
+   */
   @NoArgsConstructor
   public static class TrustAllTrustManager implements X509TrustManager {
     @Override public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
