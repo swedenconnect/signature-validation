@@ -25,10 +25,10 @@ public interface OCSPDataLoader {
 
   /**
    * Get an OCSP response from the
-   * @param url
-   * @param ocspReq
-   * @return
-   * @throws IOException
+   * @param url OCSP request URL
+   * @param ocspReq OCSP request to send to the OCSP responder
+   * @return OCSP Response
+   * @throws IOException Error sending or receiving data
    */
   OCSPResp requestOCSPResponse(String url, OCSPReq ocspReq, int connectTimeout, int readTimeout) throws IOException;
 }

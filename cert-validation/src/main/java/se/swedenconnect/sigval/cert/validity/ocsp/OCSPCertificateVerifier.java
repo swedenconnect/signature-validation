@@ -35,6 +35,7 @@ import org.bouncycastle.operator.DigestCalculator;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
+import se.swedenconnect.sigval.cert.validity.http.DefaultRevocationDataConnector;
 
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
@@ -57,7 +58,7 @@ import java.util.Random;
  * @author Stefan Santesson (stefan@idsec.se)
  */
 @Slf4j
-public class OCSPCertificateVerifier extends AbstractValidityChecker implements OCSPDataLoader {
+public class OCSPCertificateVerifier extends AbstractValidityChecker {
 
   /** Event identifier used to identify this process */
   public static final String EVENT_ID = "ocsp-validity";
@@ -87,7 +88,7 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker implements 
   public OCSPCertificateVerifier(X509Certificate certificate, X509Certificate issuer,
     PropertyChangeListener... propertyChangeListeners) {
     super(certificate, issuer, EVENT_ID, propertyChangeListeners);
-    this.ocspDataLoader = this;
+    this.ocspDataLoader = new DefaultRevocationDataConnector();
   }
 
   /** {@inheritDoc} */
@@ -280,43 +281,6 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker implements 
     ocspReqGenerator.addRequest(certificateId);
     ocspReqGenerator.setRequestExtensions(extensions);
     return ocspReqGenerator.build();
-  }
-
-  @Override
-  public OCSPResp requestOCSPResponse(String url, OCSPReq ocspReq, int connectTimeout, int readTimeout) throws IOException {
-    byte[] ocspReqData = ocspReq.getEncoded();
-
-    HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
-    try {
-      con.setRequestProperty("Content-Type", "application/ocsp-request");
-      con.setRequestProperty("Accept", "application/ocsp-response");
-      con.setConnectTimeout(connectTimeout);
-      con.setReadTimeout(readTimeout);
-
-      con.setDoInput(true);
-      con.setDoOutput(true);
-      con.setUseCaches(false);
-
-      OutputStream out = con.getOutputStream();
-      try {
-        IOUtils.write(ocspReqData, out);
-        out.flush();
-      }
-      finally {
-        IOUtils.close(out);
-      }
-
-      byte[] responseBytes = IOUtils.toByteArray(con);
-
-      OCSPResp ocspResp = new OCSPResp(responseBytes);
-
-      return ocspResp;
-    }
-    finally {
-      if (con != null) {
-        con.disconnect();
-      }
-    }
   }
 
 }
