@@ -4,5 +4,6 @@ se.swedenconnect.sigval.cert.utils
 se.swedenconnect.sigval.cert.validity
 se.swedenconnect.sigval.cert.validity.crl
 se.swedenconnect.sigval.cert.validity.crl.impl
+se.swedenconnect.sigval.cert.validity.http
 se.swedenconnect.sigval.cert.validity.impl
 se.swedenconnect.sigval.cert.validity.ocsp
