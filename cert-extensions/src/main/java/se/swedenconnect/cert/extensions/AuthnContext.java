@@ -183,7 +183,7 @@ public class AuthnContext extends ASN1Object {
    *           on error parsing data
    */
   public static SAMLAuthContext getAuthnContext(final String xml) throws JAXBException {
-    return (SAMLAuthContext) getAuthnContextJAXBContext()
+    return (SAMLAuthContext) JAXBContext.newInstance(SAMLAuthContext.class)
       .createUnmarshaller()
       .unmarshal(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
   }
@@ -200,7 +200,8 @@ public class AuthnContext extends ASN1Object {
    *           on error parsing data
    */
   public static String printAuthnContext(final SAMLAuthContext authnConext, final boolean formatted) throws JAXBException {
-    final Marshaller marshaller = getAuthnContextJAXBContext().createMarshaller();
+
+    final Marshaller marshaller = JAXBContext.newInstance(SAMLAuthContext.class).createMarshaller();
     marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
     try {
       marshaller.setProperty("com.sun.xml.bind.namespacePrefixMapper", new AuthnContextPrefixMapper());
@@ -214,19 +215,6 @@ public class AuthnContext extends ASN1Object {
     final StringWriter stringWriter = new StringWriter();
     marshaller.marshal(authnConext, stringWriter);
     return stringWriter.toString();
-  }
-
-  /**
-   * Creates JAXB context for the {@link SAMLAuthContext} class
-   *
-   * @return JAXB context
-   * @throws JAXBException
-   *           on error creating context
-   */
-  private static JAXBContext getAuthnContextJAXBContext() throws JAXBException {
-    return JAXBContext.newInstance(
-      "se.swedenconnect.schemas.cert.authcont.saci_1_0",
-      AuthnContext.class.getClassLoader());
   }
 
 }

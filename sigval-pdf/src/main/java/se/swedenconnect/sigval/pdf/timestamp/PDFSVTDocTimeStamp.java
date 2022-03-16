@@ -128,7 +128,7 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
       if (keyID != null) {
 
         ASN1ObjectIdentifier digestAlgoOID = PDFAlgorithmRegistry.getAlgorithmProperties(
-          JWSAlgorithmRegistry.getUri(signedJWT.getHeader().getAlgorithm())).getDigestAlgoOID();
+          JWSAlgorithmRegistry.getUri(signedJWT.getHeader().getAlgorithm())).getMessageDigestAlgorithm().getAlgorithmIdentifier().getAlgorithm();
         DigestAlgorithm digestAlgorithm = DigestAlgorithmRegistry.get(digestAlgoOID);
         MessageDigest svaDigestAlgo = digestAlgorithm.getInstance();
         String svaSigCertHashB64 = Base64.encodeBase64String(svaDigestAlgo.digest(sigCert.getEncoded()));

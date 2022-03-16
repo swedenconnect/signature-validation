@@ -21,6 +21,7 @@ import org.apache.xml.security.exceptions.XMLSecurityException;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import se.idsec.signservice.xml.JAXBContextUtils;
 import se.swedenconnect.cert.extensions.AuthnContext;
 import se.swedenconnect.schemas.etsi.xades_1_3_2.*;
 import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithmRegistry;
@@ -68,7 +69,7 @@ public class XAdESObjectParser implements XMLSigConstants {
     NodeList qpNodes = sigNode.getElementsByTagNameNS(XADES_NAMESPACE, "QualifyingProperties");
 
     for (int i=0 ; i< qpNodes.getLength() ; i++){
-      JAXBContext jaxbContext = getXAdESContext();
+      JAXBContext jaxbContext = JAXBContextUtils.createJAXBContext(QualifyingProperties.class);
       QualifyingProperties qp = (QualifyingProperties) jaxbContext.createUnmarshaller().unmarshal(qpNodes.item(i));
       try {
         if (signatureData.getRefDataMap().containsKey("#" + qp.getSignedProperties().getId())) {
@@ -184,7 +185,7 @@ public class XAdESObjectParser implements XMLSigConstants {
   private JAXBContext getXAdESContext() throws JAXBException {
     return JAXBContext.newInstance(
       "se.swedenconnect.schemas.etsi.xades_1_3_2",
-      AuthnContext.class.getClassLoader()
+      XAdESObjectParser.class.getClassLoader()
     );
   }
 }
