@@ -219,14 +219,18 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
   private void registerId(String referenceUri) {
     NodeList nodes = document.getDocumentElement().getElementsByTagName("*");
     List<Element> matchingElements = new ArrayList<>();
+    List<Element> candidateElements = new ArrayList<>();
+    candidateElements.add(document.getDocumentElement());
     for (int i = 0; i < nodes.getLength(); i++) {
       Node node = nodes.item(i);
       if (node instanceof Element) {
-        Element element = (Element) node;
-        String idAttrVal = getIdAttrVal(element);
-        if (StringUtils.isNotEmpty(idAttrVal) && referenceUri.equals("#" + idAttrVal)) {
-          matchingElements.add(element);
-        }
+        candidateElements.add((Element) node);
+      }
+    }
+    for (Element element: candidateElements){
+      String idAttrVal = getIdAttrVal(element);
+      if (StringUtils.isNotEmpty(idAttrVal) && referenceUri.equals("#" + idAttrVal)) {
+        matchingElements.add(element);
       }
     }
     if (matchingElements.size() == 1) {
