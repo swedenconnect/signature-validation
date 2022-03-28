@@ -164,17 +164,17 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
    * Compile a complete XML signature verification result object from the list of individual signature results
    *
    * @param sigVerifyResultList list of individual signature validation results. Each result must be of type {@link ExtendedXmlSigvalResult}
-   * @return PDF signature validation result objects
+   * @return Signature validation result objects
    */
   public static SignedDocumentValidationResult<ExtendedXmlSigvalResult> getConcludingSigVerifyResult(
     List<SignatureValidationResult> sigVerifyResultList) {
     SignedDocumentValidationResult<ExtendedXmlSigvalResult> sigVerifyResult = new SignedDocumentValidationResult<>();
-    List<ExtendedXmlSigvalResult> extendedPdfSigValResults = new ArrayList<>();
+    List<ExtendedXmlSigvalResult> extendedXmlSigvalResults = new ArrayList<>();
     try {
-      extendedPdfSigValResults = sigVerifyResultList.stream()
+      extendedXmlSigvalResults = sigVerifyResultList.stream()
         .map(signatureValidationResult -> (ExtendedXmlSigvalResult) signatureValidationResult)
         .collect(Collectors.toList());
-      sigVerifyResult.setSignatureValidationResults(extendedPdfSigValResults);
+      sigVerifyResult.setSignatureValidationResults(extendedXmlSigvalResults);
     }
     catch (Exception ex) {
       throw new IllegalArgumentException("Provided results are not instances of ExtendedXmlSigvalResult");
@@ -192,8 +192,8 @@ public class XMLSignedDocumentValidator implements ExtendedXMLSignedDocumentVali
     //Get valid signatures
     sigVerifyResult.setSigned(true);
     sigVerifyResult.setSignatureCount(sigVerifyResultList.size());
-    List<ExtendedXmlSigvalResult> validSignatureResultList = extendedPdfSigValResults.stream()
-      .filter(cmsSigVerifyResult -> cmsSigVerifyResult.isSuccess())
+    List<ExtendedXmlSigvalResult> validSignatureResultList = extendedXmlSigvalResults.stream()
+      .filter(sigvalResult -> sigvalResult.isSuccess())
       .collect(Collectors.toList());
 
     sigVerifyResult.setValidSignatureCount(validSignatureResultList.size());

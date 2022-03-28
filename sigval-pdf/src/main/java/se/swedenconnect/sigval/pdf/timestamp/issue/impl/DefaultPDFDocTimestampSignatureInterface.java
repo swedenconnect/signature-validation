@@ -149,7 +149,8 @@ public class DefaultPDFDocTimestampSignatureInterface implements PDFDocTimestamp
 
     try {
       // Get the digest algorithm OID
-      ASN1ObjectIdentifier digestAlgoOID = PDFAlgorithmRegistry.getAlgorithmProperties(algorithm).getDigestAlgoOID();
+      ASN1ObjectIdentifier digestAlgoOID = PDFAlgorithmRegistry.getAlgorithmProperties(algorithm)
+        .getMessageDigestAlgorithm().getAlgorithmIdentifier().getAlgorithm();
 
       //List<Certificate> certList = Arrays.asList(certificates);
       Store<?> certs = new JcaCertStore(certificates);

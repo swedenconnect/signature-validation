@@ -47,7 +47,7 @@ public class ExtendedSigValResult extends DefaultSignatureValidationResult {
   private List<X509Certificate> signatureCertificateChain;
 
   /**
-   * Indicator if the signature covers the visible PDF document. False value indicates that there may be visual content
+   * Indicator if the signature covers the whole signed document. False value indicates that there may be content
    * changes added after signing.
    **/
   @Setter

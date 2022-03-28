@@ -32,7 +32,7 @@ public class ExtendedXmlSigvalResult extends ExtendedSigValResult implements XML
 
   /** {@inheritDoc} */
   @Override public Element getSignatureElement() {
-    return null;
+    return signatureElement;
   }
 
 }
