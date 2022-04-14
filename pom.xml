@@ -68,7 +68,8 @@
     <module>cert-validation</module>
     <module>sigval-commons</module>
     <module>sigval-xml</module>
-    <module>sigval-pdf</module>    
+    <module>sigval-pdf</module>
+      <module>sigval-report</module>
   </modules>
 
   <dependencyManagement>
