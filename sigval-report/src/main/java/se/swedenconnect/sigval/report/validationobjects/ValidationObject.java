@@ -21,6 +21,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 /**
  * Description
  *
@@ -39,5 +41,5 @@ public class ValidationObject {
   private String hashAlgorithm;
   private RepresentationType representationType;
   private String id;
-
+  private Date poe;
 }

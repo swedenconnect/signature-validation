@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package se.swedenconnect.sigval.pdf.verify.impl;
+package se.swedenconnect.sigval.xml.verify.impl;
 
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xmlbeans.XmlString;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.cms.ContentInfo;
@@ -29,27 +30,27 @@ import org.w3.x2000.x09.xmldsig.DigestMethodType;
 import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithm;
 import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.swedenconnect.sigval.commons.data.SigValIdentifiers;
-import se.swedenconnect.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.swedenconnect.sigval.report.data.MainIndication;
 import se.swedenconnect.sigval.report.data.SubIndication;
 import se.swedenconnect.sigval.report.impl.AbstractSigValReportGenerator;
 import se.swedenconnect.sigval.svt.claims.SignatureClaims;
+import se.swedenconnect.sigval.xml.data.ExtendedXmlSigvalResult;
 
 import java.io.IOException;
 
 /**
- * PDF Implementation of the Signature validation report generator
+ * XML implementation of the Signature validation report generator
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerator<ExtendedPdfSigValResult> {
+public class DefalutXMLSigValReportGenerator extends AbstractSigValReportGenerator<ExtendedXmlSigvalResult> {
 
-  public DefalutPDFSigValReportGenerator() {
+  public DefalutXMLSigValReportGenerator() {
     super(DigestAlgorithm.ID_SHA256);
   }
 
-  public DefalutPDFSigValReportGenerator(String defaultHashAlgo) {
+  public DefalutXMLSigValReportGenerator(String defaultHashAlgo) {
     super(defaultHashAlgo);
   }
 
@@ -59,7 +60,7 @@ public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerat
    * @param sigValResult The result of signature validation
    * @return signature quality
    */
-  @Override protected String getSignatureQuality(ExtendedPdfSigValResult sigValResult) {
+  @Override protected String getSignatureQuality(ExtendedXmlSigvalResult sigValResult) {
     boolean validEtsiBaseline = sigValResult.isEtsiAdes() && !sigValResult.isInvalidSignCert();
     if (validEtsiBaseline) {
       return "urn:cef:dss:signatureQualification:AdESig";
@@ -74,7 +75,7 @@ public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerat
    * @param pol          the policy used to do the original signature validation
    * @return the signature validation process identifier to be included in the signature validation report
    */
-  @Override protected SignatureValidationProcessType getSignatureValidationProcess(ExtendedPdfSigValResult sigValResult, String pol) {
+  @Override protected SignatureValidationProcessType getSignatureValidationProcess(ExtendedXmlSigvalResult sigValResult, String pol) {
     return defaultGetSignatureValidationProcess(sigValResult, pol);
   }
 
@@ -85,8 +86,7 @@ public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerat
    */
   @Override protected SADataObjectFormatType getDataObjectFormat() {
     SADataObjectFormatType saDataObjectFormatType = SADataObjectFormatType.Factory.newInstance();
-    saDataObjectFormatType.setContentType("1.2.840.113549.1.7.1");
-    saDataObjectFormatType.setMimeType("application/pdf");
+    saDataObjectFormatType.setMimeType("text/xml");
     return saDataObjectFormatType;
   }
 
@@ -97,20 +97,13 @@ public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerat
    * @param hashAlgoId   hash algorithm id
    * @return digest value and algorithm for the DTBSR
    */
-  @Override protected DigestAlgAndValueType getSignatureDtbsDigestAndValue(ExtendedPdfSigValResult sigValResult, String hashAlgoId)
+  @Override protected DigestAlgAndValueType getSignatureDtbsDigestAndValue(ExtendedXmlSigvalResult sigValResult, String hashAlgoId)
     throws IOException {
 
-    ASN1InputStream asn1Stream = null;
     try {
-      asn1Stream = new ASN1InputStream(sigValResult.getSignedData());
-      ContentInfo contentInfo = ContentInfo.getInstance(asn1Stream.readObject());
-      if (!contentInfo.getContentType().equals(PKCSObjectIdentifiers.signedData)) {
-        throw new IOException("Illegal content for PDF signature. Must contain SignedData");
-      }
-      SignedData signedData = SignedData.getInstance(contentInfo.getContent());
-      SignerInfo signerInfo = SignerInfo.getInstance(signedData.getSignerInfos().getObjectAt(0));
-      byte[] sigAttrsEncBytes = signerInfo.getAuthenticatedAttributes().getEncoded("DER");
-      byte[] dtbsrHash = DigestAlgorithmRegistry.get(hashAlgoId).getInstance().digest(sigAttrsEncBytes);
+      XMLSignature signature = new XMLSignature(sigValResult.getSignatureElement(), "");
+      byte[] tbsbytes = signature.getSignedInfo().getCanonicalizedOctetStream();
+      byte[] dtbsrHash = DigestAlgorithmRegistry.get(hashAlgoId).getInstance().digest(tbsbytes);
       DigestAlgAndValueType digestAlgAndValueType = DigestAlgAndValueType.Factory.newInstance();
       digestAlgAndValueType.setDigestValue(dtbsrHash);
       DigestMethodType digestMethodType = DigestMethodType.Factory.newInstance();
@@ -121,15 +114,6 @@ public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerat
     catch (Exception ex) {
       throw (ex instanceof IOException) ? (IOException) ex : new IOException(ex);
     }
-    finally {
-      if (asn1Stream != null) {
-        try {
-          asn1Stream.close();
-        }
-        catch (IOException e) {
-        }
-      }
-    }
   }
 
   /**
@@ -139,7 +123,7 @@ public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerat
    * @param sigValResult                  signature validation result
    */
   @Override protected void applyValidationPolicy(SignatureValidationReportType signatureValidationReportType,
-    ExtendedPdfSigValResult sigValResult) {
+    ExtendedXmlSigvalResult sigValResult) {
     if (!sigValResult.isCoversDocument()) {
       ValidationStatusType signatureValidationStatus = signatureValidationReportType.getSignatureValidationStatus();
       signatureValidationStatus.setMainIndication(MainIndication.INDETERMINATE.getUri());

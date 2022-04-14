@@ -34,6 +34,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,7 +82,14 @@ public class ValidationObjectProcessor {
     throws NoSuchAlgorithmException {
     final DigestAlgorithm digestAlgorithm = DigestAlgorithmRegistry.get(hashAlgo);
     final MessageDigest md = digestAlgorithm.getInstance();
-    return validationObjectType.getPrefix() + "-" + Hex.toHexString(md.digest(objectBytes));
+    return validationObjectType.getPrefix() + "-" + idTrim(Hex.toHexString(md.digest(objectBytes)));
+  }
+
+  private static String idTrim(String hexString) {
+    if (hexString == null || hexString.length() < 40){
+      return hexString;
+    }
+    return hexString.substring(0,40);
   }
 
   public static String getId(TimeValidationResult timeValidationResult, String hashAlgoId) {
@@ -158,13 +166,14 @@ public class ValidationObjectProcessor {
       final byte[] timeBytes = String.valueOf(time).getBytes(StandardCharsets.UTF_8);
       hashVal = DigestAlgorithmRegistry.get(hashAlgoId).getInstance().digest(timeBytes);
     }
-    String id = validationObjectType.getPrefix() + "-" + Hex.toHexString(hashVal);
+    String id = validationObjectType.getPrefix() + "-" + idTrim(Hex.toHexString(hashVal));
     validationObjectMap.put(id, ValidationObject.builder()
         .id(id)
         .hashValue(hashVal)
         .hashAlgorithm(hashAlgoId)
         .validationObjectType(validationObjectType)
         .representationType(RepresentationType.hash)
+        .poe(new Date(time * 1000))
       .build());
     return  true;
   }
