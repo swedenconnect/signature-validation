@@ -91,13 +91,13 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
         .time_val(
           sigResult.getTimeValidationResults().stream()
             .map(timeValidationResult -> extractTimeValClaims(timeValidationResult, hashAlgoUri))
-            .filter(timeValidationClaims -> isVerifiedTime(timeValidationClaims))
+            .filter(this::isVerifiedTime)
             .collect(Collectors.toList())
         )
         .signer_cert_ref(getCertRef(sigResult, hashAlgoUri))
         .build();
 
-      return Arrays.asList(claimsData);
+      return List.of(claimsData);
     }
     // This signature should not be extended with a new SVT token.
     return null;
@@ -114,9 +114,7 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
     List<PolicyValidationClaims> validationPolicyResultList = sigResult.getValidationPolicyResultList();
     if (validationPolicyResultList != null){
       validationPolicyPassed = validationPolicyResultList.stream()
-        .filter(policyValidationClaims -> policyValidationClaims.getRes().equals(ValidationConclusion.PASSED))
-        .findFirst()
-        .isPresent();
+        .anyMatch(policyValidationClaims -> policyValidationClaims.getRes().equals(ValidationConclusion.PASSED));
     }
 
     // We only issue SVT tokes if signature validation passed.

@@ -40,15 +40,21 @@ public class SigValIdentifiers {
   public static final String SIG_VALIDATION_POLICY_PKIX_VALIDATION = "http://id.swedenconnect.se/svt/sigval-policy/pkix/01";
   /** Full PKIX path validation allowing revoked certificates revoked after time stamped signing time */
   public static final String SIG_VALIDATION_POLICY_TIMESTAMPED_PKIX_VALIDATION = "http://id.swedenconnect.se/svt/sigval-policy/ts-pkix/01";
-  /** Sig status data type identifier for a status message in the signature validation report */
-  public static final String SIG_VALIDATION_REPORT_STATUS_MESSAGE = "http://id.swedenconnect.se/svt/sig-val-report/message";
-  /** Sig validation status sub indication if the signed document is only partly signed (Signature does not cover whole document */
-  public static final String SIG_VALIDATION_SUBINDICATION_PARTIALLY_SIGNED = "http://id.swedenconnect.se/svt/subindication/partially-signed";
-
   /** Signature method indication for validation of signature based on SVT validation where original validation was pkix validation */
   public static final String SIG_VALIDATION_POLICY_SVT_PKIX_VALIDATION = "http://id.swedenconnect.se/svt/sigval-policy/pkix/01/svt";
   /** Signature method indication for validation of signature based on SVT validation where original validation was pkix validation */
-  public static final String SIG_VALIDATION_POLICY_SVT_IMESTAMPED_PKIX_VALIDATION = "http://id.swedenconnect.se/svt/sigval-policy/ts-pkix/01/svt";
+  public static final String SIG_VALIDATION_POLICY_SVT_IIMESTAMPED_PKIX_VALIDATION = "http://id.swedenconnect.se/svt/sigval-policy/ts-pkix/01/svt";
+
+  /** Sig val report */
+
+  /** XML Namespace */
+  public static final String SIG_VALIDATION_REPORT_XML_NS = "http://id.swedenconnect.se/sigval-report/ns/01";
+  /** Sig status data type identifier for a status message in the signature validation report */
+  public static final String SIG_VALIDATION_REPORT_STATUS_MESSAGE = "http://id.swedenconnect.se/sigval-report/data/message";
+  /** Sig validation status sub indication if the signed document is only partly signed (Signature does not cover whole document */
+  public static final String SIG_VALIDATION_SUBINDICATION_PARTIALLY_SIGNED = "http://id.swedenconnect.se/sigval-report/subindication/partially-signed";
+
+
 
   /** Object identifier for the ECDSA algorithm. */
   public static final String ID_ECDSA = "1.2.840.10045.2.1";

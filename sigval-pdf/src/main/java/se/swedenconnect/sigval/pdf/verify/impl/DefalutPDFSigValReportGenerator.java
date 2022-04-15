@@ -100,6 +100,59 @@ public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerat
   @Override protected DigestAlgAndValueType getSignatureDtbsDigestAndValue(ExtendedPdfSigValResult sigValResult, String hashAlgoId)
     throws IOException {
 
+    SignerInfo signerInfo = getSignerInfo(sigValResult);
+    try {
+      byte[] sigAttrsEncBytes = signerInfo.getAuthenticatedAttributes().getEncoded("DER");
+      byte[] dtbsrHash = DigestAlgorithmRegistry.get(hashAlgoId).getInstance().digest(sigAttrsEncBytes);
+      DigestAlgAndValueType digestAlgAndValueType = DigestAlgAndValueType.Factory.newInstance();
+      digestAlgAndValueType.setDigestValue(dtbsrHash);
+      DigestMethodType digestMethodType = DigestMethodType.Factory.newInstance();
+      digestMethodType.setAlgorithm(hashAlgoId);
+      digestAlgAndValueType.setDigestMethod(digestMethodType);
+      return digestAlgAndValueType;
+    }
+    catch (Exception ex) {
+      throw (ex instanceof IOException) ? (IOException) ex : new IOException(ex);
+    }
+  }
+
+  /**
+   * Get the signature value
+   *
+   * @param sigValResult
+   * @return
+   */
+  @Override protected byte[] getSignatureValue(ExtendedPdfSigValResult sigValResult) throws IOException {
+
+    SignerInfo signerInfo = getSignerInfo(sigValResult);
+    byte[] signatureBytes = signerInfo.getEncryptedDigest().getOctets();
+    return signatureBytes;
+
+  }
+
+  /**
+   * Apply the final validation checks against any policy provided by the profile
+   *
+   * @param signatureValidationReportType signature validation report data before policy check
+   * @param sigValResult                  signature validation result
+   */
+  @Override protected void applyValidationPolicy(SignatureValidationReportType signatureValidationReportType,
+    ExtendedPdfSigValResult sigValResult) {
+    if (!sigValResult.isCoversDocument()) {
+      ValidationStatusType signatureValidationStatus = signatureValidationReportType.getSignatureValidationStatus();
+      signatureValidationStatus.addSubIndication(SubIndication.DOCUMENT_PARTIALLY_SIGNED.getUri());
+      TypedDataType typedDataType = signatureValidationStatus.addNewAssociatedValidationReportData()
+        .addNewAdditionalValidationReportData()
+        .addNewReportData();
+      XmlString xmlString = XmlString.Factory.newInstance();
+      xmlString.setStringValue("Signature does not cover the full document");
+      typedDataType.setValue(xmlString);
+      typedDataType.setType(SigValIdentifiers.SIG_VALIDATION_REPORT_STATUS_MESSAGE);
+    }
+  }
+
+
+  private SignerInfo getSignerInfo(ExtendedPdfSigValResult sigValResult) throws IOException {
     ASN1InputStream asn1Stream = null;
     try {
       asn1Stream = new ASN1InputStream(sigValResult.getSignedData());
@@ -109,14 +162,7 @@ public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerat
       }
       SignedData signedData = SignedData.getInstance(contentInfo.getContent());
       SignerInfo signerInfo = SignerInfo.getInstance(signedData.getSignerInfos().getObjectAt(0));
-      byte[] sigAttrsEncBytes = signerInfo.getAuthenticatedAttributes().getEncoded("DER");
-      byte[] dtbsrHash = DigestAlgorithmRegistry.get(hashAlgoId).getInstance().digest(sigAttrsEncBytes);
-      DigestAlgAndValueType digestAlgAndValueType = DigestAlgAndValueType.Factory.newInstance();
-      digestAlgAndValueType.setDigestValue(dtbsrHash);
-      DigestMethodType digestMethodType = DigestMethodType.Factory.newInstance();
-      digestMethodType.setAlgorithm(hashAlgoId);
-      digestAlgAndValueType.setDigestMethod(digestMethodType);
-      return digestAlgAndValueType;
+      return signerInfo;
     }
     catch (Exception ex) {
       throw (ex instanceof IOException) ? (IOException) ex : new IOException(ex);
@@ -132,25 +178,4 @@ public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerat
     }
   }
 
-  /**
-   * Apply the final validation checks against any policy provided by the profile
-   *
-   * @param signatureValidationReportType signature validation report data before policy check
-   * @param sigValResult                  signature validation result
-   */
-  @Override protected void applyValidationPolicy(SignatureValidationReportType signatureValidationReportType,
-    ExtendedPdfSigValResult sigValResult) {
-    if (!sigValResult.isCoversDocument()) {
-      ValidationStatusType signatureValidationStatus = signatureValidationReportType.getSignatureValidationStatus();
-      signatureValidationStatus.setMainIndication(MainIndication.INDETERMINATE.getUri());
-      signatureValidationStatus.addSubIndication(SubIndication.DOCUMENT_PARTIALLY_SIGNED.getUri());
-      TypedDataType typedDataType = signatureValidationStatus.addNewAssociatedValidationReportData()
-        .addNewAdditionalValidationReportData()
-        .addNewReportData();
-      XmlString xmlString = XmlString.Factory.newInstance();
-      xmlString.setStringValue("Signature does not cover the full document");
-      typedDataType.setValue(xmlString);
-      typedDataType.setType(SigValIdentifiers.SIG_VALIDATION_REPORT_STATUS_MESSAGE);
-    }
-  }
 }

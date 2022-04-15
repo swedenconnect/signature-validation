@@ -21,13 +21,23 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.xmlbeans.XmlAnyURI;
+import org.apache.xmlbeans.XmlCursor;
+import org.apache.xmlbeans.XmlObject;
 import org.apache.xmlbeans.XmlString;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.bouncycastle.util.encoders.Base64;
 import org.etsi.uri.x01903.v13.DigestAlgAndValueType;
 import org.etsi.uri.x19102.v12.*;
 import org.w3.x2000.x09.xmldsig.DigestMethodType;
-import se.idsec.signservice.security.certificate.CertificateValidationResult;
+import org.w3.x2000.x09.xmldsig.SignatureValueType;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
+import se.swedenconnect.cert.extensions.QCStatements;
+import se.swedenconnect.id.sigvalReport.ns.x01.EUQualificationsDocument;
+import se.swedenconnect.id.sigvalReport.ns.x01.EUQualificationsType;
+import se.swedenconnect.id.sigvalReport.ns.x01.SignatureAlgorithmDocument;
 import se.swedenconnect.sigval.cert.chain.PathValidationResult;
 import se.swedenconnect.sigval.cert.validity.ValidationStatus;
 import se.swedenconnect.sigval.commons.data.ExtendedSigValResult;
@@ -96,7 +106,7 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
         methodId = SigValIdentifiers.SIG_VALIDATION_POLICY_SVT_PKIX_VALIDATION;
       }
       if (pol.equalsIgnoreCase(SigValIdentifiers.SIG_VALIDATION_POLICY_TIMESTAMPED_PKIX_VALIDATION)) {
-        methodId = SigValIdentifiers.SIG_VALIDATION_POLICY_SVT_IMESTAMPED_PKIX_VALIDATION;
+        methodId = SigValIdentifiers.SIG_VALIDATION_POLICY_SVT_IIMESTAMPED_PKIX_VALIDATION;
       }
     }
     SignatureValidationProcessType sigValProcessType = SignatureValidationProcessType.Factory.newInstance();
@@ -118,6 +128,13 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
    * @return digest value and algorithm for the DTBSR
    */
   protected abstract DigestAlgAndValueType getSignatureDtbsDigestAndValue(R sigValResult, String hashAlgoId) throws IOException;
+
+  /**
+   * Get the signature value
+   * @param sigValResult
+   * @return signature value
+   */
+  protected abstract byte[] getSignatureValue(R sigValResult) throws IOException;
 
   /**
    * Apply the final validation checks against any policy provided by the profile
@@ -237,6 +254,15 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
     return validationReportDocument;
   }
 
+  private void extendElement(XmlObject newElement, XmlObject parentElement) {
+    XmlCursor newElementCursor = newElement.newCursor();
+    newElementCursor.toNextToken();
+    XmlCursor parentCursor = parentElement.newCursor();
+    parentCursor.toEndToken();
+    newElementCursor.moveXml(parentCursor);
+
+  }
+
   @SneakyThrows
   protected void addSignerInformation(SignatureValidationReportType signatureValidationReportType, X509Certificate signerCertificate,
     String hashAlgoId) {
@@ -273,12 +299,29 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
     }
     // Set document format
     signatureAttributesType.setDataObjectFormatArray(new SADataObjectFormatType[] { getDataObjectFormat() });
-    // Set the signer certificate
+    // Process the signer certificate
+    EUQualificationsDocument euQualifications = null;
     try {
       VOReferenceType certificateRef = signatureAttributesType.addNewSigningCertificate().addNewAttributeObject();
       certificateRef.setVOReference(List.of(
         ValidationObjectProcessor.getId(signerCertificate.getEncoded(), hashAlgoId,
           se.swedenconnect.sigval.report.validationobjects.ValidationObjectType.certificate)));
+      // Get EU Qualifications
+      boolean qc = false, qscd = false;
+      X509CertificateHolder signCertHolder = new JcaX509CertificateHolder(signerCertificate);
+      Extension qcStatementExt = signCertHolder.getExtension(Extension.qCStatements);
+      if (qcStatementExt != null) {
+        QCStatements qcStatements = QCStatements.getInstance(qcStatementExt.getParsedValue());
+        if (qcStatements.isQcType()){
+          List<ASN1ObjectIdentifier> qcTypeIdList = qcStatements.getQcTypeIdList();
+          qc = qcTypeIdList.contains(QCStatements.QC_TYPE_ELECTRONIC_SIGNATURE);
+        }
+        qscd = qcStatements.isQcSscd();
+      }
+      euQualifications = EUQualificationsDocument.Factory.newInstance();
+      EUQualificationsType euQualificationsType = euQualifications.addNewEUQualifications();
+      euQualificationsType.setQualifiedCertificate(qc);
+      euQualificationsType.setQSCD(qscd);
     }
     catch (Exception ex) {
       log.warn("Error processing signature certificate", ex);
@@ -295,6 +338,17 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
         }
       }
     }
+
+    // Set signature algorithm
+    SignatureAlgorithmDocument signatureAlgorithmElm = SignatureAlgorithmDocument.Factory.newInstance();
+    signatureAlgorithmElm.setSignatureAlgorithm(sigValResult.getSignatureAlgorithm());
+    extendElement(signatureAlgorithmElm, signatureAttributesType);
+
+    // Set EU Qualifications
+    if (euQualifications != null){
+      extendElement(euQualifications, signatureAttributesType);
+    }
+
     signatureValidationReportType.setSignatureAttributes(signatureAttributesType);
     return null;
   }
@@ -406,7 +460,11 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
       }
       // Set the DTBSR
       signatureIdentifierType.setDigestAlgAndValue(dtbsrAlgAndValue);
-
+      // Set signature value
+      SignatureValueType signatureValueType = SignatureValueType.Factory.newInstance();
+      signatureValueType.setByteArrayValue(getSignatureValue(sigValResult));
+      signatureIdentifierType.setSignatureValue(signatureValueType);
+      // Set mandatory booleans
       signatureIdentifierType.setHashOnly(false);
       signatureIdentifierType.setDocHashOnly(false);
       signatureValidationReportType.setSignatureIdentifier(signatureIdentifierType);

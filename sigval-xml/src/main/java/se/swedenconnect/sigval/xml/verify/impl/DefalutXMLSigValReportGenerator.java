@@ -117,6 +117,22 @@ public class DefalutXMLSigValReportGenerator extends AbstractSigValReportGenerat
   }
 
   /**
+   * Get the signature value
+   *
+   * @param sigValResult
+   * @return
+   */
+  @Override protected byte[] getSignatureValue(ExtendedXmlSigvalResult sigValResult) throws IOException {
+    try {
+      XMLSignature signature = new XMLSignature(sigValResult.getSignatureElement(), "");
+      return signature.getSignatureValue();
+    }
+    catch (Exception ex) {
+      throw (ex instanceof IOException) ? (IOException) ex : new IOException(ex);
+    }
+  }
+
+  /**
    * Apply the final validation checks against any policy provided by the profile
    *
    * @param signatureValidationReportType signature validation report data before policy check
@@ -126,7 +142,6 @@ public class DefalutXMLSigValReportGenerator extends AbstractSigValReportGenerat
     ExtendedXmlSigvalResult sigValResult) {
     if (!sigValResult.isCoversDocument()) {
       ValidationStatusType signatureValidationStatus = signatureValidationReportType.getSignatureValidationStatus();
-      signatureValidationStatus.setMainIndication(MainIndication.INDETERMINATE.getUri());
       signatureValidationStatus.addSubIndication(SubIndication.DOCUMENT_PARTIALLY_SIGNED.getUri());
       TypedDataType typedDataType = signatureValidationStatus.addNewAssociatedValidationReportData()
         .addNewAdditionalValidationReportData()

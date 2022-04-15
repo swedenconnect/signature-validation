@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified"
+    targetNamespace="http://id.swedenconnect.se/sigval-report/ns/01"
+    xmlns:svrex="http://id.swedenconnect.se/sigval-report/ns/01">
+
+    <xs:element name="SignatureAlgorithm" type="xs:anyURI"/>
+    <xs:element name="EUQualifications" type="svrex:EUQualificationsType"/>
+    <xs:complexType name="EUQualificationsType">
+        <xs:sequence>
+            <xs:element name="QualifiedCertificate" type="xs:boolean"/>
+            <xs:element name="QSCD" type="xs:boolean"/>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>

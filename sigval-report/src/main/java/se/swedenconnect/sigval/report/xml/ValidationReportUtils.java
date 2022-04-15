@@ -19,6 +19,7 @@ package se.swedenconnect.sigval.report.xml;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.xmlbeans.XmlOptions;
 import org.etsi.uri.x19102.v12.ValidationReportDocument;
+import se.swedenconnect.sigval.commons.data.SigValIdentifiers;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -49,6 +50,7 @@ public class ValidationReportUtils {
     prefixMap.put("http://uri.etsi.org/02231/v2#", "tsl");
     prefixMap.put("http://www.w3.org/2001/XMLSchema", "xs");
     prefixMap.put("http://www.w3.org/2001/XMLSchema-instance", "xsi");
+    prefixMap.put(SigValIdentifiers.SIG_VALIDATION_REPORT_XML_NS, "svrex");
 
     styled = new XmlOptions().setSavePrettyPrint().setSavePrettyPrintIndent(4);
     styled.setSaveSuggestedPrefixes(prefixMap);
