@@ -16,24 +16,16 @@
 
 package se.swedenconnect.sigval.xml.verify.impl;
 
-import com.nimbusds.jwt.SignedJWT;
 import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xmlbeans.XmlString;
-import org.bouncycastle.asn1.ASN1InputStream;
-import org.bouncycastle.asn1.cms.ContentInfo;
-import org.bouncycastle.asn1.cms.SignedData;
-import org.bouncycastle.asn1.cms.SignerInfo;
-import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.etsi.uri.x01903.v13.DigestAlgAndValueType;
 import org.etsi.uri.x19102.v12.*;
 import org.w3.x2000.x09.xmldsig.DigestMethodType;
 import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithm;
 import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.swedenconnect.sigval.commons.data.SigValIdentifiers;
-import se.swedenconnect.sigval.report.data.MainIndication;
 import se.swedenconnect.sigval.report.data.SubIndication;
 import se.swedenconnect.sigval.report.impl.AbstractSigValReportGenerator;
-import se.swedenconnect.sigval.svt.claims.SignatureClaims;
 import se.swedenconnect.sigval.xml.data.ExtendedXmlSigvalResult;
 
 import java.io.IOException;
@@ -47,11 +39,11 @@ import java.io.IOException;
 public class DefalutXMLSigValReportGenerator extends AbstractSigValReportGenerator<ExtendedXmlSigvalResult> {
 
   public DefalutXMLSigValReportGenerator() {
-    super(DigestAlgorithm.ID_SHA256);
+    super(DigestAlgorithm.ID_SHA256, false);
   }
 
-  public DefalutXMLSigValReportGenerator(String defaultHashAlgo) {
-    super(defaultHashAlgo);
+  public DefalutXMLSigValReportGenerator(String defaultHashAlgo, boolean includeSigningCertificateChain) {
+    super(defaultHashAlgo, includeSigningCertificateChain);
   }
 
   /**

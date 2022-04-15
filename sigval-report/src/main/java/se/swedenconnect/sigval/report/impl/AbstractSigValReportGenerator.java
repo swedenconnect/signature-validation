@@ -17,6 +17,7 @@
 package se.swedenconnect.sigval.report.impl;
 
 import com.nimbusds.jwt.SignedJWT;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -68,10 +69,14 @@ import java.util.*;
 @Slf4j
 public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResult> implements SigValReportGenerator<R> {
 
-  private final String defaultHashAlgo;
+  @Setter protected boolean addTimeValidationCertObjects = false;
 
-  public AbstractSigValReportGenerator(String defaultHashAlgo) {
+  private final String defaultHashAlgo;
+  private final boolean includeSigningCertificateChain;
+
+  public AbstractSigValReportGenerator(String defaultHashAlgo, boolean includeSigningCertificateChain) {
     this.defaultHashAlgo = defaultHashAlgo;
+    this.includeSigningCertificateChain = includeSigningCertificateChain;
   }
 
   /**
@@ -600,8 +605,8 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
 
     for (R validationResult : validationResults) {
       String hashAlgoId = getHashAlgo(validationResult);
-      ValidationObjectProcessor.storeSigningCertificates(validationResult, validationObjectMap, hashAlgoId);
-      ValidationObjectProcessor.storeTimeValidationObjects(validationResult, validationObjectMap, hashAlgoId);
+      ValidationObjectProcessor.storeSigningCertificates(validationResult, validationObjectMap, hashAlgoId, includeSigningCertificateChain);
+      ValidationObjectProcessor.storeTimeValidationObjects(validationResult, validationObjectMap, hashAlgoId, addTimeValidationCertObjects);
     }
     return validationObjectMap;
   }

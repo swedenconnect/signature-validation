@@ -46,11 +46,11 @@ import java.io.IOException;
 public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerator<ExtendedPdfSigValResult> {
 
   public DefalutPDFSigValReportGenerator() {
-    super(DigestAlgorithm.ID_SHA256);
+    super(DigestAlgorithm.ID_SHA256, false);
   }
 
-  public DefalutPDFSigValReportGenerator(String defaultHashAlgo) {
-    super(defaultHashAlgo);
+  public DefalutPDFSigValReportGenerator(String defaultHashAlgo, boolean includeSigningCertificateChain) {
+    super(defaultHashAlgo, includeSigningCertificateChain);
   }
 
   /**

@@ -48,7 +48,7 @@ import java.util.Map;
 @Slf4j
 public class ValidationObjectProcessor {
   public static <R extends ExtendedSigValResult> void storeSigningCertificates(
-    R validationResult, Map<String, ValidationObject> validationObjectMap, String hashAlgo)
+    R validationResult, Map<String, ValidationObject> validationObjectMap, String hashAlgo, boolean includeChain)
     throws CertificateEncodingException, NoSuchAlgorithmException {
     final X509Certificate signerCertificate = validationResult.getSignerCertificate();
     if (signerCertificate == null) {
@@ -57,8 +57,10 @@ public class ValidationObjectProcessor {
 
     addCertificate(signerCertificate, validationObjectMap, hashAlgo);
     final List<X509Certificate> additionalCertificates = validationResult.getAdditionalCertificates();
-    for (X509Certificate certificate : additionalCertificates) {
-      addCertificate(certificate, validationObjectMap, hashAlgo);
+    if (includeChain){
+      for (X509Certificate certificate : additionalCertificates) {
+        addCertificate(certificate, validationObjectMap, hashAlgo);
+      }
     }
   }
 
@@ -109,11 +111,11 @@ public class ValidationObjectProcessor {
   }
 
   public static <R extends ExtendedSigValResult> void storeTimeValidationObjects(R validationResult,
-    Map<String, ValidationObject> validationObjectMap, String hashAlgoId) throws NoSuchAlgorithmException {
+    Map<String, ValidationObject> validationObjectMap, String hashAlgoId, boolean addCertificates) throws NoSuchAlgorithmException {
     final List<TimeValidationResult> timeValidationResults = validationResult.getTimeValidationResults();
     if (timeValidationResults != null) {
       for (TimeValidationResult timeValidationResult : timeValidationResults) {
-        if (addTimeEvidenceRef(timeValidationResult, validationObjectMap, hashAlgoId)){
+        if (addTimeEvidenceRef(timeValidationResult, validationObjectMap, hashAlgoId) && addCertificates){
           // If time evidence was added, then attempt to add time validation certificates
           addTimeValidationCertificatePath(timeValidationResult, validationObjectMap, hashAlgoId);
         }
