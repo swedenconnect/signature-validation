@@ -90,7 +90,7 @@ public class XMLSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<XMLS
         .sig_data_ref(getDocRefHashes(refDataMap, hashAlgoUri))
         .time_val(
           sigResult.getTimeValidationResults().stream()
-            .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeValidationClaims())
+            .map(timeValidationResult -> extractTimeValClaims(timeValidationResult, hashAlgoUri))
             .filter(timeValidationClaims -> isVerifiedTime(timeValidationClaims))
             .collect(Collectors.toList())
         )

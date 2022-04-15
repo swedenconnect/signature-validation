@@ -151,13 +151,22 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
         .signatureElement(signature)
         .signatureData(signatureData)
         .build();
+      // If an SVT validator is present. Attempt to validate any present SVT data
       final List<SignatureSVTValidationResult> svtValidationResultList =
-          this.xmlsvtValidator == null ? null : this.xmlsvtValidator.validate(sigValInput);
-      final SignatureSVTValidationResult svtValResult =
-          svtValidationResultList == null || svtValidationResultList.isEmpty() ? null : svtValidationResultList.get(0);
+        this.xmlsvtValidator == null
+          ? null
+          : this.xmlsvtValidator.validate(sigValInput);
+      // Pick the first valid SVT validation result if present
+      final SignatureSVTValidationResult validSvtValidationResult =
+        svtValidationResultList == null
+          ? null
+          : svtValidationResultList.stream()
+          .filter(SignatureSVTValidationResult::isSvtValidationSuccess)
+          .findFirst()
+          .orElse(null);
 
-      if (svtValResult != null) {
-        return this.compileXMLSigValResultsFromSvtValidation(svtValResult, signature, signatureData);
+      if (validSvtValidationResult != null) {
+        return this.compileXMLSigValResultsFromSvtValidation(validSvtValidationResult, signature, signatureData);
       }
 
       // If not SVT validation, then perform normal validation

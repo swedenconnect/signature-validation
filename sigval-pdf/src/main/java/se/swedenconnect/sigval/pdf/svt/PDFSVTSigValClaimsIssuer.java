@@ -36,15 +36,15 @@ import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 
+import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.swedenconnect.sigval.commons.data.SignedDocumentValidationResult;
+import se.swedenconnect.sigval.commons.data.TimeValidationResult;
 import se.swedenconnect.sigval.commons.svt.AbstractSVTSigValClaimsIssuer;
+import se.swedenconnect.sigval.commons.timestamp.TimeStamp;
 import se.swedenconnect.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.swedenconnect.sigval.pdf.verify.ExtendedPDFSignatureValidator;
 import se.swedenconnect.sigval.svt.algorithms.SVTAlgoRegistry;
-import se.swedenconnect.sigval.svt.claims.SVTProfile;
-import se.swedenconnect.sigval.svt.claims.SigReferenceClaims;
-import se.swedenconnect.sigval.svt.claims.SignatureClaims;
-import se.swedenconnect.sigval.svt.claims.SignedDataClaims;
+import se.swedenconnect.sigval.svt.claims.*;
 
 /**
  * Representation of a SVT claims issuer.
@@ -110,7 +110,7 @@ public class PDFSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<byte
           .time_val(
             sigResult.getTimeValidationResults()
               .stream()
-              .map(pdfTimeValidationResult -> pdfTimeValidationResult.getTimeValidationClaims())
+              .map(timeValidationResult -> extractTimeValClaims(timeValidationResult, hashAlgoUri))
               .filter(timeValidationClaims -> isVerifiedTime(timeValidationClaims))
               .collect(Collectors.toList()))
           .signer_cert_ref(getCertRef(sigResult, hashAlgoUri))
