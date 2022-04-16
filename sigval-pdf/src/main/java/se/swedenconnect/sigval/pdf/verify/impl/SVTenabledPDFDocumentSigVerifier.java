@@ -155,7 +155,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
         SignatureSVTValidationResult svtValResult = null;
           svtValResult = getMatchingSvtValidation(PDFSVAUtils.getSignatureValueBytes(signature, pdfDocBytes), svtValidationResults);
         if (svtValResult == null) {
-          // This signature is not covered by a valid SVA. Perform normal signature verification
+          // This signature is not covered by a valid SVT. Perform normal signature verification
           try {
             //Get verified documentTimestamps if not previously loaded
             if (!docTsVerified) {
@@ -340,7 +340,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       try {
         MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(svtValResult.getSignedJWT().getHeader().getAlgorithm());
         String sigValueHashStr = Base64.encodeBase64String(md.digest(sigValueBytes));
-        if (sigValueHashStr.equals(svtValResult.getSignatureClaims().getSig_ref().getSig_hash())) {
+        if (sigValueHashStr.equals(svtValResult.getSignatureClaims().getSig_ref().getSig_hash()) && svtValResult.isSvtValidationSuccess()) {
           return svtValResult;
         }
       }

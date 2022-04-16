@@ -26,10 +26,12 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
  */
 public class SigValIdentifiers {
 
-  /** PDF signature timestamp */
+  /** Signature timestamp */
   public static final String TIME_VERIFICATION_TYPE_SIG_TIMESTAMP = "http://id.swedenconnect.se/svt/timeval-type/sig-timestamp/01";
-  /** PDF document timestamp */
+  /** Document timestamp */
   public static final String TIME_VERIFICATION_TYPE_PDF_DOC_TIMESTAMP = "http://id.swedenconnect.se/svt/timeval-type/pdf-doc-timestamp/01";
+  /** Verified time without explicit reference to the source time evidence data */
+  public static final String VERIFIED_TIME = "http://id.swedenconnect.se/svt/timeval-type/verified-time/01";
   /** SVT timestamp */
   public static final String TIME_VERIFICATION_TYPE_SVT = "http://id.swedenconnect.se/svt/timeval-type/svt/01";
   /** Basic signature validation against list of trusted certificates. No revocation checking */
@@ -38,6 +40,21 @@ public class SigValIdentifiers {
   public static final String SIG_VALIDATION_POLICY_PKIX_VALIDATION = "http://id.swedenconnect.se/svt/sigval-policy/pkix/01";
   /** Full PKIX path validation allowing revoked certificates revoked after time stamped signing time */
   public static final String SIG_VALIDATION_POLICY_TIMESTAMPED_PKIX_VALIDATION = "http://id.swedenconnect.se/svt/sigval-policy/ts-pkix/01";
+  /** Signature method indication for validation of signature based on SVT validation where original validation was pkix validation */
+  public static final String SIG_VALIDATION_POLICY_SVT_PKIX_VALIDATION = "http://id.swedenconnect.se/svt/sigval-policy/pkix/01/svt";
+  /** Signature method indication for validation of signature based on SVT validation where original validation was pkix validation */
+  public static final String SIG_VALIDATION_POLICY_SVT_IIMESTAMPED_PKIX_VALIDATION = "http://id.swedenconnect.se/svt/sigval-policy/ts-pkix/01/svt";
+
+  /** Sig val report */
+
+  /** XML Namespace */
+  public static final String SIG_VALIDATION_REPORT_XML_NS = "http://id.swedenconnect.se/sigval-report/ns/01";
+  /** Sig status data type identifier for a status message in the signature validation report */
+  public static final String SIG_VALIDATION_REPORT_STATUS_MESSAGE = "http://id.swedenconnect.se/sigval-report/data/message";
+  /** Sig validation status sub indication if the signed document is only partly signed (Signature does not cover whole document */
+  public static final String SIG_VALIDATION_SUBINDICATION_PARTIALLY_SIGNED = "http://id.swedenconnect.se/sigval-report/subindication/partially-signed";
+
+
 
   /** Object identifier for the ECDSA algorithm. */
   public static final String ID_ECDSA = "1.2.840.10045.2.1";

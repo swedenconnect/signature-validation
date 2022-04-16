@@ -22,8 +22,11 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
+import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.swedenconnect.sigval.commons.data.ExtendedSigValResult;
 import se.swedenconnect.sigval.commons.data.SigValIdentifiers;
+import se.swedenconnect.sigval.commons.data.TimeValidationResult;
+import se.swedenconnect.sigval.commons.timestamp.TimeStamp;
 import se.swedenconnect.sigval.svt.algorithms.SVTAlgoRegistry;
 import se.swedenconnect.sigval.svt.claims.*;
 import se.swedenconnect.sigval.svt.issuer.SVTIssuer;
@@ -187,6 +190,29 @@ public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SV
     MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(hashAlgoUri);
     return Base64.encodeBase64String(md.digest(bytes));
   }
+
+  /**
+   * Extracts the time validation claims from a time validation result object. In particular this function also adds
+   * a hash of the timestamp if present using the SVT assigned hash algorithm
+   * @param timeValidationResult time stamp validation result
+   * @param hashAlgoUri SVT hash algorithm
+   * @return time validation claims
+   * @throws NoSuchAlgorithmException if the selected hash algorithm is not supported
+   */
+  public TimeValidationClaims extractTimeValClaims(TimeValidationResult timeValidationResult, String hashAlgoUri){
+    TimeValidationClaims timeValidationClaims = timeValidationResult.getTimeValidationClaims();
+    TimeStamp timeStamp = timeValidationResult.getTimeStamp();
+    if (timeStamp != null) {
+      try {
+        byte[] tsHash = DigestAlgorithmRegistry.get(hashAlgoUri).getInstance().digest(timeStamp.getTimeStampSigBytes());
+        timeValidationClaims.setHash(Base64.encodeBase64String(tsHash));
+      } catch (NoSuchAlgorithmException ex) {
+        log.warn("The provided SVT hash algorithm is not supported", ex);
+      }
+    }
+    return timeValidationClaims;
+  }
+
 
 
 }
