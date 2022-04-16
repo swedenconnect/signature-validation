@@ -33,7 +33,9 @@ import org.etsi.uri.x01903.v13.DigestAlgAndValueType;
 import org.etsi.uri.x19102.v12.*;
 import org.w3.x2000.x09.xmldsig.DigestMethodType;
 import org.w3.x2000.x09.xmldsig.SignatureValueType;
+import org.w3c.dom.Document;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
+import se.idsec.signservice.xml.DOMUtils;
 import se.swedenconnect.cert.extensions.AuthnContext;
 import se.swedenconnect.cert.extensions.QCStatements;
 import se.swedenconnect.id.sigvalReport.ns.x01.*;
@@ -53,6 +55,8 @@ import se.swedenconnect.sigval.report.SigValReportGenerator;
 import se.swedenconnect.sigval.report.data.*;
 import se.swedenconnect.sigval.report.validationobjects.ValidationObject;
 import se.swedenconnect.sigval.report.validationobjects.ValidationObjectProcessor;
+import se.swedenconnect.sigval.report.xml.ReportSigner;
+import se.swedenconnect.sigval.report.xml.ValidationReportUtils;
 import se.swedenconnect.sigval.svt.claims.*;
 
 import java.io.ByteArrayInputStream;
@@ -149,6 +153,20 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
    * @param sigValResult                  signature validation result
    */
   protected abstract void applyValidationPolicy(SignatureValidationReportType signatureValidationReportType, R sigValResult);
+
+  /** {@inheritDoc} */
+  @Override public byte[] getSignedValidationReport(SignedDocumentValidationResult<R> validationResult,
+    SigvalReportOptions sigvalReportOptions, String requestID, ReportSigner signer) throws IOException {
+
+    try {
+      ValidationReportDocument validationReport = getValidationReport(validationResult, sigvalReportOptions, requestID);
+      byte[] reportBytes = ValidationReportUtils.getReportXml(validationReport);
+      return signer.signSigvalReport(reportBytes);
+    } catch (Exception ex) {
+      log.error("Error signing signature validation report", ex);
+      throw new IOException("Error signing signature validation report", ex);
+    }
+  }
 
   /** {@inheritDoc} */
   @Override public ValidationReportDocument getValidationReport(SignedDocumentValidationResult<R> validationResult,
