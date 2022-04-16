@@ -55,7 +55,7 @@ public class ExtendedSigValResult extends DefaultSignatureValidationResult {
   private boolean coversDocument = false;
 
   /**
-   * The pdf document in the form it was before being signed by this signature.
+   * The document data that was actually signed, in the form it had before this signature was added to the document.
    */
   @Setter
   @Getter

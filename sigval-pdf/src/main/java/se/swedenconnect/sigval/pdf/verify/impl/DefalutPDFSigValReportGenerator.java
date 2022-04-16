@@ -16,7 +16,6 @@
 
 package se.swedenconnect.sigval.pdf.verify.impl;
 
-import com.nimbusds.jwt.SignedJWT;
 import org.apache.xmlbeans.XmlString;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.cms.ContentInfo;
@@ -30,10 +29,8 @@ import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithm;
 import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.swedenconnect.sigval.commons.data.SigValIdentifiers;
 import se.swedenconnect.sigval.pdf.data.ExtendedPdfSigValResult;
-import se.swedenconnect.sigval.report.data.MainIndication;
 import se.swedenconnect.sigval.report.data.SubIndication;
 import se.swedenconnect.sigval.report.impl.AbstractSigValReportGenerator;
-import se.swedenconnect.sigval.svt.claims.SignatureClaims;
 
 import java.io.IOException;
 
@@ -46,11 +43,11 @@ import java.io.IOException;
 public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerator<ExtendedPdfSigValResult> {
 
   public DefalutPDFSigValReportGenerator() {
-    super(DigestAlgorithm.ID_SHA256, false);
+    super(DigestAlgorithm.ID_SHA256);
   }
 
-  public DefalutPDFSigValReportGenerator(String defaultHashAlgo, boolean includeSigningCertificateChain) {
-    super(defaultHashAlgo, includeSigningCertificateChain);
+  public DefalutPDFSigValReportGenerator(String defaultHashAlgo) {
+    super(defaultHashAlgo);
   }
 
   /**

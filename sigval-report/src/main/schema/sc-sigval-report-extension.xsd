@@ -11,4 +11,57 @@
             <xs:element name="QSCD" type="xs:boolean"/>
         </xs:sequence>
     </xs:complexType>
+    <xs:element name="InResponseTo" type="xs:string"/>
+
+
+    <xs:element name="AuthContext" type="svrex:AuthContextType"/>
+
+    <xs:complexType name="AuthContextType">
+        <xs:sequence>
+            <xs:element ref="svrex:AuthContextInfo" minOccurs="0"/>
+            <xs:element ref="svrex:IdAttributes" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="AuthContextInfo" type="svrex:AuthContextInfoType"/>
+
+    <xs:complexType name="AuthContextInfoType">
+        <xs:sequence>
+            <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="IdentityProvider" type="xs:string" use="required"/>
+        <xs:attribute name="AuthenticationInstant" type="xs:dateTime" use="required"/>
+        <xs:attribute name="AuthnContextClassRef" type="xs:anyURI" use="required"/>
+        <xs:attribute name="AssertionRef" type="xs:string"/>
+        <xs:attribute name="ServiceID" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:element name="IdAttributes" type="svrex:IdAttributesType"/>
+
+    <xs:complexType name="IdAttributesType">
+        <xs:sequence>
+            <xs:element maxOccurs="unbounded" minOccurs="1" ref="svrex:AttributeMapping"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="AttributeMapping" type="svrex:AttributeMappingType"/>
+
+    <xs:complexType name="AttributeMappingType">
+        <xs:sequence>
+            <xs:element ref="svrex:Attribute"/>
+            <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="Type" use="required" type="xs:string"> </xs:attribute>
+        <xs:attribute name="Ref" type="xs:string" use="required"/>
+    </xs:complexType>
+
+
+    <xs:element name="Attribute" type="svrex:AttributeType"/>
+    <xs:complexType name="AttributeType">
+        <xs:sequence>
+            <xs:element maxOccurs="unbounded" minOccurs="0" name="AttributeValue" type="xs:string"/>
+        </xs:sequence>
+        <xs:attribute name="Name" type="xs:string" use="required"/>
+        <xs:attribute name="FriendlyName" type="xs:string"/>
+    </xs:complexType>
 </xs:schema>

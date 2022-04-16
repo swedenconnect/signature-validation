@@ -19,15 +19,24 @@ package se.swedenconnect.sigval.report;
 import org.etsi.uri.x19102.v12.ValidationReportDocument;
 import se.swedenconnect.sigval.commons.data.ExtendedSigValResult;
 import se.swedenconnect.sigval.commons.data.SignedDocumentValidationResult;
+import se.swedenconnect.sigval.report.data.SigvalReportOptions;
 
 /**
- * Description
+ * Interface for creating a signature validation report based on ETSI TS 119 102-2
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
 public interface SigValReportGenerator<R extends ExtendedSigValResult> {
 
-  ValidationReportDocument getValidationReport(SignedDocumentValidationResult<R> validationResult);
+  /**
+   * Provide a signature validation report based on ETSI TS 119 102-2
+   * @param validationResult the result of signature validation used to generate the report
+   * @param sigvalReportOptions options for building the validation report
+   * @param requestID an optional requestID to be included in the report
+   * @return signature validation report
+   */
+  ValidationReportDocument getValidationReport(SignedDocumentValidationResult<R> validationResult,
+    SigvalReportOptions sigvalReportOptions, String requestID);
 
 }

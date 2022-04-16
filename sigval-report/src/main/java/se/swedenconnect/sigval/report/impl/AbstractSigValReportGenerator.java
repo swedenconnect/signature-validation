@@ -17,7 +17,6 @@
 package se.swedenconnect.sigval.report.impl;
 
 import com.nimbusds.jwt.SignedJWT;
-import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -35,10 +34,14 @@ import org.etsi.uri.x19102.v12.*;
 import org.w3.x2000.x09.xmldsig.DigestMethodType;
 import org.w3.x2000.x09.xmldsig.SignatureValueType;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
+import se.swedenconnect.cert.extensions.AuthnContext;
 import se.swedenconnect.cert.extensions.QCStatements;
-import se.swedenconnect.id.sigvalReport.ns.x01.EUQualificationsDocument;
-import se.swedenconnect.id.sigvalReport.ns.x01.EUQualificationsType;
-import se.swedenconnect.id.sigvalReport.ns.x01.SignatureAlgorithmDocument;
+import se.swedenconnect.id.sigvalReport.ns.x01.*;
+import se.swedenconnect.schemas.cert.authcont.saci_1_0.AttributeMapping;
+import se.swedenconnect.schemas.cert.authcont.saci_1_0.AuthContextInfo;
+import se.swedenconnect.schemas.cert.authcont.saci_1_0.IdAttributes;
+import se.swedenconnect.schemas.cert.authcont.saci_1_0.SAMLAuthContext;
+import se.swedenconnect.schemas.saml_2_0.assertion.Attribute;
 import se.swedenconnect.sigval.cert.chain.PathValidationResult;
 import se.swedenconnect.sigval.cert.validity.ValidationStatus;
 import se.swedenconnect.sigval.commons.data.ExtendedSigValResult;
@@ -47,14 +50,14 @@ import se.swedenconnect.sigval.commons.data.SignedDocumentValidationResult;
 import se.swedenconnect.sigval.commons.data.TimeValidationResult;
 import se.swedenconnect.sigval.commons.utils.SVAUtils;
 import se.swedenconnect.sigval.report.SigValReportGenerator;
-import se.swedenconnect.sigval.report.data.MainIndication;
-import se.swedenconnect.sigval.report.data.POETypeOfProof;
-import se.swedenconnect.sigval.report.data.SubIndication;
+import se.swedenconnect.sigval.report.data.*;
 import se.swedenconnect.sigval.report.validationobjects.ValidationObject;
 import se.swedenconnect.sigval.report.validationobjects.ValidationObjectProcessor;
 import se.swedenconnect.sigval.svt.claims.*;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
@@ -69,14 +72,10 @@ import java.util.*;
 @Slf4j
 public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResult> implements SigValReportGenerator<R> {
 
-  @Setter protected boolean addTimeValidationCertObjects = false;
-
   private final String defaultHashAlgo;
-  private final boolean includeSigningCertificateChain;
 
-  public AbstractSigValReportGenerator(String defaultHashAlgo, boolean includeSigningCertificateChain) {
+  public AbstractSigValReportGenerator(String defaultHashAlgo) {
     this.defaultHashAlgo = defaultHashAlgo;
-    this.includeSigningCertificateChain = includeSigningCertificateChain;
   }
 
   /**
@@ -98,6 +97,7 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
 
   /**
    * Default implementation of the logic to get signature validation process identifier
+   *
    * @param sigValResult
    * @param pol
    * @return
@@ -136,6 +136,7 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
 
   /**
    * Get the signature value
+   *
    * @param sigValResult
    * @return signature value
    */
@@ -149,7 +150,14 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
    */
   protected abstract void applyValidationPolicy(SignatureValidationReportType signatureValidationReportType, R sigValResult);
 
-  @Override public ValidationReportDocument getValidationReport(SignedDocumentValidationResult<R> validationResult) {
+  /** {@inheritDoc} */
+  @Override public ValidationReportDocument getValidationReport(SignedDocumentValidationResult<R> validationResult,
+    SigvalReportOptions sigvalReportOptions, String requestID) {
+
+    // Create signature validation report options if not provided
+    sigvalReportOptions = sigvalReportOptions == null
+      ? new SigvalReportOptions()
+      : sigvalReportOptions;
 
     final ValidationReportDocument validationReportDocument = ValidationReportDocument.Factory.newInstance();
     final ValidationReportType validationReport = validationReportDocument.addNewValidationReport();
@@ -160,7 +168,7 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
     // Get all validation objects
     try {
       // Get all validation object data from the validation results
-      validationObjectMap = getValidationObejctMap(validationResults);
+      validationObjectMap = getValidationObejctMap(validationResults, sigvalReportOptions);
       if (!validationObjectMap.isEmpty()) {
         // Create validation objects in the report if validation objects are found
         ValidationObjectListType signatureValidationObjects = validationReport.addNewSignatureValidationObjects();
@@ -232,6 +240,10 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
       validationTime.setBestSignatureTime(getBestSignatureTime(sigValResult, currentTime, hashAlgoId));
       signatureValidationReportType.setValidationTimeInfo(validationTime);
 
+      // Set signed document ref
+      addSignedDocumentRepresentation(sigValResult, hashAlgoId, signatureValidationReportType,
+        sigvalReportOptions.getSignedDataRepresentation());
+
       // Set the status indication
       setValidationStatus(sigValResult, signatureValidationReportType);
       // SignatureIdentifier
@@ -255,11 +267,45 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
       // Make last final policy validation
       applyValidationPolicy(signatureValidationReportType, sigValResult);
 
+      // Add InResponseTo
+      if (requestID != null) {
+        InResponseToDocument inResponseTo = InResponseToDocument.Factory.newInstance();
+        inResponseTo.setInResponseTo(requestID);
+        extendElement(inResponseTo, signatureValidationReportType);
+      }
+
     }
     return validationReportDocument;
   }
 
-  private void extendElement(XmlObject newElement, XmlObject parentElement) {
+  protected void addSignedDocumentRepresentation(R sigValResult, String hashAlgoId,
+    SignatureValidationReportType signatureValidationReportType, SignedDataRepresentation signedDataRepresentation) {
+
+    if (sigValResult.getSignedDocument() == null) {
+      log.debug("No signed document available for validation");
+      return;
+    }
+    try {
+      String signedDocRefId = ValidationObjectProcessor.getId(sigValResult.getSignedDocument(), hashAlgoId,
+        se.swedenconnect.sigval.report.validationobjects.ValidationObjectType.signedData);
+      VOReferenceType signedDocRef = VOReferenceType.Factory.newInstance();
+      signedDocRef.setVOReference(List.of(signedDocRefId));
+      SignersDocumentType signersDocumentType = SignersDocumentType.Factory.newInstance();
+      signersDocumentType.setSignersDocumentRepresentation(signedDocRef);
+      signatureValidationReportType.setSignersDocument(signersDocumentType);
+    }
+    catch (Exception ex) {
+      log.error("Unable to hash the signed document", ex);
+    }
+  }
+
+  /**
+   * Extend one element with a new child element
+   *
+   * @param newElement    new child element
+   * @param parentElement element to be extended with the new child element
+   */
+  protected void extendElement(XmlObject newElement, XmlObject parentElement) {
     XmlCursor newElementCursor = newElement.newCursor();
     newElementCursor.toNextToken();
     XmlCursor parentCursor = parentElement.newCursor();
@@ -268,6 +314,15 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
 
   }
 
+  /**
+   * Add signer information. The reason for the sneaky throws annotation is because the exception case is impossible as it can only
+   * be triggered by a bad or null certificate, but this certificate has already been processed and would have caused errors before reaching
+   * this point, had it been corrupt.
+   *
+   * @param signatureValidationReportType signature validation report element to be extended
+   * @param signerCertificate             signer certificate
+   * @param hashAlgoId                    hash algorithm
+   */
   @SneakyThrows
   protected void addSignerInformation(SignatureValidationReportType signatureValidationReportType, X509Certificate signerCertificate,
     String hashAlgoId) {
@@ -306,6 +361,7 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
     signatureAttributesType.setDataObjectFormatArray(new SADataObjectFormatType[] { getDataObjectFormat() });
     // Process the signer certificate
     EUQualificationsDocument euQualifications = null;
+    AuthContextDocument authnContextDoc = null;
     try {
       VOReferenceType certificateRef = signatureAttributesType.addNewSigningCertificate().addNewAttributeObject();
       certificateRef.setVOReference(List.of(
@@ -317,7 +373,7 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
       Extension qcStatementExt = signCertHolder.getExtension(Extension.qCStatements);
       if (qcStatementExt != null) {
         QCStatements qcStatements = QCStatements.getInstance(qcStatementExt.getParsedValue());
-        if (qcStatements.isQcType()){
+        if (qcStatements.isQcType()) {
           List<ASN1ObjectIdentifier> qcTypeIdList = qcStatements.getQcTypeIdList();
           qc = qcTypeIdList.contains(QCStatements.QC_TYPE_ELECTRONIC_SIGNATURE);
         }
@@ -327,6 +383,18 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
       EUQualificationsType euQualificationsType = euQualifications.addNewEUQualifications();
       euQualificationsType.setQualifiedCertificate(qc);
       euQualificationsType.setQSCD(qscd);
+
+      //Get Authn Context extension info
+      Extension authnContextExt = signCertHolder.getExtension(AuthnContext.OID);
+      if (authnContextExt != null) {
+        AuthnContext authnContext = AuthnContext.getInstance(authnContextExt.getParsedValue());
+        List<SAMLAuthContext> statementInfoList = authnContext.getStatementInfoList();
+        if (statementInfoList != null && !statementInfoList.isEmpty()) {
+          SAMLAuthContext authContext = statementInfoList.get(0);
+          authnContextDoc = cloneExtAuthContext(authContext);
+        }
+      }
+
     }
     catch (Exception ex) {
       log.warn("Error processing signature certificate", ex);
@@ -350,12 +418,71 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
     extendElement(signatureAlgorithmElm, signatureAttributesType);
 
     // Set EU Qualifications
-    if (euQualifications != null){
+    if (euQualifications != null) {
       extendElement(euQualifications, signatureAttributesType);
+    }
+
+    // Set AuthnContextData
+    if (authnContextDoc != null) {
+      extendElement(authnContextDoc, signatureAttributesType);
     }
 
     signatureValidationReportType.setSignatureAttributes(signatureAttributesType);
     return null;
+  }
+
+  private AuthContextDocument cloneExtAuthContext(SAMLAuthContext authContext) {
+
+    AuthContextDocument acDoc = AuthContextDocument.Factory.newInstance();
+    AuthContextType ac = acDoc.addNewAuthContext();
+
+    //Get Authn context info
+    AuthContextInfo authContextInfo = authContext.getAuthContextInfo();
+    if (authContextInfo != null) {
+      AuthContextInfoType aci = ac.addNewAuthContextInfo();
+      aci.setIdentityProvider(authContextInfo.getIdentityProvider());
+      aci.setAuthenticationInstant(authContextInfo.getAuthenticationInstant().toGregorianCalendar());
+      aci.setAuthnContextClassRef(authContextInfo.getAuthnContextClassRef());
+      if (authContextInfo.getAssertionRef() != null){
+        aci.setAssertionRef(authContextInfo.getAssertionRef());
+      }
+      if (authContextInfo.getServiceID() != null) {
+        aci.setServiceID(authContextInfo.getServiceID());
+      }
+    }
+
+    // Get attribute mapping
+    IdAttributes idAttributes = authContext.getIdAttributes();
+    if (idAttributes != null) {
+      IdAttributesType ida = ac.addNewIdAttributes();
+      List<AttributeMapping> attributeMappings = idAttributes.getAttributeMappings();
+      if (attributeMappings != null && !attributeMappings.isEmpty()) {
+        for (AttributeMapping attributeMapping: attributeMappings) {
+          AttributeMappingType am = ida.addNewAttributeMapping();
+          cloneAttributeMapping(attributeMapping, am);
+        }
+      }
+    }
+    return acDoc;
+  }
+
+  private void cloneAttributeMapping(AttributeMapping attributeMapping, AttributeMappingType am) {
+    am.setType(attributeMapping.getType());
+    am.setRef(attributeMapping.getRef());
+    AttributeType at = am.addNewAttribute();
+    Attribute attribute = attributeMapping.getAttribute();
+    at.setName(attribute.getName());
+    at.setFriendlyName(attribute.getFriendlyName());
+    List<Object> attributeValues = attribute.getAttributeValues();
+    if (attributeValues != null && !attributeValues.isEmpty()){
+      for (Object valueObj: attributeValues) {
+        if (valueObj instanceof String) {
+          at.addNewAttributeValue().setStringValue((String) valueObj);
+        } else {
+          at.addNewAttributeValue().setStringValue(valueObj.toString());
+        }
+      }
+    }
   }
 
   /**
@@ -531,23 +658,23 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
     // Create result data
     ValidationStatusType validationStatus = ValidationStatusType.Factory.newInstance();
     validationStatus.setMainIndication(mainIndication.getUri());
-    if (!subIndications.isEmpty()){
+    if (!subIndications.isEmpty()) {
       validationStatus.setSubIndicationArray(subIndications.toArray(String[]::new));
     }
     setResultMessage(statusMessage, validationStatus);
     signatureValidationReportType.setSignatureValidationStatus(validationStatus);
     // Set the signature validation process identifier
-    SignatureValidationProcessType signatureValidationProcessType = getSignatureValidationProcess(sigValResult , method);
+    SignatureValidationProcessType signatureValidationProcessType = getSignatureValidationProcess(sigValResult, method);
     signatureValidationReportType.setSignatureValidationProcess(signatureValidationProcessType);
   }
 
   private void addCertValidationSubindications(List<String> subIndications, R sigValidationResult) {
 
-    if (sigValidationResult.getSignerCertificate() != null){
-      if (sigValidationResult.getSignerCertificate().getNotAfter().before(new Date())){
+    if (sigValidationResult.getSignerCertificate() != null) {
+      if (sigValidationResult.getSignerCertificate().getNotAfter().before(new Date())) {
         subIndications.add(SubIndication.EXPIRED.getUri());
       }
-      if (sigValidationResult.getSignerCertificate().getNotBefore().after(new Date())){
+      if (sigValidationResult.getSignerCertificate().getNotBefore().after(new Date())) {
         subIndications.add(SubIndication.NOT_YET_VALID.getUri());
       }
     }
@@ -557,11 +684,12 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
       ValidationStatus validationStatus = pathValidationResult.getValidationStatusList().get(0);
       ValidationStatus.CertificateValidity validity = validationStatus.getValidity();
 
-      if (validity.equals(ValidationStatus.CertificateValidity.REVOKED)){
+      if (validity.equals(ValidationStatus.CertificateValidity.REVOKED)) {
         subIndications.add(SubIndication.REVOKED.getUri());
       }
 
-    } catch (Exception ignored) {
+    }
+    catch (Exception ignored) {
       // Causing an exception is not an indication of an error
     }
 
@@ -598,15 +726,19 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
    * @throws CertificateEncodingException
    * @throws NoSuchAlgorithmException
    */
-  protected Map<String, ValidationObject> getValidationObejctMap(List<R> validationResults)
+  protected Map<String, ValidationObject> getValidationObejctMap(List<R> validationResults, SigvalReportOptions sigvalReportOptions)
     throws CertificateEncodingException, NoSuchAlgorithmException {
 
     Map<String, ValidationObject> validationObjectMap = new HashMap<>();
 
     for (R validationResult : validationResults) {
       String hashAlgoId = getHashAlgo(validationResult);
-      ValidationObjectProcessor.storeSigningCertificates(validationResult, validationObjectMap, hashAlgoId, includeSigningCertificateChain);
-      ValidationObjectProcessor.storeTimeValidationObjects(validationResult, validationObjectMap, hashAlgoId, addTimeValidationCertObjects);
+      ValidationObjectProcessor.storeSigningCertificates(validationResult, validationObjectMap, hashAlgoId,
+        sigvalReportOptions.isIncludeSignatureCertChainRefs());
+      ValidationObjectProcessor.storeTimeValidationObjects(validationResult, validationObjectMap, hashAlgoId,
+        sigvalReportOptions.isIncludeTimeStampCertRefs());
+      ValidationObjectProcessor.includeExplicitSignedDataReferences(validationResult, validationObjectMap, hashAlgoId,
+        sigvalReportOptions.getSignedDataRepresentation());
     }
     return validationObjectMap;
   }

@@ -39,11 +39,11 @@ import java.io.IOException;
 public class DefalutXMLSigValReportGenerator extends AbstractSigValReportGenerator<ExtendedXmlSigvalResult> {
 
   public DefalutXMLSigValReportGenerator() {
-    super(DigestAlgorithm.ID_SHA256, false);
+    super(DigestAlgorithm.ID_SHA256);
   }
 
-  public DefalutXMLSigValReportGenerator(String defaultHashAlgo, boolean includeSigningCertificateChain) {
-    super(defaultHashAlgo, includeSigningCertificateChain);
+  public DefalutXMLSigValReportGenerator(String defaultHashAlgo) {
+    super(defaultHashAlgo);
   }
 
   /**
