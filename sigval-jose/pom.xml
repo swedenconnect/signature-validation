@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <artifactId>sigval-jose</artifactId>
+  <packaging>jar</packaging>
+
+  <parent>
+    <artifactId>sigval-parent</artifactId>
+    <groupId>se.swedenconnect.sigval</groupId>
+    <version>1.2.0-SNAPSHOT</version>
+  </parent>
+
+  <name>Sweden Connect :: Signature validation :: JOSE</name>
+  <description>JOSE Signature Validation</description>
+  <url>https://github.com/swedenconnect/signature-validation</url>
+
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:https://github.com/swedenconnect/signature-validation.git</connection>
+    <developerConnection>scm:git:https://github.com/swedenconnect/signature-validation.git</developerConnection>
+    <url>https://github.com/swedenconnect/signature-validation/tree/master</url>
+  </scm>
+
+  <organization>
+    <name>Sweden Connect</name>
+    <url>https://www.swedenconnect.se</url>
+  </organization>
+
+  <developers>
+    <developer>
+      <name>Martin Lindström</name>
+      <email>martin@idsec.se</email>
+      <organization>IDsec Solutions AB</organization>
+      <organizationUrl>https://www.idsec.se</organizationUrl>
+    </developer>
+
+    <developer>
+      <name>Stefan Santesson</name>
+      <email>stefan@idsec.se</email>
+      <organization>IDsec Solutions AB</organization>
+      <organizationUrl>https://www.idsec.se</organizationUrl>
+    </developer>
+  </developers>
+
+  <dependencies>
+  
+    <dependency>
+      <groupId>se.swedenconnect.sigval</groupId>
+      <artifactId>sigval-commons</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>se.swedenconnect.sigval</groupId>
+      <artifactId>sigvalreport</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
+    
+  </dependencies>
+
+  <build>
+    <plugins>
+    
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <doctitle>Signature Validation JOSE - ${project.version}</doctitle>
+          <windowtitle>Signature Validation JOSE - ${project.version}</windowtitle>
+          <links>
+            <link>https://docs.swedenconnect.se/signature-validation/javadoc/cert-validation/</link>
+            <link>https://docs.swedenconnect.se/signature-validation/javadoc/sigval-commons/</link>
+          </links>
+        </configuration>
+      </plugin>
+      
+    </plugins>
+  </build>
+
+</project>

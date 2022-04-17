@@ -32,7 +32,7 @@ import java.util.zip.ZipInputStream;
  */
 @AllArgsConstructor
 public enum DocType {
-    XML,PDF,ASICS_NON_ETSI, ASICS_S, ASICS_CADES, CADES, UNKNOWN;
+    XML,PDF,ASICS_NON_ETSI, ASICS_S, ASICS_CADES, CADES, JOSE, JOSE_COMPACT, UNKNOWN;
 
     /**
      * Determine the document type
@@ -108,7 +108,11 @@ public enum DocType {
 
             } else if (preambleString.getBytes()[0] == 0x30) {
                 return DocType.CADES;
-            } else {
+            } else if (preambleString.trim().startsWith("{")){
+                return DocType.JOSE;
+            } else if (preambleString.trim().startsWith("ey")) {
+                return DocType.JOSE_COMPACT;
+            }else {
                 return DocType.UNKNOWN;
             }
         } finally {
