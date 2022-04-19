@@ -47,13 +47,16 @@ public class SigValIdentifiers {
 
   /** Sig val report */
 
-  /** XML Namespace */
-  public static final String SIG_VALIDATION_REPORT_XML_NS = "http://id.swedenconnect.se/sigval-report/ns/01";
   /** Sig status data type identifier for a status message in the signature validation report */
   public static final String SIG_VALIDATION_REPORT_STATUS_MESSAGE = "http://id.swedenconnect.se/sigval-report/data/message";
   /** Sig validation status sub indication if the signed document is only partly signed (Signature does not cover whole document */
   public static final String SIG_VALIDATION_SUBINDICATION_PARTIALLY_SIGNED = "http://id.swedenconnect.se/sigval-report/subindication/partially-signed";
 
+  /** Signature quality */
+  public static final String SIG_VALIDATION_REPORT_SIGNATURE_QUALITY_ADES = "http://id.swedenconnect.se/sigval-report/quality/ades";
+  public static final String SIG_VALIDATION_REPORT_SIGNATURE_QUALITY_ETSI = "http://id.swedenconnect.se/sigval-report/quality/etsi";
+  public static final String SIG_VALIDATION_REPORT_SIGNATURE_QUALITY_QC = "http://id.swedenconnect.se/sigval-report/quality/qc";
+  public static final String SIG_VALIDATION_REPORT_SIGNATURE_QUALITY_QC_SQSCD = "http://id.swedenconnect.se/sigval-report/quality/qc-qscd";
 
 
   /** Object identifier for the ECDSA algorithm. */

@@ -57,11 +57,7 @@ public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerat
    * @return signature quality
    */
   @Override protected String getSignatureQuality(ExtendedPdfSigValResult sigValResult) {
-    boolean validEtsiBaseline = sigValResult.isEtsiAdes() && !sigValResult.isInvalidSignCert();
-    if (validEtsiBaseline) {
-      return "urn:cef:dss:signatureQualification:AdESig";
-    }
-    return "urn:cef:dss:signatureQualification:notApplicable";
+    return defaultSignatureQuality(sigValResult);
   }
 
   /**

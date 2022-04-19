@@ -20,6 +20,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import se.swedenconnect.sigval.commons.svt.SVTExtendpolicy;
 import se.swedenconnect.sigval.xml.xmlstruct.SignatureData;
 
 import org.w3c.dom.Element;
@@ -41,6 +42,6 @@ public class XMLSigValInput {
   /** Signature data collected from the signature element */
   private SignatureData signatureData;
   /** SVT extension strategy */
-  private XMLDocumentSVTMethod svtMethod;
+  private SVTExtendpolicy svtMethod;
 
 }

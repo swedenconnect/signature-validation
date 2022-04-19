@@ -20,6 +20,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import se.swedenconnect.sigval.commons.svt.SVTExtendpolicy;
 import se.swedenconnect.sigval.jose.data.JOSESignatureData;
 
 /**

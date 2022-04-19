@@ -25,6 +25,7 @@ import com.nimbusds.jwt.SignedJWT;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import se.swedenconnect.sigval.commons.svt.SVTExtendpolicy;
 import se.swedenconnect.sigval.jose.data.JOSESignatureData;
 import se.swedenconnect.sigval.jose.verify.JOSESignedDocumentValidator;
 import se.swedenconnect.sigval.svt.issuer.SVTModel;

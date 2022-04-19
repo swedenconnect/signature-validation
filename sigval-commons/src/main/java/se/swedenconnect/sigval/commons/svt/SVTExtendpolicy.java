@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020. Sweden Connect
+ * Copyright (c) 2020-2022.  Sweden Connect
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package se.swedenconnect.sigval.xml.svt;
+package se.swedenconnect.sigval.commons.svt;
 
 /**
- * Enumeration class specifying identifiers for different XML SVT extension strategies
+ * Enumeration class specifying identifiers for different SVT extension strategies
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-public enum XMLDocumentSVTMethod {
-  /** Replace any previous SVT in the XML signatures where a new SVT was successfully created */
+public enum SVTExtendpolicy {
+  /** Replace any previous SVT in the signature where a new SVT was successfully created */
   REPLACE,
   /** Append a new SVT to any existing SVT tokens */
   EXTEND;

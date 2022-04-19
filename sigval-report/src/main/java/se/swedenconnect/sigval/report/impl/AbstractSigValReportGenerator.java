@@ -32,18 +32,14 @@ import org.bouncycastle.util.encoders.Base64;
 import org.etsi.uri.x01903.v13.DigestAlgAndValueType;
 import org.etsi.uri.x19102.v12.*;
 import org.w3.x2000.x09.xmldsig.DigestMethodType;
+import org.w3.x2000.x09.xmldsig.SignatureMethodDocument;
+import org.w3.x2000.x09.xmldsig.SignatureMethodType;
 import org.w3.x2000.x09.xmldsig.SignatureValueType;
-import org.w3c.dom.Document;
+import se.elegnamnden.id.authCont.x10.saci.SAMLAuthContextDocument;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
-import se.idsec.signservice.xml.DOMUtils;
 import se.swedenconnect.cert.extensions.AuthnContext;
 import se.swedenconnect.cert.extensions.QCStatements;
-import se.swedenconnect.id.sigvalReport.ns.x01.*;
-import se.swedenconnect.schemas.cert.authcont.saci_1_0.AttributeMapping;
-import se.swedenconnect.schemas.cert.authcont.saci_1_0.AuthContextInfo;
-import se.swedenconnect.schemas.cert.authcont.saci_1_0.IdAttributes;
 import se.swedenconnect.schemas.cert.authcont.saci_1_0.SAMLAuthContext;
-import se.swedenconnect.schemas.saml_2_0.assertion.Attribute;
 import se.swedenconnect.sigval.cert.chain.PathValidationResult;
 import se.swedenconnect.sigval.cert.validity.ValidationStatus;
 import se.swedenconnect.sigval.commons.data.ExtendedSigValResult;
@@ -89,6 +85,38 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
    * @return signature quality
    */
   protected abstract String getSignatureQuality(R sigValResult);
+
+  protected String defaultSignatureQuality(R sigValResult) {
+    boolean qc = false;
+    boolean qscd = false;
+    try {
+      // Get EU Qualifications
+      X509CertificateHolder signCertHolder = new JcaX509CertificateHolder(sigValResult.getSignerCertificate());
+      Extension qcStatementExt = signCertHolder.getExtension(Extension.qCStatements);
+      if (qcStatementExt != null) {
+        QCStatements qcStatements = QCStatements.getInstance(qcStatementExt.getParsedValue());
+        if (qcStatements.isQcType()) {
+          List<ASN1ObjectIdentifier> qcTypeIdList = qcStatements.getQcTypeIdList();
+          qc = qcTypeIdList.contains(QCStatements.QC_TYPE_ELECTRONIC_SIGNATURE);
+        }
+        qscd = qcStatements.isQcSscd();
+      }
+      if (qc && qscd){
+        return SigValIdentifiers.SIG_VALIDATION_REPORT_SIGNATURE_QUALITY_QC_SQSCD;
+      }
+      if (qc){
+        return SigValIdentifiers.SIG_VALIDATION_REPORT_SIGNATURE_QUALITY_QC;
+      }
+      boolean validEtsiBaseline = sigValResult.isEtsiAdes() && !sigValResult.isInvalidSignCert();
+      if (validEtsiBaseline) {
+        return SigValIdentifiers.SIG_VALIDATION_REPORT_SIGNATURE_QUALITY_ETSI;
+      }
+      return SigValIdentifiers.SIG_VALIDATION_REPORT_SIGNATURE_QUALITY_ADES;
+    } catch (Exception ex) {
+      log.debug("Error parsing signagture certificate");
+      return "urn:cef:dss:signatureQualification:notApplicable";
+    }
+  }
 
   /**
    * Get the signature validation process identifier for this signature validation process
@@ -156,10 +184,10 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
 
   /** {@inheritDoc} */
   @Override public byte[] getSignedValidationReport(SignedDocumentValidationResult<R> validationResult,
-    SigvalReportOptions sigvalReportOptions, String requestID, ReportSigner signer) throws IOException {
+    SigvalReportOptions sigvalReportOptions, ReportSigner signer) throws IOException {
 
     try {
-      ValidationReportDocument validationReport = getValidationReport(validationResult, sigvalReportOptions, requestID);
+      ValidationReportDocument validationReport = getValidationReport(validationResult, sigvalReportOptions);
       byte[] reportBytes = ValidationReportUtils.getReportXml(validationReport);
       return signer.signSigvalReport(reportBytes);
     } catch (Exception ex) {
@@ -170,7 +198,7 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
 
   /** {@inheritDoc} */
   @Override public ValidationReportDocument getValidationReport(SignedDocumentValidationResult<R> validationResult,
-    SigvalReportOptions sigvalReportOptions, String requestID) {
+    SigvalReportOptions sigvalReportOptions) {
 
     // Create signature validation report options if not provided
     sigvalReportOptions = sigvalReportOptions == null
@@ -285,13 +313,6 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
       // Make last final policy validation
       applyValidationPolicy(signatureValidationReportType, sigValResult);
 
-      // Add InResponseTo
-      if (requestID != null) {
-        InResponseToDocument inResponseTo = InResponseToDocument.Factory.newInstance();
-        inResponseTo.setInResponseTo(requestID);
-        extendElement(inResponseTo, signatureValidationReportType);
-      }
-
     }
     return validationReportDocument;
   }
@@ -378,39 +399,24 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
     // Set document format
     signatureAttributesType.setDataObjectFormatArray(new SADataObjectFormatType[] { getDataObjectFormat() });
     // Process the signer certificate
-    EUQualificationsDocument euQualifications = null;
-    AuthContextDocument authnContextDoc = null;
+    SAMLAuthContextDocument authnContextDoc = null;
     try {
       VOReferenceType certificateRef = signatureAttributesType.addNewSigningCertificate().addNewAttributeObject();
       certificateRef.setVOReference(List.of(
         ValidationObjectProcessor.getId(signerCertificate.getEncoded(), hashAlgoId,
           se.swedenconnect.sigval.report.validationobjects.ValidationObjectType.certificate)));
-      // Get EU Qualifications
-      boolean qc = false, qscd = false;
-      X509CertificateHolder signCertHolder = new JcaX509CertificateHolder(signerCertificate);
-      Extension qcStatementExt = signCertHolder.getExtension(Extension.qCStatements);
-      if (qcStatementExt != null) {
-        QCStatements qcStatements = QCStatements.getInstance(qcStatementExt.getParsedValue());
-        if (qcStatements.isQcType()) {
-          List<ASN1ObjectIdentifier> qcTypeIdList = qcStatements.getQcTypeIdList();
-          qc = qcTypeIdList.contains(QCStatements.QC_TYPE_ELECTRONIC_SIGNATURE);
-        }
-        qscd = qcStatements.isQcSscd();
-      }
-      euQualifications = EUQualificationsDocument.Factory.newInstance();
-      EUQualificationsType euQualificationsType = euQualifications.addNewEUQualifications();
-      euQualificationsType.setQualifiedCertificate(qc);
-      euQualificationsType.setQSCD(qscd);
 
       //Get Authn Context extension info
+      X509CertificateHolder signCertHolder = new JcaX509CertificateHolder(signerCertificate);
       Extension authnContextExt = signCertHolder.getExtension(AuthnContext.OID);
       if (authnContextExt != null) {
         try {
           AuthnContext authnContext = AuthnContext.getInstance(authnContextExt.getParsedValue());
           List<SAMLAuthContext> statementInfoList = authnContext.getStatementInfoList();
           if (statementInfoList != null && !statementInfoList.isEmpty()) {
-            SAMLAuthContext authContext = statementInfoList.get(0);
-            authnContextDoc = cloneExtAuthContext(authContext);
+            SAMLAuthContext samlAuthContext = statementInfoList.get(0);
+            String authContextXmlStr = AuthnContext.printAuthnContext(samlAuthContext, false);
+            authnContextDoc = SAMLAuthContextDocument.Factory.parse(new ByteArrayInputStream(authContextXmlStr.getBytes(StandardCharsets.UTF_8)));
           }
         } catch (Exception ex) {
           log.error("SAML Authn context parsing error - Probably caused by JAXB dependency setup errors");
@@ -435,14 +441,10 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
     }
 
     // Set signature algorithm
-    SignatureAlgorithmDocument signatureAlgorithmElm = SignatureAlgorithmDocument.Factory.newInstance();
-    signatureAlgorithmElm.setSignatureAlgorithm(sigValResult.getSignatureAlgorithm());
-    extendElement(signatureAlgorithmElm, signatureAttributesType);
-
-    // Set EU Qualifications
-    if (euQualifications != null) {
-      extendElement(euQualifications, signatureAttributesType);
-    }
+    SignatureMethodDocument signatureMethodDocument = SignatureMethodDocument.Factory.newInstance();
+    SignatureMethodType signatureMethodType = signatureMethodDocument.addNewSignatureMethod();
+    signatureMethodType.setAlgorithm(sigValResult.getSignatureAlgorithm());
+    extendElement(signatureMethodDocument, signatureAttributesType);
 
     // Set AuthnContextData
     if (authnContextDoc != null) {
@@ -451,60 +453,6 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
 
     signatureValidationReportType.setSignatureAttributes(signatureAttributesType);
     return null;
-  }
-
-  private AuthContextDocument cloneExtAuthContext(SAMLAuthContext authContext) {
-
-    AuthContextDocument acDoc = AuthContextDocument.Factory.newInstance();
-    AuthContextType ac = acDoc.addNewAuthContext();
-
-    //Get Authn context info
-    AuthContextInfo authContextInfo = authContext.getAuthContextInfo();
-    if (authContextInfo != null) {
-      AuthContextInfoType aci = ac.addNewAuthContextInfo();
-      aci.setIdentityProvider(authContextInfo.getIdentityProvider());
-      aci.setAuthenticationInstant(authContextInfo.getAuthenticationInstant().toGregorianCalendar());
-      aci.setAuthnContextClassRef(authContextInfo.getAuthnContextClassRef());
-      if (authContextInfo.getAssertionRef() != null){
-        aci.setAssertionRef(authContextInfo.getAssertionRef());
-      }
-      if (authContextInfo.getServiceID() != null) {
-        aci.setServiceID(authContextInfo.getServiceID());
-      }
-    }
-
-    // Get attribute mapping
-    IdAttributes idAttributes = authContext.getIdAttributes();
-    if (idAttributes != null) {
-      IdAttributesType ida = ac.addNewIdAttributes();
-      List<AttributeMapping> attributeMappings = idAttributes.getAttributeMappings();
-      if (attributeMappings != null && !attributeMappings.isEmpty()) {
-        for (AttributeMapping attributeMapping: attributeMappings) {
-          AttributeMappingType am = ida.addNewAttributeMapping();
-          cloneAttributeMapping(attributeMapping, am);
-        }
-      }
-    }
-    return acDoc;
-  }
-
-  private void cloneAttributeMapping(AttributeMapping attributeMapping, AttributeMappingType am) {
-    am.setType(attributeMapping.getType());
-    am.setRef(attributeMapping.getRef());
-    AttributeType at = am.addNewAttribute();
-    Attribute attribute = attributeMapping.getAttribute();
-    at.setName(attribute.getName());
-    at.setFriendlyName(attribute.getFriendlyName());
-    List<Object> attributeValues = attribute.getAttributeValues();
-    if (attributeValues != null && !attributeValues.isEmpty()){
-      for (Object valueObj: attributeValues) {
-        if (valueObj instanceof String) {
-          at.addNewAttributeValue().setStringValue((String) valueObj);
-        } else {
-          at.addNewAttributeValue().setStringValue(valueObj.toString());
-        }
-      }
-    }
   }
 
   /**

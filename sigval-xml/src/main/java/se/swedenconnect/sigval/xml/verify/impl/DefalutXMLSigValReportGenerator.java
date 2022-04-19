@@ -53,11 +53,7 @@ public class DefalutXMLSigValReportGenerator extends AbstractSigValReportGenerat
    * @return signature quality
    */
   @Override protected String getSignatureQuality(ExtendedXmlSigvalResult sigValResult) {
-    boolean validEtsiBaseline = sigValResult.isEtsiAdes() && !sigValResult.isInvalidSignCert();
-    if (validEtsiBaseline) {
-      return "urn:cef:dss:signatureQualification:AdESig";
-    }
-    return "urn:cef:dss:signatureQualification:notApplicable";
+    return defaultSignatureQuality(sigValResult);
   }
 
   /**

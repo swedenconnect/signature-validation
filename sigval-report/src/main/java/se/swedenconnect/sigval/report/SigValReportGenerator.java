@@ -36,19 +36,17 @@ public interface SigValReportGenerator<R extends ExtendedSigValResult> {
    * Provide a signature validation report based on ETSI TS 119 102-2
    * @param validationResult the result of signature validation used to generate the report
    * @param sigvalReportOptions options for building the validation report
-   * @param requestID an optional requestID to be included in the report
    * @return signature validation report
    */
   ValidationReportDocument getValidationReport(SignedDocumentValidationResult<R> validationResult,
-    SigvalReportOptions sigvalReportOptions, String requestID);
+    SigvalReportOptions sigvalReportOptions);
 
   /**
    * Provide a signed signature validation report based on ETSI TS 119 102-2
    * @param validationResult the result of signature validation used to generate the report
    * @param sigvalReportOptions options for building the validation report
-   * @param requestID an optional requestID to be included in the report
    * @return signed signature validation report
    */
   byte[] getSignedValidationReport(SignedDocumentValidationResult<R> validationResult,
-    SigvalReportOptions sigvalReportOptions, String requestID, ReportSigner signer) throws IOException;
+    SigvalReportOptions sigvalReportOptions, ReportSigner signer) throws IOException;
 }

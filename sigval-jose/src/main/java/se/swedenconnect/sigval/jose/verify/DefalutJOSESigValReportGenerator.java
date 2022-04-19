@@ -52,11 +52,7 @@ public class DefalutJOSESigValReportGenerator extends AbstractSigValReportGenera
    * @return signature quality
    */
   @Override protected String getSignatureQuality(ExtendedJOSESigvalResult sigValResult) {
-    boolean validEtsiBaseline = sigValResult.isEtsiAdes() && !sigValResult.isInvalidSignCert();
-    if (validEtsiBaseline) {
-      return "urn:cef:dss:signatureQualification:AdESig";
-    }
-    return "urn:cef:dss:signatureQualification:notApplicable";
+    return defaultSignatureQuality(sigValResult);
   }
 
   /**

@@ -51,7 +51,6 @@ public class ValidationReportUtils {
     prefixMap.put("http://www.w3.org/2001/XMLSchema", "xs");
     prefixMap.put("http://www.w3.org/2001/XMLSchema-instance", "xsi");
     prefixMap.put("http://id.elegnamnden.se/auth-cont/1.0/saci", "saci");
-    prefixMap.put(SigValIdentifiers.SIG_VALIDATION_REPORT_XML_NS, "svrex");
     prefixMap.put("urn:oasis:names:tc:SAML:2.0:assertion", "saml");
 
     styled = new XmlOptions().setSavePrettyPrint().setSavePrettyPrintIndent(4);
