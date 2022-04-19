@@ -405,14 +405,18 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
       //Get Authn Context extension info
       Extension authnContextExt = signCertHolder.getExtension(AuthnContext.OID);
       if (authnContextExt != null) {
-        AuthnContext authnContext = AuthnContext.getInstance(authnContextExt.getParsedValue());
-        List<SAMLAuthContext> statementInfoList = authnContext.getStatementInfoList();
-        if (statementInfoList != null && !statementInfoList.isEmpty()) {
-          SAMLAuthContext authContext = statementInfoList.get(0);
-          authnContextDoc = cloneExtAuthContext(authContext);
+        try {
+          AuthnContext authnContext = AuthnContext.getInstance(authnContextExt.getParsedValue());
+          List<SAMLAuthContext> statementInfoList = authnContext.getStatementInfoList();
+          if (statementInfoList != null && !statementInfoList.isEmpty()) {
+            SAMLAuthContext authContext = statementInfoList.get(0);
+            authnContextDoc = cloneExtAuthContext(authContext);
+          }
+        } catch (Exception ex) {
+          log.error("SAML Authn context parsing error - Probably caused by JAXB dependency setup errors");
+          // Proceed without adding auth context data
         }
       }
-
     }
     catch (Exception ex) {
       log.warn("Error processing signature certificate", ex);
