@@ -75,7 +75,9 @@ public abstract class AbstractBasicPDFSignaturePolicyChecks implements PDFSignat
     }
 
     CertificateValidationResult certificateValidationResult = verifyResultSignature.getCertificateValidationResult();
-    List<X509Certificate> validatedCertificatePath = certificateValidationResult.getValidatedCertificatePath();
+    List<X509Certificate> validatedCertificatePath = certificateValidationResult == null
+      ? null
+      : certificateValidationResult.getValidatedCertificatePath();
     if (validatedCertificatePath == null || validatedCertificatePath.isEmpty()) {
       log.debug("No valid certificate path was found");
       return new PolicyValidationResult(
@@ -102,7 +104,7 @@ public abstract class AbstractBasicPDFSignaturePolicyChecks implements PDFSignat
    * <p>This function is responsible for processing any certificate validity results such as results of CRL or OCSP checking</p>
    *
    * @param verifyResultSignature signature validation results
-   * @param signatureContext signature context data
+   * @param signatureContext      signature context data
    * @return results after extended validation checks
    */
   protected abstract PolicyValidationResult performAdditionalValidityChecks(ExtendedPdfSigValResult verifyResultSignature,
