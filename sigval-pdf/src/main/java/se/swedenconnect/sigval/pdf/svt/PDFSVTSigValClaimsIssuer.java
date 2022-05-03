@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020. Sweden Connect
+ * Copyright (c) 2020-2022. Sweden Connect
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,19 +36,19 @@ import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 
-import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.swedenconnect.sigval.commons.data.SignedDocumentValidationResult;
-import se.swedenconnect.sigval.commons.data.TimeValidationResult;
 import se.swedenconnect.sigval.commons.svt.AbstractSVTSigValClaimsIssuer;
-import se.swedenconnect.sigval.commons.timestamp.TimeStamp;
 import se.swedenconnect.sigval.pdf.data.ExtendedPdfSigValResult;
 import se.swedenconnect.sigval.pdf.verify.ExtendedPDFSignatureValidator;
 import se.swedenconnect.sigval.svt.algorithms.SVTAlgoRegistry;
-import se.swedenconnect.sigval.svt.claims.*;
+import se.swedenconnect.sigval.svt.claims.SVTProfile;
+import se.swedenconnect.sigval.svt.claims.SigReferenceClaims;
+import se.swedenconnect.sigval.svt.claims.SignatureClaims;
+import se.swedenconnect.sigval.svt.claims.SignedDataClaims;
 
 /**
  * Representation of a SVT claims issuer.
- * 
+ *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
@@ -59,7 +59,7 @@ public class PDFSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<byte
   /**
    * Constructor for the PDF SVT claims issuer. This class is not thread safe and an instance of this issuer must be
    * created for each instance of SVT creation.
-   * 
+   *
    * @param algorithm
    *          the algorithm used to sign the SVT
    * @param privateKey

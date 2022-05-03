@@ -1,124 +1,137 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  ~ Copyright (c) 2022. IDsec Solutions AB
-  ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~     http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
-  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  
+  <parent>
+    <artifactId>sigval-parent</artifactId>
+    <groupId>se.swedenconnect.sigval</groupId>
+    <version>1.2.0</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>sigval-parent</artifactId>
-        <groupId>se.swedenconnect.sigval</groupId>
-        <version>1.2.0</version>
-    </parent>
-    <modelVersion>4.0.0</modelVersion>
+  <artifactId>sigvalreport</artifactId>
 
-    <artifactId>sigvalreport</artifactId>
+  <name>Sweden Connect :: Signature validation :: Validation Report</name>
+  <description>Signature validation report generator</description>
+  <url>https://github.com/swedenconnect/signature-validation</url>
 
-    <name>Sweden Connect :: Signature validation :: Validation Report</name>
-    <description>Signature validation report generator</description>
-    <url>https://github.com/swedenconnect/signature-validation</url>
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  
+  <scm>
+    <connection>scm:git:https://github.com/swedenconnect/signature-validation.git</connection>
+    <developerConnection>scm:git:https://github.com/swedenconnect/signature-validation.git</developerConnection>
+    <url>https://github.com/swedenconnect/signature-validation/tree/master</url>
+  </scm>
 
-    <licenses>
-        <license>
-            <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
+  <organization>
+    <name>Sweden Connect</name>
+    <url>https://www.swedenconnect.se</url>
+  </organization>
 
-    <properties>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-    </properties>
+  <developers>
+    <developer>
+      <name>Martin Lindström</name>
+      <email>martin@idsec.se</email>
+      <organization>IDsec Solutions AB</organization>
+      <organizationUrl>https://www.idsec.se</organizationUrl>
+    </developer>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.apache.xmlbeans</groupId>
-            <artifactId>xmlbeans</artifactId>
-            <version>5.0.3</version>
-        </dependency>
-        <dependency>
-            <groupId>se.swedenconnect.sigval</groupId>
-            <artifactId>sigval-commons</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>se.idsec.signservice.commons</groupId>
-            <artifactId>signservice-xml-commons</artifactId>
-            <version>1.2.1</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.nimbusds</groupId>
-                    <artifactId>nimbus-jose-jwt</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
+    <developer>
+      <name>Stefan Santesson</name>
+      <email>stefan@idsec.se</email>
+      <organization>IDsec Solutions AB</organization>
+      <organizationUrl>https://www.idsec.se</organizationUrl>
+    </developer>
+  </developers>  
 
-    </dependencies>
+  <properties>
+  </properties>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.xmlbeans</groupId>
-                <artifactId>xmlbeans</artifactId>
-                <version>5.0.3</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <!--<repackage>se.swedenconnect.sigvaltrust.xmlbeans</repackage>-->
-                    <name>tsl</name>
-                    <mdefNamespaces>http://uri.etsi.org/02231/v2#</mdefNamespaces>
-                </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.apache.logging.log4j</groupId>
-                        <artifactId>log4j-core</artifactId>
-                        <version>2.17.1</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M5</version>
-                <configuration>
-                    <parallel>methods</parallel>
-                    <threadCount>10</threadCount>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.2.0</version>
-                <configuration>
-                    <doctitle>Signature validation trust - Commons - ${project.version}</doctitle>
-                    <windowtitle>Signature validation trust - Commons - ${project.version}</windowtitle>
-                    <source>11</source>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+  <dependencies>
+  
+    <dependency>
+      <groupId>org.apache.xmlbeans</groupId>
+      <artifactId>xmlbeans</artifactId>
+      <version>5.0.3</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>se.swedenconnect.sigval</groupId>
+      <artifactId>sigval-commons</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
+    
+    <dependency>
+      <groupId>se.idsec.signservice.commons</groupId>
+      <artifactId>signservice-xml-commons</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>com.nimbusds</groupId>
+          <artifactId>nimbus-jose-jwt</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <plugins>
+    
+      <plugin>
+        <groupId>org.apache.xmlbeans</groupId>
+        <artifactId>xmlbeans</artifactId>
+        <version>5.0.3</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <name>tsl</name>
+          <mdefNamespaces>http://uri.etsi.org/02231/v2#</mdefNamespaces>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.17.1</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.0.0-M5</version>
+        <configuration>
+          <parallel>methods</parallel>
+          <threadCount>10</threadCount>
+        </configuration>
+      </plugin>
+      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <doctitle>Signature Validation Report Generation - ${project.version}</doctitle>
+          <windowtitle>Signature Validation Report Generation - ${project.version}</windowtitle>
+          <source>11</source>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>

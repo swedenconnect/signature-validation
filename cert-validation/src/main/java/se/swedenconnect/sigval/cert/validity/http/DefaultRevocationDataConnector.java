@@ -1,16 +1,16 @@
 package se.swedenconnect.sigval.cert.validity.http;
 
-import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.bouncycastle.cert.ocsp.OCSPReq;
-import org.bouncycastle.cert.ocsp.OCSPResp;
-import se.swedenconnect.sigval.cert.validity.crl.impl.CRLDataLoader;
-import se.swedenconnect.sigval.cert.validity.ocsp.OCSPDataLoader;
-
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.bouncycastle.cert.ocsp.OCSPReq;
+import org.bouncycastle.cert.ocsp.OCSPResp;
+
+import lombok.NoArgsConstructor;
+import se.swedenconnect.sigval.cert.validity.crl.impl.CRLDataLoader;
+import se.swedenconnect.sigval.cert.validity.ocsp.OCSPDataLoader;
 
 /**
  * Standard Revocation data connector for downloading revocation data resources
@@ -18,7 +18,6 @@ import java.util.Map;
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-@Slf4j
 @NoArgsConstructor
 public class DefaultRevocationDataConnector extends GenericHttpConnector implements CRLDataLoader, OCSPDataLoader {
 
