@@ -89,6 +89,14 @@
     <plugins>
 
       <plugin>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok-maven-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+
+      <plugin>
         <groupId>org.apache.xmlbeans</groupId>
         <artifactId>xmlbeans</artifactId>
         <version>5.0.3</version>
@@ -136,19 +144,17 @@
   <profiles>
     <profile>
       <id>release</id>
-
-      <!-- See http://central.sonatype.org/pages/apache-maven.html for setup -->
-
       <build>
         <plugins>
 
           <plugin>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok-maven-plugin</artifactId>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
             <configuration>
-              <skip>true</skip>
+              <sourcepath>src/main/java;target/generated-sources</sourcepath>
             </configuration>
           </plugin>
+
         </plugins>
       </build>
     </profile>
