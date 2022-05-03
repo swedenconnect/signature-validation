@@ -26,6 +26,7 @@ import se.swedenconnect.sigval.xml.data.ExtendedXmlSigvalResult;
 import se.swedenconnect.sigval.xml.policy.XMLSignaturePolicyValidator;
 
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -49,29 +50,43 @@ public abstract class AbstractBasicXMLSignaturePolicyChecks implements XMLSignat
     builder.pol(getValidationPolicy());
 
     // Check if signature validation failed
-    if (!verifyResultSignature.isSuccess()) {
-      //Signature validation has failed. No more checks needed
-      log.debug("Basic signature validation failed");
-      return new PolicyValidationResult(
-        builder.res(ValidationConclusion.FAILED)
-          .msg(verifyResultSignature.getStatusMessage())
-          .build(),
-        SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE
-      );
-    }
-
-    CertificateValidationResult certificateValidationResult = verifyResultSignature.getCertificateValidationResult();
-    List<X509Certificate> validatedCertificatePath = certificateValidationResult.getValidatedCertificatePath();
-    if (validatedCertificatePath == null || validatedCertificatePath.isEmpty()) {
+    // If the result is success or indeterminate, then further checks will be done to determine status
+    switch (verifyResultSignature.getStatus()) {
+    case ERROR_NOT_TRUSTED:
+      // Result is not trusted to a trusted root. We stop here
       log.debug("No valid certificate path was found");
       return new PolicyValidationResult(
         builder.res(ValidationConclusion.INDETERMINATE)
-          .msg("Document content was altered after signing")
+          .msg("No certificate path found to a trusted root")
+          .build(),
+        SignatureValidationResult.Status.ERROR_NOT_TRUSTED);
+    case ERROR_INVALID_SIGNATURE:
+    case ERROR_SIGNER_INVALID:
+    case ERROR_SIGNER_NOT_ACCEPTED:
+    case ERROR_BAD_FORMAT:
+      log.debug("Basic signature validation failed with status {}", verifyResultSignature.getStatus());
+      return new PolicyValidationResult(
+        builder.res(ValidationConclusion.FAILED).msg(verifyResultSignature.getStatusMessage()).build(),
+        verifyResultSignature.getStatus());
+    }
+
+    // Make sure that we have a certificate path, just to be sure nothing slips through without a path.
+    CertificateValidationResult certificateValidationResult = verifyResultSignature.getCertificateValidationResult();
+    List<X509Certificate> validatedCertificatePath = certificateValidationResult != null
+      ? certificateValidationResult.getValidatedCertificatePath()
+      : new ArrayList<>();
+    if (validatedCertificatePath == null || validatedCertificatePath.isEmpty()) {
+      // No valid path. Return Indeterminate
+      log.debug("No valid certificate path was found");
+      return new PolicyValidationResult(
+        builder.res(ValidationConclusion.INDETERMINATE)
+          .msg("No certificate path found to a trusted root")
           .build(),
         SignatureValidationResult.Status.ERROR_NOT_TRUSTED
       );
     }
 
+    // Now do certificate trust checking and examine validation checks, timestamps etc.
     return performAdditionalValidityChecks(verifyResultSignature);
   }
 
