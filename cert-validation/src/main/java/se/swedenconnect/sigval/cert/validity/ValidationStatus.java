@@ -79,7 +79,7 @@ public class ValidationStatus {
   /**
    * Revocation time
    *
-   * @param revocationDate revocation time
+   * @param revocationTime revocation time
    * @return revocation time if certificate is revoked or else null
    */
   private Date revocationTime;

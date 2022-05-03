@@ -16,6 +16,10 @@
 
 package se.swedenconnect.sigval.xml.policy.impl;
 
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
+
 import lombok.extern.slf4j.Slf4j;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
@@ -25,11 +29,9 @@ import se.swedenconnect.sigval.svt.claims.ValidationConclusion;
 import se.swedenconnect.sigval.xml.data.ExtendedXmlSigvalResult;
 import se.swedenconnect.sigval.xml.policy.XMLSignaturePolicyValidator;
 
-import java.security.cert.X509Certificate;
-import java.util.List;
-
 /**
- * Abstract implementation of a PDF signature policy checker implementing the {@link XMLSignaturePolicyValidator} interface
+ * Abstract implementation of a PDF signature policy checker implementing the {@link XMLSignaturePolicyValidator}
+ * interface.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -40,54 +42,75 @@ public abstract class AbstractBasicXMLSignaturePolicyChecks implements XMLSignat
   /**
    * Validate the signature according to the defined policy.
    *
-   * @param verifyResultSignature the verification result of the signature
+   * @param verifyResultSignature
+   *          the verification result of the signature
    * @return {@link PolicyValidationResult} for this signature
    */
-  @Override public PolicyValidationResult validatePolicy(ExtendedXmlSigvalResult verifyResultSignature) {
+  @Override
+  public PolicyValidationResult validatePolicy(ExtendedXmlSigvalResult verifyResultSignature) {
 
     PolicyValidationClaims.PolicyValidationClaimsBuilder builder = PolicyValidationClaims.builder();
     builder.pol(getValidationPolicy());
 
     // Check if signature validation failed
-    if (!verifyResultSignature.isSuccess()) {
-      //Signature validation has failed. No more checks needed
-      log.debug("Basic signature validation failed");
-      return new PolicyValidationResult(
-        builder.res(ValidationConclusion.FAILED)
-          .msg(verifyResultSignature.getStatusMessage())
-          .build(),
-        SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE
-      );
-    }
-
-    CertificateValidationResult certificateValidationResult = verifyResultSignature.getCertificateValidationResult();
-    List<X509Certificate> validatedCertificatePath = certificateValidationResult.getValidatedCertificatePath();
-    if (validatedCertificatePath == null || validatedCertificatePath.isEmpty()) {
+    // If the result is success or indeterminate, then further checks will be done to determine status
+    switch (verifyResultSignature.getStatus()) {
+    case ERROR_NOT_TRUSTED:
+      // Result is not trusted to a trusted root. We stop here
       log.debug("No valid certificate path was found");
       return new PolicyValidationResult(
         builder.res(ValidationConclusion.INDETERMINATE)
-          .msg("Document content was altered after signing")
+          .msg("No certificate path found to a trusted root")
           .build(),
-        SignatureValidationResult.Status.ERROR_NOT_TRUSTED
-      );
+        SignatureValidationResult.Status.ERROR_NOT_TRUSTED);
+    case ERROR_INVALID_SIGNATURE:
+    case ERROR_SIGNER_INVALID:
+    case ERROR_SIGNER_NOT_ACCEPTED:
+    case ERROR_BAD_FORMAT:
+      log.debug("Basic signature validation failed with status {}", verifyResultSignature.getStatus());
+      return new PolicyValidationResult(
+        builder.res(ValidationConclusion.FAILED).msg(verifyResultSignature.getStatusMessage()).build(),
+        verifyResultSignature.getStatus());
+    default:
+      // NOP
     }
 
+    // Make sure that we have a certificate path, just to be sure nothing slips through without a path.
+    CertificateValidationResult certificateValidationResult = verifyResultSignature.getCertificateValidationResult();
+    List<X509Certificate> validatedCertificatePath = certificateValidationResult != null
+        ? certificateValidationResult.getValidatedCertificatePath()
+        : new ArrayList<>();
+    if (validatedCertificatePath == null || validatedCertificatePath.isEmpty()) {
+      // No valid path. Return Indeterminate
+      log.debug("No valid certificate path was found");
+      return new PolicyValidationResult(
+        builder.res(ValidationConclusion.INDETERMINATE)
+          .msg("No certificate path found to a trusted root")
+          .build(),
+        SignatureValidationResult.Status.ERROR_NOT_TRUSTED);
+    }
+
+    // Now do certificate trust checking and examine validation checks, timestamps etc.
     return performAdditionalValidityChecks(verifyResultSignature);
   }
 
   /**
-   * This function is called after performing the basic validity checks in the extended abstract superclass. The basic checks done when this
-   * function is called are:
+   * This function is called after performing the basic validity checks in the extended abstract superclass. The basic
+   * checks done when this function is called are:
    *
    * <ul>
-   *   <li>Verified that basic signature validation succeeded</li>
-   *   <li>Verified that no non-signature alterations was made to the document after this signature was created</li>
-   *   <li>Verified that certificate path validation resulted in a trusted path</li>
+   * <li>Verified that basic signature validation succeeded</li>
+   * <li>Verified that no non-signature alterations was made to the document after this signature was created</li>
+   * <li>Verified that certificate path validation resulted in a trusted path</li>
    * </ul>
    *
-   * <p>This function is responsible for processing any certificate validity results such as results of CRL or OCSP checking</p>
+   * <p>
+   * This function is responsible for processing any certificate validity results such as results of CRL or OCSP
+   * checking
+   * </p>
    *
-   * @param verifyResultSignature result of signature validation
+   * @param verifyResultSignature
+   *          result of signature validation
    * @return result of extended validation
    */
   protected abstract PolicyValidationResult performAdditionalValidityChecks(ExtendedXmlSigvalResult verifyResultSignature);

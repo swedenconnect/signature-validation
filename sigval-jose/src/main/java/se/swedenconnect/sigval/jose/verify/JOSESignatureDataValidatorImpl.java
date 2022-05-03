@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022.  Sweden Connect
+ * Copyright (c) 2020-2022. Sweden Connect
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package se.swedenconnect.sigval.jose.verify;
+
+import java.nio.charset.StandardCharsets;
+import java.security.PublicKey;
+import java.security.SignatureException;
+import java.security.cert.CertPathBuilderException;
+import java.security.cert.X509Certificate;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
+import java.util.stream.Collectors;
+
+import org.bouncycastle.util.encoders.Base64;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -24,18 +40,12 @@ import com.nimbusds.jose.shaded.json.JSONArray;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+
 import lombok.extern.slf4j.Slf4j;
-import org.bouncycastle.util.encoders.Base64;
 import se.idsec.signservice.security.certificate.CertificateValidationResult;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.idsec.signservice.security.certificate.impl.DefaultCertificateValidationResult;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
-import se.swedenconnect.sigval.jose.data.ExtendedJOSESigvalResult;
-import se.swedenconnect.sigval.jose.data.JOSESignatureData;
-import se.swedenconnect.sigval.jose.jades.EtsiUComponent;
-import se.swedenconnect.sigval.jose.policy.JOSESignaturePolicyValidator;
-import se.swedenconnect.sigval.jose.svt.JOSESVTValInput;
-import se.swedenconnect.sigval.jose.svt.JOSESVTValidator;
 import se.swedenconnect.sigval.cert.chain.ExtendedCertPathValidatorException;
 import se.swedenconnect.sigval.commons.algorithms.JWSAlgorithmRegistry;
 import se.swedenconnect.sigval.commons.data.PolicyValidationResult;
@@ -46,21 +56,17 @@ import se.swedenconnect.sigval.commons.timestamp.TimeStamp;
 import se.swedenconnect.sigval.commons.timestamp.TimeStampPolicyVerifier;
 import se.swedenconnect.sigval.commons.utils.GeneralCMSUtils;
 import se.swedenconnect.sigval.commons.utils.SVAUtils;
+import se.swedenconnect.sigval.jose.data.ExtendedJOSESigvalResult;
+import se.swedenconnect.sigval.jose.data.JOSESignatureData;
+import se.swedenconnect.sigval.jose.jades.EtsiUComponent;
+import se.swedenconnect.sigval.jose.policy.JOSESignaturePolicyValidator;
+import se.swedenconnect.sigval.jose.svt.JOSESVTValInput;
+import se.swedenconnect.sigval.jose.svt.JOSESVTValidator;
 import se.swedenconnect.sigval.svt.claims.PolicyValidationClaims;
 import se.swedenconnect.sigval.svt.claims.SignatureClaims;
 import se.swedenconnect.sigval.svt.claims.TimeValidationClaims;
 import se.swedenconnect.sigval.svt.claims.ValidationConclusion;
 import se.swedenconnect.sigval.svt.validation.SignatureSVTValidationResult;
-
-import java.nio.charset.StandardCharsets;
-import java.security.PublicKey;
-import java.security.SignatureException;
-import java.security.cert.CertPathBuilderException;
-import java.security.cert.X509Certificate;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Validator for validating single signature elements within an JSON document.
@@ -363,6 +369,7 @@ public class JOSESignatureDataValidatorImpl implements JOSESignatureDataValidato
    * @param signatureData signature element
    * @return canonical signature value element bytes
    */
+  @SuppressWarnings("unused")
   private byte[] getTimestampedBytes(final JOSESignatureData signatureData) {
 
     //TODO implement JSON version of this

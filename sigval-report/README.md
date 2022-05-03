@@ -1,8 +1,11 @@
+![Logo](https://raw.githubusercontent.com/swedenconnect/technical-framework/master/img/sweden-connect.png)
+
 # Signature validation report
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ----
 
-This module provides an implementation of the ETSI TS 119 102-2 signature validation report
+This module provides an implementation of the ETSI TS 119 102-2 signature validation report.
 
 
 ## Report structure
@@ -81,3 +84,7 @@ The following SignatureElements are supported and included if applicable:
 
 Note: DataObjectFormat refer to the signature data format rather than the signed data format. In case of PDF and XML, signature
 format and data format is the same but in other signature formats such as JOSE, the signed data may be using any data format.
+
+---
+
+Copyright &copy; [The Swedish Agency for Digital Government (DIGG)](https://www.digg.se), 2019-2022. All Rights Reserved.

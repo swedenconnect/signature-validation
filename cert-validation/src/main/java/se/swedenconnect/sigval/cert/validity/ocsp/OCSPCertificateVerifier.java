@@ -13,35 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package se.swedenconnect.sigval.cert.validity.ocsp;
-
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
-import se.swedenconnect.sigval.cert.utils.CertUtils;
-import se.swedenconnect.sigval.cert.validity.AbstractValidityChecker;
-import se.swedenconnect.sigval.cert.validity.ValidationStatus;
-import se.swedenconnect.sigval.cert.validity.ValidationStatus.CertificateValidity;
-import se.swedenconnect.sigval.cert.validity.ValidationStatus.ValidatorSourceType;
-
-import org.apache.commons.io.IOUtils;
-import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.Extensions;
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
-import org.bouncycastle.cert.ocsp.*;
-import org.bouncycastle.operator.DigestCalculator;
-import org.bouncycastle.operator.OperatorCreationException;
-import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
-import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
-import se.swedenconnect.sigval.cert.validity.http.DefaultRevocationDataConnector;
 
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.security.Principal;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
@@ -50,6 +25,35 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
+
+import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.Extensions;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
+import org.bouncycastle.cert.ocsp.BasicOCSPResp;
+import org.bouncycastle.cert.ocsp.CertificateID;
+import org.bouncycastle.cert.ocsp.CertificateStatus;
+import org.bouncycastle.cert.ocsp.OCSPException;
+import org.bouncycastle.cert.ocsp.OCSPReq;
+import org.bouncycastle.cert.ocsp.OCSPReqBuilder;
+import org.bouncycastle.cert.ocsp.OCSPResp;
+import org.bouncycastle.cert.ocsp.OCSPRespBuilder;
+import org.bouncycastle.cert.ocsp.RevokedStatus;
+import org.bouncycastle.cert.ocsp.SingleResp;
+import org.bouncycastle.operator.DigestCalculator;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
+import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
+
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import se.swedenconnect.sigval.cert.utils.CertUtils;
+import se.swedenconnect.sigval.cert.validity.AbstractValidityChecker;
+import se.swedenconnect.sigval.cert.validity.ValidationStatus;
+import se.swedenconnect.sigval.cert.validity.ValidationStatus.CertificateValidity;
+import se.swedenconnect.sigval.cert.validity.ValidationStatus.ValidatorSourceType;
+import se.swedenconnect.sigval.cert.validity.http.DefaultRevocationDataConnector;
 
 /**
  * Certificate verifier based on OCSP
