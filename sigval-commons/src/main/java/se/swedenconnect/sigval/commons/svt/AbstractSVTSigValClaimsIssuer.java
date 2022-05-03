@@ -156,8 +156,7 @@ public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SV
     List<PolicyValidationClaims> policyValidationClaims = timeValidationClaims.getVal();
     if (policyValidationClaims == null || policyValidationClaims.isEmpty()) return false;
     return policyValidationClaims.stream()
-      .filter(validation -> validation.getRes().equals(ValidationConclusion.PASSED))
-      .findFirst().isPresent();
+      .anyMatch(validation -> validation.getRes().equals(ValidationConclusion.PASSED));
   }
 
   /**
@@ -197,9 +196,8 @@ public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SV
    * @param timeValidationResult time stamp validation result
    * @param hashAlgoUri SVT hash algorithm
    * @return time validation claims
-   * @throws NoSuchAlgorithmException if the selected hash algorithm is not supported
    */
-  public TimeValidationClaims extractTimeValClaims(TimeValidationResult timeValidationResult, String hashAlgoUri){
+  public TimeValidationClaims extractTimeValClaims(TimeValidationResult timeValidationResult, String hashAlgoUri) {
     TimeValidationClaims timeValidationClaims = timeValidationResult.getTimeValidationClaims();
     TimeStamp timeStamp = timeValidationResult.getTimeStamp();
     if (timeStamp != null) {
