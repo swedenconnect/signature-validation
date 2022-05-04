@@ -13,6 +13,8 @@
     <version>1.2.0</version>
   </parent>
 
+  <version>1.2.1-SNAPSHOT</version>
+
   <name>Sweden Connect :: Signature validation :: PDF</name>
   <description>PDF Signature Validation</description>
   <url>https://github.com/swedenconnect/signature-validation</url>
@@ -50,14 +52,14 @@
       <organization>IDsec Solutions AB</organization>
       <organizationUrl>https://www.idsec.se</organizationUrl>
     </developer>
-  </developers>  
+  </developers>
 
   <dependencies>
   
     <dependency>
       <groupId>se.swedenconnect.sigval</groupId>
       <artifactId>sigval-commons</artifactId>
-      <version>${project.version}</version>
+      <version>1.2.0</version>
     </dependency>
     <dependency>
       <groupId>se.swedenconnect.sigval</groupId>
