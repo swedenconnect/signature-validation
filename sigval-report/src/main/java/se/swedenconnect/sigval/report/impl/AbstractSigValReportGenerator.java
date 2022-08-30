@@ -617,6 +617,7 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
       }
       break;
     case ERROR_NOT_TRUSTED:
+      mainIndication = MainIndication.INDETERMINATE;
       addCertValidationSubindications(subIndications, sigValResult);
       subIndications.add(SubIndication.NO_CERTIFICATE_CHAIN_FOUND.getUri());
       break;
