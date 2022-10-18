@@ -95,7 +95,7 @@
       <dependency>
         <groupId>se.idsec.signservice.commons</groupId>
         <artifactId>signservice-xml-commons</artifactId>
-        <version>1.2.1</version>
+        <version>1.2.2</version>
         <type>jar</type>
         <scope>compile</scope>
         <exclusions>
@@ -234,7 +234,7 @@
               <id>enforce</id>
               <configuration>
                 <rules>
-                  <dependencyConvergence />
+                  <dependencyConvergence/>
                 </rules>
               </configuration>
               <goals>
