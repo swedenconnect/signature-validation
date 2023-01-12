@@ -16,15 +16,16 @@
 
 package se.swedenconnect.cert.extensions;
 
-import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.TransformerException;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
 
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Object;
@@ -35,14 +36,11 @@ import org.bouncycastle.asn1.ASN1UTF8String;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERUTF8String;
 import org.bouncycastle.asn1.x509.Extensions;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.xml.sax.SAXException;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import se.swedenconnect.cert.extensions.data.saci.SAMLAuthContext;
-import se.swedenconnect.cert.extensions.utils.DOMUtils;
+import se.swedenconnect.cert.extensions.data.AuthnContextPrefixMapper;
+import se.swedenconnect.schemas.cert.authcont.saci_1_0.SAMLAuthContext;
 
 /**
  * AuthnContext X.509 extension implementation for extending Bouncycastle.
@@ -51,11 +49,11 @@ import se.swedenconnect.cert.extensions.utils.DOMUtils;
  * @author Stefan Santesson (stefan@idsec.se)
  */
 @Slf4j
-public class AuthnContext extends ASN1Object {
+public class JaxbAuthnContext extends ASN1Object {
 
   public static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.2.752.201.5.1");
   public static final String CONTENT_TYPE = "http://id.elegnamnden.se/auth-cont/1.0/saci";
-  
+
   @Getter
   private List<SAMLAuthContext> statementInfoList = new ArrayList<>();
 
@@ -66,12 +64,12 @@ public class AuthnContext extends ASN1Object {
    *          object holding extension data
    * @return Authentication context extension
    */
-  public static AuthnContext getInstance(final Object obj) {
-    if (obj instanceof AuthnContext) {
-      return (AuthnContext) obj;
+  public static JaxbAuthnContext getInstance(final Object obj) {
+    if (obj instanceof JaxbAuthnContext) {
+      return (JaxbAuthnContext) obj;
     }
     if (obj != null) {
-      return new AuthnContext(ASN1Sequence.getInstance(obj));
+      return new JaxbAuthnContext(ASN1Sequence.getInstance(obj));
     }
 
     return null;
@@ -84,8 +82,8 @@ public class AuthnContext extends ASN1Object {
    *          Authentication context extension
    * @return Authentication context extension
    */
-  public static AuthnContext fromExtensions(final Extensions extensions) {
-    return AuthnContext.getInstance(extensions.getExtensionParsedValue(OID));
+  public static JaxbAuthnContext fromExtensions(final Extensions extensions) {
+    return JaxbAuthnContext.getInstance(extensions.getExtensionParsedValue(OID));
   }
 
   /**
@@ -96,7 +94,7 @@ public class AuthnContext extends ASN1Object {
    * @param seq
    *          ASN1 sequence
    */
-  private AuthnContext(final ASN1Sequence seq) {
+  private JaxbAuthnContext(final ASN1Sequence seq) {
     this.statementInfoList = new ArrayList<>();
     try {
       for (int i = 0; i < seq.size(); i++) {
@@ -120,7 +118,7 @@ public class AuthnContext extends ASN1Object {
    * @param statementInfoList
    *          list of statement infos
    */
-  public AuthnContext(final List<SAMLAuthContext> statementInfoList) {
+  public JaxbAuthnContext(final List<SAMLAuthContext> statementInfoList) {
     this.statementInfoList = statementInfoList;
   }
 
@@ -152,7 +150,7 @@ public class AuthnContext extends ASN1Object {
         authnConexts.add(new DERSequence(authnConext));
       }
       catch (final Exception ex) {
-        Logger.getLogger(AuthnContext.class.getName()).warning(ex.getMessage());
+        Logger.getLogger(JaxbAuthnContext.class.getName()).warning(ex.getMessage());
       }
     }
     return new DERSequence(authnConexts);
@@ -168,7 +166,7 @@ public class AuthnContext extends ASN1Object {
       try {
         b.append(printAuthnContext(statementInfo, true)).append("\n");
       }
-      catch (final IOException ex) {
+      catch (final JAXBException ex) {
         b.append("Bad XML content: ").append(ex.getMessage()).append("\n");
       }
     }
@@ -181,18 +179,13 @@ public class AuthnContext extends ASN1Object {
    * @param xml
    *          xml string
    * @return {@link SAMLAuthContext} object
-   * @throws IOException
+   * @throws JAXBException
    *           on error parsing data
    */
-  public static SAMLAuthContext getAuthnContext(final String xml) throws IOException {
-
-    try {
-      Document document = DOMUtils.getDocument(xml.getBytes(StandardCharsets.UTF_8));
-      return new SAMLAuthContext(document);
-    }
-    catch (SAXException | ParserConfigurationException | CertificateException e) {
-      throw new IOException("Unable to parse SAMLAuthContext xml");
-    }
+  public static SAMLAuthContext getAuthnContext(final String xml) throws JAXBException {
+    return (SAMLAuthContext) JAXBContext.newInstance(SAMLAuthContext.class)
+      .createUnmarshaller()
+      .unmarshal(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
   }
 
   /**
@@ -203,23 +196,25 @@ public class AuthnContext extends ASN1Object {
    * @param formatted
    *          true to generate pretty printing version
    * @return XML string
-   * @throws IOException
+   * @throws JAXBException
    *           on error parsing data
    */
-  public static String printAuthnContext(final SAMLAuthContext authnConext, final boolean formatted) throws IOException {
+  public static String printAuthnContext(final SAMLAuthContext authnConext, final boolean formatted) throws JAXBException {
 
+    final Marshaller marshaller = JAXBContext.newInstance(SAMLAuthContext.class).createMarshaller();
+    marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
     try {
-      Document document = authnConext.getDocument();
-      document.setXmlStandalone(true);
-      if (formatted) {
-        return DOMUtils.getDocText(document);
-      }
-      return new String(DOMUtils.getCanonicalDocText(document), StandardCharsets.UTF_8);
+      marshaller.setProperty("com.sun.xml.bind.namespacePrefixMapper", new AuthnContextPrefixMapper());
     }
-    catch (TransformerException e) {
-      throw new IOException("Error converting SAMLAuthContext to xml string", e);
+    catch (final Exception ex) {
+      log.warn("Unable to set the com.sun.xml.bind.namespacePrefixMapper property");
     }
-
+    if (formatted) {
+      marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+    }
+    final StringWriter stringWriter = new StringWriter();
+    marshaller.marshal(authnConext, stringWriter);
+    return stringWriter.toString();
   }
 
 }

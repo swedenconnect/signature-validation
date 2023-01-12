@@ -79,7 +79,7 @@
       <dependency>
         <groupId>se.idsec.signservice.commons</groupId>
         <artifactId>signservice-bom</artifactId>
-        <version>1.2.1</version>
+        <version>1.2.4</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -87,7 +87,7 @@
       <dependency>
         <groupId>se.idsec.signservice.commons</groupId>
         <artifactId>signservice-commons</artifactId>
-        <version>1.2.2</version>
+        <version>1.2.4</version>
         <type>jar</type>
         <scope>compile</scope>
       </dependency>
@@ -95,7 +95,7 @@
       <dependency>
         <groupId>se.idsec.signservice.commons</groupId>
         <artifactId>signservice-xml-commons</artifactId>
-        <version>1.2.2</version>
+        <version>1.2.4</version>
         <type>jar</type>
         <scope>compile</scope>
         <exclusions>
@@ -109,7 +109,7 @@
       <dependency>
         <groupId>se.idsec.signservice.commons</groupId>
         <artifactId>signservice-pdf-commons</artifactId>
-        <version>1.2.3</version>
+        <version>1.2.4</version>
         <type>jar</type>
         <scope>compile</scope>
         <exclusions>
@@ -134,11 +134,27 @@
 
   <dependencies>
 
+    <!-- We use JUnit 5 and Mockito for our tests -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>4.11.0</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <version>4.11.0</version>
+      <scope>test</scope>
+    </dependency>
+
 
   </dependencies>
 

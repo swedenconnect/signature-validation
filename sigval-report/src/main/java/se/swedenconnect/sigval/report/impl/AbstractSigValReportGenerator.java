@@ -19,7 +19,8 @@ package se.swedenconnect.sigval.report.impl;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.xmlbeans.XmlAnyURI;
 import org.apache.xmlbeans.XmlCursor;
 import org.apache.xmlbeans.XmlObject;
@@ -39,7 +40,7 @@ import se.elegnamnden.id.authCont.x10.saci.SAMLAuthContextDocument;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
 import se.swedenconnect.cert.extensions.AuthnContext;
 import se.swedenconnect.cert.extensions.QCStatements;
-import se.swedenconnect.schemas.cert.authcont.saci_1_0.SAMLAuthContext;
+import se.swedenconnect.cert.extensions.data.saci.SAMLAuthContext;
 import se.swedenconnect.sigval.cert.chain.PathValidationResult;
 import se.swedenconnect.sigval.cert.validity.ValidationStatus;
 import se.swedenconnect.sigval.commons.data.ExtendedSigValResult;
