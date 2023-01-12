@@ -218,7 +218,7 @@ public class AuthnContext extends ASN1Object {
       return new SAMLAuthContext(document, strictMode);
     }
     catch (SAXException | ParserConfigurationException | CertificateException e) {
-      throw new IOException("Unable to parse SAMLAuthContext xml");
+      throw new IOException("Unable to parse SAMLAuthContext xml: " + e.getMessage());
     }
   }
 
