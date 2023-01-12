@@ -20,6 +20,7 @@ import java.security.cert.CertificateException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -30,13 +31,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Description
+ * AuthContextInfo element dom implementation
  */
 @Data
 @NoArgsConstructor
 public class AuthContextInfo extends AbstractDomData {
 
-  public static final String AUTH_CONTEXT_INFO_ELEMENT_NAME = "AuthContextInfo";
+  public static final String AUTH_CONTEXT_INFO_ELEMENT = "AuthContextInfo";
 
   public static final String IDENTITY_PROVIDER = "IdentityProvider";
   public static final String AUTHENTICATION_INSTANT = "AuthenticationInstant";
@@ -51,12 +52,24 @@ public class AuthContextInfo extends AbstractDomData {
   private String serviceId;
   private List<Element> anyList;
 
-  public AuthContextInfo(Element element) throws CertificateException {
-    super(element);
+  public AuthContextInfo(Element element, boolean strictMode) throws CertificateException {
+    super(element, strictMode);
+  }
+
+  /** {@inheritDoc} */
+  @Override protected void validate() throws CertificateException {
+    try {
+      Objects.requireNonNull(identityProvider, "IdentityProvider attribute must be present");
+      Objects.requireNonNull(authenticationInstant, "AuthenticationInstant attribute must be present");
+      Objects.requireNonNull(authnContextClassRef, "AuthnContextClassRef attribute must be present");
+    }
+    catch (Exception ex) {
+      throw new CertificateException(ex);
+    }
   }
 
   @Override public Element getElement(Document document) {
-    Element authContextInfo = document.createElementNS(SACI_NS, AUTH_CONTEXT_INFO_ELEMENT_NAME);
+    Element authContextInfo = document.createElementNS(SACI_NS, AUTH_CONTEXT_INFO_ELEMENT);
     setAttribute(authContextInfo, IDENTITY_PROVIDER, identityProvider);
     setAttribute(authContextInfo, AUTHENTICATION_INSTANT, instantToString(authenticationInstant));
     setAttribute(authContextInfo, AUTHN_CONTEXT_CLASS_REF, authnContextClassRef);
@@ -80,16 +93,6 @@ public class AuthContextInfo extends AbstractDomData {
       if (node instanceof Element) {
         anyList.add((Element) node);
       }
-    }
-  }
-
-  /** {@inheritDoc} */
-  @Override protected void validate() throws CertificateException {
-    try {
-      //TODO field validation check
-    }
-    catch (Exception ex) {
-      throw new CertificateException(ex);
     }
   }
 

@@ -27,22 +27,30 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * IdAttributes of SAMLAuthContextExtension
+ * IdAttributes dom implementation
  */
 @Data
 @NoArgsConstructor
 public class IdAttributes extends AbstractDomData {
 
-  public static final String ID_ATTRIBUTES = "IdAttributes";
+  public static final String ID_ATTRIBUTES_ELEMENT = "IdAttributes";
 
   private List<AttributeMapping> attributeMappingList;
 
-  public IdAttributes(Element element) throws CertificateException {
-    super(element);
+  public IdAttributes(Element element, boolean strictMode) throws CertificateException {
+    super(element, strictMode);
+  }
+
+  /** {@inheritDoc} */
+  @Override protected void validate() throws CertificateException {
+    if (attributeMappingList == null || attributeMappingList.isEmpty()) {
+      throw new CertificateException("No AttributeMapping present in IdAttributes. "
+        + "At least one Attribute mapping must be present in IdAttributes");
+    }
   }
 
   @Override public Element getElement(Document document) {
-    Element idAttributes = document.createElementNS(SACI_NS, ID_ATTRIBUTES);
+    Element idAttributes = document.createElementNS(SACI_NS, ID_ATTRIBUTES_ELEMENT);
     if (attributeMappingList != null) {
       attributeMappingList.forEach(attributeMapping -> idAttributes.appendChild(attributeMapping.getElement(document)));
     }
@@ -50,20 +58,10 @@ public class IdAttributes extends AbstractDomData {
   }
 
   @Override protected void setValuesFromElement(Element element) throws CertificateException {
-    List<Element> elements = getElements(element, SACI_NS, AttributeMapping.ATTRIBUTE_MAPPING_ELEMENT_NAME);
+    List<Element> elements = getElements(element, SACI_NS, AttributeMapping.ATTRIBUTE_MAPPING_ELEMENT);
     attributeMappingList = new ArrayList<>();
     for (Element attrMapElm : elements) {
-      attributeMappingList.add(new AttributeMapping(attrMapElm));
-    }
-  }
-
-  /** {@inheritDoc} */
-  @Override protected void validate() throws CertificateException {
-    try {
-      //TODO field validation check
-    }
-    catch (Exception ex) {
-      throw new CertificateException(ex);
+      attributeMappingList.add(new AttributeMapping(attrMapElm, strictMode));
     }
   }
 

@@ -59,6 +59,8 @@ public class AuthnContext extends ASN1Object {
   @Getter
   private List<SAMLAuthContext> statementInfoList = new ArrayList<>();
 
+  private boolean strictMode;
+
   /**
    * Creates an instance of the Authentication context extension
    *
@@ -67,11 +69,23 @@ public class AuthnContext extends ASN1Object {
    * @return Authentication context extension
    */
   public static AuthnContext getInstance(final Object obj) {
+    return getInstance(obj, false);
+  }
+
+  /**
+   * Creates an instance of the Authentication context extension
+   *
+   * @param obj
+   *          object holding extension data
+   * @param strictMode strict syntax processing
+   * @return Authentication context extension
+   */
+  public static AuthnContext getInstance(final Object obj, boolean strictMode) {
     if (obj instanceof AuthnContext) {
       return (AuthnContext) obj;
     }
     if (obj != null) {
-      return new AuthnContext(ASN1Sequence.getInstance(obj));
+      return new AuthnContext(ASN1Sequence.getInstance(obj), strictMode);
     }
 
     return null;
@@ -85,7 +99,19 @@ public class AuthnContext extends ASN1Object {
    * @return Authentication context extension
    */
   public static AuthnContext fromExtensions(final Extensions extensions) {
-    return AuthnContext.getInstance(extensions.getExtensionParsedValue(OID));
+    return fromExtensions(extensions, false);
+  }
+
+  /**
+   * Creates an instance of the Authentication context extension
+   *
+   * @param extensions
+   *          Authentication context extension
+   * @param strictMode strict syntax processing
+   * @return Authentication context extension
+   */
+  public static AuthnContext fromExtensions(final Extensions extensions, boolean strictMode) {
+    return AuthnContext.getInstance(extensions.getExtensionParsedValue(OID), strictMode);
   }
 
   /**
@@ -96,14 +122,15 @@ public class AuthnContext extends ASN1Object {
    * @param seq
    *          ASN1 sequence
    */
-  private AuthnContext(final ASN1Sequence seq) {
+  private AuthnContext(final ASN1Sequence seq, boolean strictMode) {
+    this.strictMode = strictMode;
     this.statementInfoList = new ArrayList<>();
     try {
       for (int i = 0; i < seq.size(); i++) {
         final ASN1Sequence contSeq = ASN1Sequence.getInstance(seq.getObjectAt(i));
         final ASN1UTF8String contextType = ASN1UTF8String.getInstance(contSeq.getObjectAt(0));
         final ASN1UTF8String contextInfo = ASN1UTF8String.getInstance(contSeq.getObjectAt(1));
-        final SAMLAuthContext samlAuthContext = getAuthnContext(contextInfo.getString());
+        final SAMLAuthContext samlAuthContext = getAuthnContext(contextInfo.getString(), strictMode);
         if (contextType.getString().equalsIgnoreCase(CONTENT_TYPE)) {
           this.statementInfoList.add(samlAuthContext);
         }
@@ -184,11 +211,11 @@ public class AuthnContext extends ASN1Object {
    * @throws IOException
    *           on error parsing data
    */
-  public static SAMLAuthContext getAuthnContext(final String xml) throws IOException {
+  public static SAMLAuthContext getAuthnContext(final String xml, boolean strictMode) throws IOException {
 
     try {
       Document document = DOMUtils.getDocument(xml.getBytes(StandardCharsets.UTF_8));
-      return new SAMLAuthContext(document);
+      return new SAMLAuthContext(document, strictMode);
     }
     catch (SAXException | ParserConfigurationException | CertificateException e) {
       throw new IOException("Unable to parse SAMLAuthContext xml");

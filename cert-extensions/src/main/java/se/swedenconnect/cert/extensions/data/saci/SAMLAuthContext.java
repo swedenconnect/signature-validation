@@ -19,7 +19,6 @@ package se.swedenconnect.cert.extensions.data.saci;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
-import java.util.Objects;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -32,30 +31,48 @@ import lombok.EqualsAndHashCode;
 import se.swedenconnect.cert.extensions.utils.DOMUtils;
 
 /**
- * DOM based implementation of SAMLAuthContext for the Auhtn Context extension RFC 7773
+ * DOM based implementation of SAMLAuthContext for the AuhtnContext extension RFC 7773
  */
 @EqualsAndHashCode(callSuper = true) @Data
 public class SAMLAuthContext extends AbstractDomData {
+
+  private static final String SAML_AUTH_CONTEXT_ELEMENT = "SAMLAuthContext";
 
   private AuthContextInfo authContextInfo;
   private IdAttributes idAttributes;
 
   private Document document;
 
-  public SAMLAuthContext() {
+  public SAMLAuthContext(boolean strictMode) {
     this.document = createNewDocument();
+    this.strictMode = strictMode;
   }
 
-  public SAMLAuthContext(Document document) throws CertificateException {
-    super(document.getDocumentElement());
+  public SAMLAuthContext(Document document, boolean strictMode) throws CertificateException {
+    super(document.getDocumentElement(), strictMode);
     this.document = document;
+    // Finally check the document element
+    validateDocument();
   }
 
-  public SAMLAuthContext(String xml)
+  public SAMLAuthContext(String xml, boolean strictMode)
     throws IOException, ParserConfigurationException, SAXException, CertificateException {
+    this.strictMode = strictMode;
     this.document = DOMUtils.getDocument(xml.getBytes(StandardCharsets.UTF_8));
     setValuesFromElement(document.getDocumentElement());
     validate();
+  }
+
+  /** {@inheritDoc} */
+  @Override protected void validate() throws CertificateException {
+    // No checks to make as both elements are optional
+  }
+
+  private void validateDocument() throws CertificateException {
+    Element root = document.getDocumentElement();
+    if (!SACI_NS.equals(root.getNamespaceURI()) && !SAML_AUTH_CONTEXT_ELEMENT.equals(root.getLocalName())) {
+      throw new CertificateException("Illegal root element name");
+    }
   }
 
   /**
@@ -72,32 +89,25 @@ public class SAMLAuthContext extends AbstractDomData {
 
   /** {@inheritDoc} */
   @Override protected Element getElement(Document owner) {
-    Element samlAuthContext = owner.createElementNS(SACI_NS, "SAMLAuthContext");
-    samlAuthContext.appendChild(authContextInfo.getElement(owner));
-    samlAuthContext.appendChild(idAttributes.getElement(owner));
+    Element samlAuthContext = owner.createElementNS(SACI_NS, SAML_AUTH_CONTEXT_ELEMENT);
+    if (authContextInfo != null){
+      samlAuthContext.appendChild(authContextInfo.getElement(owner));
+    }
+    if (idAttributes != null) {
+      samlAuthContext.appendChild(idAttributes.getElement(owner));
+    }
     return samlAuthContext;
   }
 
   /** {@inheritDoc} */
   @Override protected void setValuesFromElement(Element element) throws CertificateException {
-    Element authContextInfoElm = getSingleElement(element, SACI_NS, "AuthContextInfo");
+    Element authContextInfoElm = getSingleElement(element, SACI_NS, AuthContextInfo.AUTH_CONTEXT_INFO_ELEMENT);
     if (authContextInfoElm != null) {
-      authContextInfo = new AuthContextInfo(authContextInfoElm);
+      authContextInfo = new AuthContextInfo(authContextInfoElm, strictMode);
     }
-    Element idAttributesElm = getSingleElement(element, AbstractDomData.SACI_NS, "IdAttributes");
+    Element idAttributesElm = getSingleElement(element, AbstractDomData.SACI_NS, IdAttributes.ID_ATTRIBUTES_ELEMENT);
     if (idAttributesElm != null) {
-      idAttributes = new IdAttributes(idAttributesElm);
-    }
-  }
-
-  /** {@inheritDoc} */
-  @Override protected void validate() throws CertificateException {
-    try {
-      Objects.requireNonNull(authContextInfo, "AuthContextInfo element is not present");
-      Objects.requireNonNull(idAttributes, "IdAttributes element is not present");
-    }
-    catch (Exception ex) {
-      throw new CertificateException(ex);
+      idAttributes = new IdAttributes(idAttributesElm, strictMode);
     }
   }
 
@@ -108,6 +118,5 @@ public class SAMLAuthContext extends AbstractDomData {
     catch (ParserConfigurationException e) {
       throw new RuntimeException("Failed to create XML document");
     }
-
   }
 }

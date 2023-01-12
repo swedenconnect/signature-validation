@@ -20,6 +20,7 @@ import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -36,7 +37,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AttributeMapping extends AbstractDomData {
 
-  public static final String ATTRIBUTE_MAPPING_ELEMENT_NAME = "AttributeMapping";
+  public static final String ATTRIBUTE_MAPPING_ELEMENT = "AttributeMapping";
 
   public static final String TYPE = "Type";
   public static final String REF = "Ref";
@@ -46,12 +47,24 @@ public class AttributeMapping extends AbstractDomData {
   private SAMLAttribute attribute;
   private List<Element> anyList;
 
-  public AttributeMapping(Element element) throws CertificateException {
-    super(element);
+  public AttributeMapping(Element element, boolean strictMode) throws CertificateException {
+    super(element, strictMode);
+  }
+
+  /** {@inheritDoc} */
+  @Override protected void validate() throws CertificateException {
+    try {
+      Objects.requireNonNull(type, "Type attribute must be present in AttributeMapping");
+      Objects.requireNonNull(ref, "Ref attribute must be present in AttributeMapping");
+      Objects.requireNonNull(attribute, "Attribute element must be present in AttributeMapping");
+    }
+    catch (Exception ex) {
+      throw new CertificateException(ex);
+    }
   }
 
   @Override public Element getElement(Document document) {
-    Element attributeMapping = document.createElementNS(SACI_NS, ATTRIBUTE_MAPPING_ELEMENT_NAME);
+    Element attributeMapping = document.createElementNS(SACI_NS, ATTRIBUTE_MAPPING_ELEMENT);
     setAttribute(attributeMapping, TYPE, type.name());
     setAttribute(attributeMapping, REF, ref);
     attributeMapping.appendChild(attribute.getElement(document));
@@ -63,9 +76,9 @@ public class AttributeMapping extends AbstractDomData {
     type = Type.getTypeFromName(getAttributeValue(element, TYPE));
     ref = getAttributeValue(element, REF);
 
-    Element attributeElm = getSingleElement(element, SAML_ASSERTION_NS, SAMLAttribute.ATTRIBUTE_ELEMENT_NAME);
+    Element attributeElm = getSingleElement(element, SAML_ASSERTION_NS, SAMLAttribute.ATTRIBUTE_ELEMENT);
     if (attributeElm != null) {
-      this.attribute = new SAMLAttribute(attributeElm);
+      this.attribute = new SAMLAttribute(attributeElm, strictMode);
     }
     anyList = new ArrayList<>();
     NodeList childNodes = element.getChildNodes();
@@ -73,20 +86,10 @@ public class AttributeMapping extends AbstractDomData {
       Node node = childNodes.item(i);
       if (node instanceof Element) {
         if (!node.getNamespaceURI().equals(SAML_ASSERTION_NS) || !node.getLocalName()
-          .equals(SAMLAttribute.ATTRIBUTE_ELEMENT_NAME)) {
+          .equals(SAMLAttribute.ATTRIBUTE_ELEMENT)) {
           anyList.add((Element) node);
         }
       }
-    }
-  }
-
-  /** {@inheritDoc} */
-  @Override protected void validate() throws CertificateException {
-    try {
-      //TODO field validation check
-    }
-    catch (Exception ex) {
-      throw new CertificateException(ex);
     }
   }
 

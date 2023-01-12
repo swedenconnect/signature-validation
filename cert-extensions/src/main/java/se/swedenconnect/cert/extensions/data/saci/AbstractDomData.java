@@ -48,7 +48,13 @@ public abstract class AbstractDomData {
   public static final String SACI_NS = "http://id.elegnamnden.se/auth-cont/1.0/saci";
   public static final String SAML_ASSERTION_NS = "urn:oasis:names:tc:SAML:2.0:assertion";
 
+  protected boolean strictMode;
+
   public AbstractDomData(Element element) throws CertificateException {
+    this(element, false);
+  }
+  public AbstractDomData(Element element, boolean strictMode) throws CertificateException {
+    this.strictMode = strictMode;
     setValuesFromElement(element);
     validate();
   }

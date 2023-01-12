@@ -18,6 +18,7 @@ package se.swedenconnect.cert.extensions.data.saci;
 
 import java.security.cert.CertificateException;
 import java.util.List;
+import java.util.Objects;
 
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
@@ -25,19 +26,18 @@ import org.w3c.dom.Element;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
- * Description
- *
- * @author Martin Lindström (martin@idsec.se)
- * @author Stefan Santesson (stefan@idsec.se)
+ * SAML Attribute dom implementation
  */
 @Data
 @NoArgsConstructor
+@Slf4j
 public class SAMLAttribute extends AbstractDomData {
 
-  public static final String ATTRIBUTE_ELEMENT_NAME = "Attribute";
-  public static final String ATTRIBUTE_VALUE_ELEMENT_NAME = "AttributeValue";
+  public static final String ATTRIBUTE_ELEMENT = "Attribute";
+  public static final String ATTRIBUTE_VALUE_ELEMENT = "AttributeValue";
 
   public static final String NAME = "Name";
   public static final String NAME_FORMAT = "NameFormat";
@@ -49,12 +49,24 @@ public class SAMLAttribute extends AbstractDomData {
   private List<Attr> anyAttrList;
   private List<Element> attributeValues;
 
-  public SAMLAttribute(Element element) throws CertificateException {
-    super(element);
+  public SAMLAttribute(Element element, boolean strictMode) throws CertificateException {
+    super(element, strictMode);
+  }
+
+  /** {@inheritDoc} */
+  @Override protected void validate() throws CertificateException {
+    try {
+      if (strictMode){
+        Objects.requireNonNull(name, "Name attribute must be present");
+      }
+    }
+    catch (Exception ex) {
+      throw new CertificateException(ex);
+    }
   }
 
   @Override public Element getElement(Document document) {
-    Element attribute = document.createElementNS(SAML_ASSERTION_NS, ATTRIBUTE_ELEMENT_NAME);
+    Element attribute = document.createElementNS(SAML_ASSERTION_NS, ATTRIBUTE_ELEMENT);
     attribute.setPrefix("saml");
     setAttribute(attribute, NAME, name);
     setAttribute(attribute, NAME_FORMAT, nameFormat);
@@ -69,22 +81,12 @@ public class SAMLAttribute extends AbstractDomData {
     this.nameFormat = getAttributeValue(element, NAME_FORMAT);
     this.friendlyName = getAttributeValue(element, FRIENDLY_NAME);
     this.anyAttrList = getOtherAttributes(element, List.of(NAME, NAME_FORMAT, FRIENDLY_NAME));
-    this.attributeValues = getElements(element, SAML_ASSERTION_NS, ATTRIBUTE_VALUE_ELEMENT_NAME);
-  }
-
-  /** {@inheritDoc} */
-  @Override protected void validate() throws CertificateException {
-    try {
-      //TODO field validation check
-    }
-    catch (Exception ex) {
-      throw new CertificateException(ex);
-    }
+    this.attributeValues = getElements(element, SAML_ASSERTION_NS, ATTRIBUTE_VALUE_ELEMENT);
   }
 
   public static Element createStringAttributeValue(Document document, String value) {
     Element attrValue = document.createElementNS(AbstractDomData.SAML_ASSERTION_NS,
-      SAMLAttribute.ATTRIBUTE_VALUE_ELEMENT_NAME);
+      SAMLAttribute.ATTRIBUTE_VALUE_ELEMENT);
     attrValue.setPrefix("saml");
     attrValue.setTextContent(value);
     Attr xsiAttr = document.createAttributeNS("http://www.w3.org/2001/XMLSchema-instance", "xsi:type");

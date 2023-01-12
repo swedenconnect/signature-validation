@@ -53,7 +53,7 @@ class AuthnContextTest {
   @Test
   void getAuthnContext() throws Exception {
 
-    SAMLAuthContext samlAuthnContext = AuthnContext.getAuthnContext(TestData.samlAuthContextXml);
+    SAMLAuthContext samlAuthnContext = AuthnContext.getAuthnContext(TestData.samlAuthContextXml, false);
 
     String xmlPrint = AuthnContext.printAuthnContext(samlAuthnContext, true);
     String xmlPrint2 = AuthnContext.printAuthnContext(samlAuthnContext, true);
