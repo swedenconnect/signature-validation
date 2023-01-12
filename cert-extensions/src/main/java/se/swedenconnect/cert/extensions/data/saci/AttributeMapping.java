@@ -20,7 +20,6 @@ import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -29,7 +28,6 @@ import org.w3c.dom.NodeList;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import se.swedenconnect.cert.extensions.utils.DOMUtils;
 
 /**
  * Attribute mapping element
@@ -54,18 +52,18 @@ public class AttributeMapping extends AbstractDomData {
 
   @Override public Element getElement(Document document) {
     Element attributeMapping = document.createElementNS(SACI_NS, ATTRIBUTE_MAPPING_ELEMENT_NAME);
-    DOMUtils.setAttribute(attributeMapping, TYPE, type.name());
-    DOMUtils.setAttribute(attributeMapping, REF, ref);
+    setAttribute(attributeMapping, TYPE, type.name());
+    setAttribute(attributeMapping, REF, ref);
     attributeMapping.appendChild(attribute.getElement(document));
-    DOMUtils.adoptElements(attributeMapping, document, anyList);
+    adoptElements(attributeMapping, document, anyList);
     return attributeMapping;
   }
 
   @Override protected void setValuesFromElement(Element element) throws CertificateException {
-    type = Type.getTypeFromName(DOMUtils.getAttributeValue(element, TYPE));
-    ref = DOMUtils.getAttributeValue(element, REF);
+    type = Type.getTypeFromName(getAttributeValue(element, TYPE));
+    ref = getAttributeValue(element, REF);
 
-    Element attributeElm = DOMUtils.getSingleElement(element, SAML_ASSERTION_NS, SAMLAttribute.ATTRIBUTE_ELEMENT_NAME);
+    Element attributeElm = getSingleElement(element, SAML_ASSERTION_NS, SAMLAttribute.ATTRIBUTE_ELEMENT_NAME);
     if (attributeElm != null) {
       this.attribute = new SAMLAttribute(attributeElm);
     }
@@ -80,7 +78,6 @@ public class AttributeMapping extends AbstractDomData {
         }
       }
     }
-    validate();
   }
 
   /** {@inheritDoc} */

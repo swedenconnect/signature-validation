@@ -28,33 +28,34 @@ import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
 import lombok.Data;
-import lombok.Getter;
+import lombok.EqualsAndHashCode;
 import se.swedenconnect.cert.extensions.utils.DOMUtils;
 
 /**
  * DOM based implementation of SAMLAuthContext for the Auhtn Context extension RFC 7773
  */
-@Data
+@EqualsAndHashCode(callSuper = true) @Data
 public class SAMLAuthContext extends AbstractDomData {
 
   private AuthContextInfo authContextInfo;
   private IdAttributes idAttributes;
 
-  @Getter Document document;
+  private Document document;
 
   public SAMLAuthContext() {
     this.document = createNewDocument();
   }
 
   public SAMLAuthContext(Document document) throws CertificateException {
+    super(document.getDocumentElement());
     this.document = document;
-    setValuesFromElement(document.getDocumentElement());
   }
 
   public SAMLAuthContext(String xml)
     throws IOException, ParserConfigurationException, SAXException, CertificateException {
     this.document = DOMUtils.getDocument(xml.getBytes(StandardCharsets.UTF_8));
     setValuesFromElement(document.getDocumentElement());
+    validate();
   }
 
   /**
@@ -79,15 +80,14 @@ public class SAMLAuthContext extends AbstractDomData {
 
   /** {@inheritDoc} */
   @Override protected void setValuesFromElement(Element element) throws CertificateException {
-    Element authContextInfoElm = DOMUtils.getSingleElement(element, SACI_NS, "AuthContextInfo");
+    Element authContextInfoElm = getSingleElement(element, SACI_NS, "AuthContextInfo");
     if (authContextInfoElm != null) {
       authContextInfo = new AuthContextInfo(authContextInfoElm);
     }
-    Element idAttributesElm = DOMUtils.getSingleElement(element, AbstractDomData.SACI_NS, "IdAttributes");
+    Element idAttributesElm = getSingleElement(element, AbstractDomData.SACI_NS, "IdAttributes");
     if (idAttributesElm != null) {
       idAttributes = new IdAttributes(idAttributesElm);
     }
-    validate();
   }
 
   /** {@inheritDoc} */

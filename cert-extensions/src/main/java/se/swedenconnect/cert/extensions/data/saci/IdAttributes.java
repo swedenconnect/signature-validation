@@ -25,14 +25,13 @@ import org.w3c.dom.Element;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import se.swedenconnect.cert.extensions.utils.DOMUtils;
 
 /**
  * IdAttributes of SAMLAuthContextExtension
  */
 @Data
 @NoArgsConstructor
-public class IdAttributes  extends AbstractDomData{
+public class IdAttributes extends AbstractDomData {
 
   public static final String ID_ATTRIBUTES = "IdAttributes";
 
@@ -51,12 +50,11 @@ public class IdAttributes  extends AbstractDomData{
   }
 
   @Override protected void setValuesFromElement(Element element) throws CertificateException {
-    List<Element> elements = DOMUtils.getElements(element, SACI_NS, AttributeMapping.ATTRIBUTE_MAPPING_ELEMENT_NAME);
+    List<Element> elements = getElements(element, SACI_NS, AttributeMapping.ATTRIBUTE_MAPPING_ELEMENT_NAME);
     attributeMappingList = new ArrayList<>();
     for (Element attrMapElm : elements) {
       attributeMappingList.add(new AttributeMapping(attrMapElm));
     }
-    validate();
   }
 
   /** {@inheritDoc} */

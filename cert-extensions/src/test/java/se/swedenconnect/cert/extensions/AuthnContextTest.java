@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 
+import se.swedenconnect.cert.extensions.data.saci.AbstractDomData;
 import se.swedenconnect.cert.extensions.data.saci.AttributeMapping;
 import se.swedenconnect.cert.extensions.data.saci.SAMLAttribute;
 import se.swedenconnect.cert.extensions.data.saci.SAMLAuthContext;
@@ -52,9 +53,6 @@ class AuthnContextTest {
   @Test
   void getAuthnContext() throws Exception {
 
-    String parsedInstant = DOMUtils.XML_DATE_TIME_FORMATTER.format(Instant.now());
-    Instant instant = DOMUtils.parseTime(parsedInstant);
-
     SAMLAuthContext samlAuthnContext = AuthnContext.getAuthnContext(TestData.samlAuthContextXml);
 
     String xmlPrint = AuthnContext.printAuthnContext(samlAuthnContext, true);
@@ -67,7 +65,7 @@ class AuthnContextTest {
     String textContent = attrVal.getTextContent();
     //attribute.setAttributeValues(List.of(DOMUtils.createStringAttributeValue(samlAuthnContext.getDocument(), "new Value")));
 
-    Element newValue = DOMUtils.createStringAttributeValue(samlAuthnContext.getDocument(), "1234209871934789");
+    Element newValue = SAMLAttribute.createStringAttributeValue(samlAuthnContext.getDocument(), "1234209871934789");
     String newTextContent = newValue.getTextContent();
     NamedNodeMap newAttrNodeMap = newValue.getAttributes();
 

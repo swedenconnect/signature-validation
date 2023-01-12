@@ -22,14 +22,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -41,28 +33,17 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import se.swedenconnect.cert.extensions.data.saci.AbstractDomData;
-import se.swedenconnect.cert.extensions.data.saci.SAMLAttribute;
 
 /**
  * XML DOM Utils
  */
 @Slf4j
 public class DOMUtils {
-
-  public static final DateTimeFormatter XML_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(
-    "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ",
-    Locale.ENGLISH).withZone(ZoneId.systemDefault());
 
   private static Transformer plainTransformer;
   @Getter private static Transformer transformer;
@@ -102,104 +83,6 @@ public class DOMUtils {
     catch (Exception ex) {
       ex.printStackTrace();
     }
-  }
-
-  public static Element getSingleElement(Element parent, String namespaceUri, String elementName) {
-    List<Element> elementList = getElements(parent, namespaceUri, elementName);
-    if (elementList.isEmpty()) {
-      return null;
-    }
-    return elementList.get(0);
-  }
-
-  public static List<Element> getElements(Element parent, String namespaceUri, String elementName) {
-    NodeList elements = parent.getElementsByTagNameNS(namespaceUri, elementName);
-    List<Element> elementList = new ArrayList<>();
-    for (int i = 0; i < elements.getLength(); i++) {
-      Node node = elements.item(i);
-      if (node instanceof Element) {
-        elementList.add((Element) node);
-      }
-    }
-    return elementList;
-  }
-
-  public static void setAttribute(Element element, String name, String value) {
-    setAttribute(element, name, value,null);
-  }
-
-  public static void setAttribute(Element element, String name, String value, String namespaceUri) {
-    if (value == null) {
-      return;
-    }
-    if (namespaceUri == null) {
-      element.setAttribute(name, value);
-      return;
-    }
-    element.setAttributeNS(namespaceUri, name, value);
-  }
-
-  public static String getAttributeValue(Element element, String name) {
-    return getAttributeValue(element, name, null);
-  }
-
-  public static String getAttributeValue(Element element, String name, String namespaceUri) {
-    String val = namespaceUri == null
-      ? element.getAttribute(name)
-      : element.getAttributeNS(namespaceUri, name);
-
-    return (val != null && val.length() > 0) ? val : null;
-  }
-
-  public static List<Attr> getOtherAttributes(Element element, List<String> excludeList) {
-
-    List<Attr> attrList = new ArrayList<>();
-    NamedNodeMap attributes = element.getAttributes();
-    for (int i = 0; i < attributes.getLength(); i++) {
-      Node item = attributes.item(i);
-      if (item instanceof Attr) {
-        Attr attrItem = (Attr) item;
-        if (!excludeList.contains(attrItem.getName())) {
-          attrList.add(attrItem);
-        }
-      }
-    }
-    return attrList;
-  }
-
-
-  public static void adoptElements(Element adoptingElement, Document document, List<Element> anyList) {
-    if (anyList == null) {
-      return;
-    }
-    anyList.forEach(element -> {
-      document.adoptNode(element);
-      adoptingElement.appendChild(element);
-    });
-  }
-
-  public static void adoptAttributes(Element adoptingElement, Document document, List<Attr> anyAttrList) {
-    if (anyAttrList == null) {
-      return;
-    }
-    anyAttrList.forEach(attr -> {
-      document.adoptNode(attr);
-      adoptingElement.setAttributeNode(attr);
-    });
-  }
-
-  public static String instantToString(Instant instant) {
-    if (instant == null) {
-      return null;
-    }
-    return XML_DATE_TIME_FORMATTER.format(instant);
-  }
-
-  public static Instant parseTime(String xmlTimeStr) {
-    if (xmlTimeStr == null) {
-      return null;
-    }
-    return LocalDateTime.parse(xmlTimeStr, XML_DATE_TIME_FORMATTER).toInstant(ZoneOffset.UTC);
   }
 
   /**
@@ -270,20 +153,6 @@ public class DOMUtils {
   public static String getParsedXMLText(File xmlFile)
     throws IOException, ParserConfigurationException, SAXException, TransformerException {
     return getDocText(loadXMLContent(xmlFile));
-  }
-
-  public static Element createStringAttributeValue(Document document, String value) {
-    Element attrValue = document.createElementNS(AbstractDomData.SAML_ASSERTION_NS,
-      SAMLAttribute.ATTRIBUTE_VALUE_ELEMENT_NAME);
-    attrValue.setPrefix("saml");
-    attrValue.setTextContent(value);
-    Attr xsiAttr = document.createAttributeNS("http://www.w3.org/2001/XMLSchema-instance", "xsi:type");
-    xsiAttr.setValue("xs:string");
-    attrValue.setAttribute("xmlns:xs","http://www.w3.org/2001/XMLSchema");
-    attrValue.setAttribute("xmlns:xsi","http://www.w3.org/2001/XMLSchema-instance");
-    attrValue.setAttributeNS("http://www.w3.org/2001/XMLSchema-instance", "xsi:type", "xs:string");
-    attrValue.setAttributeNode(xsiAttr);
-    return attrValue;
   }
 
 }

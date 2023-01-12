@@ -28,7 +28,6 @@ import org.w3c.dom.NodeList;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import se.swedenconnect.cert.extensions.utils.DOMUtils;
 
 /**
  * Description
@@ -58,21 +57,21 @@ public class AuthContextInfo extends AbstractDomData {
 
   @Override public Element getElement(Document document) {
     Element authContextInfo = document.createElementNS(SACI_NS, AUTH_CONTEXT_INFO_ELEMENT_NAME);
-    DOMUtils.setAttribute(authContextInfo, IDENTITY_PROVIDER, identityProvider);
-    DOMUtils.setAttribute(authContextInfo, AUTHENTICATION_INSTANT, DOMUtils.instantToString(authenticationInstant));
-    DOMUtils.setAttribute(authContextInfo, AUTHN_CONTEXT_CLASS_REF, authnContextClassRef);
-    DOMUtils.setAttribute(authContextInfo, ASSERTION_REF, assertionRef);
-    DOMUtils.setAttribute(authContextInfo, SERVICE_ID, serviceId);
-    DOMUtils.adoptElements(authContextInfo, document, anyList);
+    setAttribute(authContextInfo, IDENTITY_PROVIDER, identityProvider);
+    setAttribute(authContextInfo, AUTHENTICATION_INSTANT, instantToString(authenticationInstant));
+    setAttribute(authContextInfo, AUTHN_CONTEXT_CLASS_REF, authnContextClassRef);
+    setAttribute(authContextInfo, ASSERTION_REF, assertionRef);
+    setAttribute(authContextInfo, SERVICE_ID, serviceId);
+    adoptElements(authContextInfo, document, anyList);
     return authContextInfo;
   }
 
   @Override protected void setValuesFromElement(Element element) throws CertificateException {
-    this.identityProvider = DOMUtils.getAttributeValue(element, IDENTITY_PROVIDER);
-    this.authenticationInstant = DOMUtils.parseTime(DOMUtils.getAttributeValue(element, AUTHENTICATION_INSTANT));
-    this.authnContextClassRef = DOMUtils.getAttributeValue(element, AUTHN_CONTEXT_CLASS_REF);
-    this.assertionRef = DOMUtils.getAttributeValue(element, ASSERTION_REF);
-    this.serviceId = DOMUtils.getAttributeValue(element, SERVICE_ID);
+    this.identityProvider = getAttributeValue(element, IDENTITY_PROVIDER);
+    this.authenticationInstant = parseTime(getAttributeValue(element, AUTHENTICATION_INSTANT));
+    this.authnContextClassRef = getAttributeValue(element, AUTHN_CONTEXT_CLASS_REF);
+    this.assertionRef = getAttributeValue(element, ASSERTION_REF);
+    this.serviceId = getAttributeValue(element, SERVICE_ID);
 
     anyList = new ArrayList<>();
     NodeList childNodes = element.getChildNodes();
@@ -82,7 +81,6 @@ public class AuthContextInfo extends AbstractDomData {
         anyList.add((Element) node);
       }
     }
-    validate();
   }
 
   /** {@inheritDoc} */
@@ -94,4 +92,5 @@ public class AuthContextInfo extends AbstractDomData {
       throw new CertificateException(ex);
     }
   }
+
 }

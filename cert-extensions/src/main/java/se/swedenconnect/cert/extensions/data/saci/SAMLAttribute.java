@@ -25,7 +25,6 @@ import org.w3c.dom.Element;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import se.swedenconnect.cert.extensions.utils.DOMUtils;
 
 /**
  * Description
@@ -57,21 +56,20 @@ public class SAMLAttribute extends AbstractDomData {
   @Override public Element getElement(Document document) {
     Element attribute = document.createElementNS(SAML_ASSERTION_NS, ATTRIBUTE_ELEMENT_NAME);
     attribute.setPrefix("saml");
-    DOMUtils.setAttribute(attribute, NAME, name);
-    DOMUtils.setAttribute(attribute, NAME_FORMAT, nameFormat);
-    DOMUtils.setAttribute(attribute, FRIENDLY_NAME, friendlyName);
-    DOMUtils.adoptAttributes(attribute, document, anyAttrList);
-    DOMUtils.adoptElements(attribute, document, attributeValues);
+    setAttribute(attribute, NAME, name);
+    setAttribute(attribute, NAME_FORMAT, nameFormat);
+    setAttribute(attribute, FRIENDLY_NAME, friendlyName);
+    adoptAttributes(attribute, document, anyAttrList);
+    adoptElements(attribute, document, attributeValues);
     return attribute;
   }
 
   @Override protected void setValuesFromElement(Element element) throws CertificateException {
-    this.name = DOMUtils.getAttributeValue(element, NAME);
-    this.nameFormat = DOMUtils.getAttributeValue(element, NAME_FORMAT);
-    this.friendlyName = DOMUtils.getAttributeValue(element, FRIENDLY_NAME);
-    this.anyAttrList = DOMUtils.getOtherAttributes(element, List.of(NAME, NAME_FORMAT, FRIENDLY_NAME));
-    this.attributeValues = DOMUtils.getElements(element, SAML_ASSERTION_NS, ATTRIBUTE_VALUE_ELEMENT_NAME);
-    validate();
+    this.name = getAttributeValue(element, NAME);
+    this.nameFormat = getAttributeValue(element, NAME_FORMAT);
+    this.friendlyName = getAttributeValue(element, FRIENDLY_NAME);
+    this.anyAttrList = getOtherAttributes(element, List.of(NAME, NAME_FORMAT, FRIENDLY_NAME));
+    this.attributeValues = getElements(element, SAML_ASSERTION_NS, ATTRIBUTE_VALUE_ELEMENT_NAME);
   }
 
   /** {@inheritDoc} */
@@ -82,6 +80,20 @@ public class SAMLAttribute extends AbstractDomData {
     catch (Exception ex) {
       throw new CertificateException(ex);
     }
+  }
+
+  public static Element createStringAttributeValue(Document document, String value) {
+    Element attrValue = document.createElementNS(AbstractDomData.SAML_ASSERTION_NS,
+      SAMLAttribute.ATTRIBUTE_VALUE_ELEMENT_NAME);
+    attrValue.setPrefix("saml");
+    attrValue.setTextContent(value);
+    Attr xsiAttr = document.createAttributeNS("http://www.w3.org/2001/XMLSchema-instance", "xsi:type");
+    xsiAttr.setValue("xs:string");
+    attrValue.setAttribute("xmlns:xs", "http://www.w3.org/2001/XMLSchema");
+    attrValue.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+    attrValue.setAttributeNS("http://www.w3.org/2001/XMLSchema-instance", "xsi:type", "xs:string");
+    attrValue.setAttributeNode(xsiAttr);
+    return attrValue;
   }
 
 }
