@@ -49,7 +49,7 @@ public class AuthContextInfo extends AbstractDomData {
   private Instant authenticationInstant;
   private String authnContextClassRef;
   private String assertionRef;
-  private String serviceId;
+  private String serviceID;
   private List<Element> anyList;
 
   public AuthContextInfo(Element element, boolean strictMode) throws CertificateException {
@@ -74,7 +74,7 @@ public class AuthContextInfo extends AbstractDomData {
     setAttribute(authContextInfo, AUTHENTICATION_INSTANT, instantToString(authenticationInstant));
     setAttribute(authContextInfo, AUTHN_CONTEXT_CLASS_REF, authnContextClassRef);
     setAttribute(authContextInfo, ASSERTION_REF, assertionRef);
-    setAttribute(authContextInfo, SERVICE_ID, serviceId);
+    setAttribute(authContextInfo, SERVICE_ID, serviceID);
     adoptElements(authContextInfo, document, anyList);
     return authContextInfo;
   }
@@ -84,7 +84,7 @@ public class AuthContextInfo extends AbstractDomData {
     this.authenticationInstant = parseTime(getAttributeValue(element, AUTHENTICATION_INSTANT));
     this.authnContextClassRef = getAttributeValue(element, AUTHN_CONTEXT_CLASS_REF);
     this.assertionRef = getAttributeValue(element, ASSERTION_REF);
-    this.serviceId = getAttributeValue(element, SERVICE_ID);
+    this.serviceID = getAttributeValue(element, SERVICE_ID);
 
     anyList = new ArrayList<>();
     NodeList childNodes = element.getChildNodes();

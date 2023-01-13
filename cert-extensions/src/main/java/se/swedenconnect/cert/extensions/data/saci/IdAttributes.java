@@ -35,7 +35,7 @@ public class IdAttributes extends AbstractDomData {
 
   public static final String ID_ATTRIBUTES_ELEMENT = "IdAttributes";
 
-  private List<AttributeMapping> attributeMappingList;
+  private List<AttributeMapping> attributeMappings;
 
   public IdAttributes(Element element, boolean strictMode) throws CertificateException {
     super(element, strictMode);
@@ -43,7 +43,7 @@ public class IdAttributes extends AbstractDomData {
 
   /** {@inheritDoc} */
   @Override protected void validate() throws CertificateException {
-    if (attributeMappingList == null || attributeMappingList.isEmpty()) {
+    if (attributeMappings == null || attributeMappings.isEmpty()) {
       throw new CertificateException("No AttributeMapping present in IdAttributes. "
         + "At least one Attribute mapping must be present in IdAttributes");
     }
@@ -51,17 +51,17 @@ public class IdAttributes extends AbstractDomData {
 
   @Override public Element getElement(Document document) {
     Element idAttributes = document.createElementNS(SACI_NS, ID_ATTRIBUTES_ELEMENT);
-    if (attributeMappingList != null) {
-      attributeMappingList.forEach(attributeMapping -> idAttributes.appendChild(attributeMapping.getElement(document)));
+    if (attributeMappings != null) {
+      attributeMappings.forEach(attributeMapping -> idAttributes.appendChild(attributeMapping.getElement(document)));
     }
     return idAttributes;
   }
 
   @Override protected void setValuesFromElement(Element element) throws CertificateException {
     List<Element> elements = getElements(element, SACI_NS, AttributeMapping.ATTRIBUTE_MAPPING_ELEMENT);
-    attributeMappingList = new ArrayList<>();
+    attributeMappings = new ArrayList<>();
     for (Element attrMapElm : elements) {
-      attributeMappingList.add(new AttributeMapping(attrMapElm, strictMode));
+      attributeMappings.add(new AttributeMapping(attrMapElm, strictMode));
     }
   }
 

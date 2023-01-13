@@ -239,9 +239,9 @@ public class AuthnContext extends ASN1Object {
       Document document = authnConext.getDocument();
       document.setXmlStandalone(true);
       if (formatted) {
-        return DOMUtils.getDocText(document);
+        return DOMUtils.getStyledDocText(document, false);
       }
-      return new String(DOMUtils.getCanonicalDocText(document), StandardCharsets.UTF_8);
+      return new String(DOMUtils.getCanonicalDocText(document, false), StandardCharsets.UTF_8);
     }
     catch (TransformerException e) {
       throw new IOException("Error converting SAMLAuthContext to xml string", e);

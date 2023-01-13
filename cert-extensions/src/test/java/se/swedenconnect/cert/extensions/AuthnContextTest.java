@@ -16,24 +16,18 @@
 
 package se.swedenconnect.cert.extensions;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.security.Security;
-import java.time.Instant;
 import java.util.List;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 
-import se.swedenconnect.cert.extensions.data.saci.AbstractDomData;
 import se.swedenconnect.cert.extensions.data.saci.AttributeMapping;
 import se.swedenconnect.cert.extensions.data.saci.SAMLAttribute;
 import se.swedenconnect.cert.extensions.data.saci.SAMLAuthContext;
-import se.swedenconnect.cert.extensions.utils.DOMUtils;
 
 /**
  * Description
@@ -58,7 +52,7 @@ class AuthnContextTest {
     String xmlPrint = AuthnContext.printAuthnContext(samlAuthnContext, true);
     String xmlPrint2 = AuthnContext.printAuthnContext(samlAuthnContext, true);
 
-    AttributeMapping attributeMapping = samlAuthnContext.getIdAttributes().getAttributeMappingList().get(0);
+    AttributeMapping attributeMapping = samlAuthnContext.getIdAttributes().getAttributeMappings().get(0);
     SAMLAttribute attribute = attributeMapping.getAttribute();
     Element attrVal = attribute.getAttributeValues().get(0);
     NamedNodeMap attributes = attrVal.getAttributes();
@@ -70,7 +64,7 @@ class AuthnContextTest {
     NamedNodeMap newAttrNodeMap = newValue.getAttributes();
 
     attribute.setAttributeValues(List.of(newValue));
-    String xmlPrint3 = AuthnContext.printAuthnContext(samlAuthnContext, true);
+    String xmlPrint3 = AuthnContext.printAuthnContext(samlAuthnContext, false);
 
     int sdf=0;
 

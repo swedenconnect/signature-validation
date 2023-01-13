@@ -46,7 +46,9 @@ import lombok.extern.slf4j.Slf4j;
 public class DOMUtils {
 
   private static Transformer plainTransformer;
-  @Getter private static Transformer transformer;
+  @Getter private static Transformer styledTransformer;
+  @Getter private static Transformer noXMLDeclarationTransformer;
+  @Getter private static Transformer noXMLDeclarationStyledTransformer;
   @Getter private static DocumentBuilderFactory safeDocBuilderFactory;
 
   static {
@@ -71,14 +73,26 @@ public class DOMUtils {
 
     TransformerFactory tf = TransformerFactory.newInstance();
     try {
+      // Canonical XML transformer
       plainTransformer = tf.newTransformer();
-      transformer = tf.newTransformer();
-      transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
+      // Canonical XML with no XML declaration transformer
+      noXMLDeclarationTransformer = tf.newTransformer();
+      noXMLDeclarationTransformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+      // Styled print transformer
+      styledTransformer = tf.newTransformer();
+      styledTransformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
       //transformer.setOutputProperty(OutputKeys.STANDALONE, "no");
-      transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-      transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-      transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-      transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+      styledTransformer.setOutputProperty(OutputKeys.METHOD, "xml");
+      styledTransformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+      styledTransformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+      styledTransformer.setOutputProperty(OutputKeys.INDENT, "yes");
+      // No XML Declaration styled print transformer
+      noXMLDeclarationStyledTransformer = tf.newTransformer();
+      noXMLDeclarationStyledTransformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+      noXMLDeclarationStyledTransformer.setOutputProperty(OutputKeys.METHOD, "xml");
+      noXMLDeclarationStyledTransformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+      noXMLDeclarationStyledTransformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+      noXMLDeclarationStyledTransformer.setOutputProperty(OutputKeys.INDENT, "yes");
     }
     catch (Exception ex) {
       ex.printStackTrace();
@@ -92,14 +106,17 @@ public class DOMUtils {
    * @param doc The doc being processed
    * @return Test representation of the XML document
    */
-  public static String getDocText(Document doc) throws TransformerException {
+  public static String getStyledDocText(Document doc, boolean xmlDeclaration) throws TransformerException {
     Objects.requireNonNull(doc, "Document must not be null");
     DOMSource domSource = new DOMSource(doc);
     java.io.StringWriter sw = new java.io.StringWriter();
     StreamResult sr = new StreamResult(sw);
-    transformer.transform(domSource, sr);
-    String xml = sw.toString();
-    return xml;
+    if (xmlDeclaration) {
+      styledTransformer.transform(domSource, sr);
+    } else {
+      noXMLDeclarationStyledTransformer.transform(domSource, sr);
+    }
+    return sw.toString();
   }
 
   /**
@@ -109,11 +126,14 @@ public class DOMUtils {
    * @param doc The XML document being processed.
    * @return XML String
    */
-  public static byte[] getCanonicalDocText(Document doc) throws TransformerException {
+  public static byte[] getCanonicalDocText(Document doc, boolean xmlDeclaration) throws TransformerException {
     ByteArrayOutputStream os = new ByteArrayOutputStream();
-    plainTransformer.transform(new DOMSource(doc), new StreamResult(os));
-    byte[] xmlData = os.toByteArray();
-    return xmlData;
+    if (xmlDeclaration) {
+      plainTransformer.transform(new DOMSource(doc), new StreamResult(os));
+    } else {
+      noXMLDeclarationTransformer.transform(new DOMSource(doc), new StreamResult(os));
+    }
+    return os.toByteArray();
   }
 
   public static Document getNormalizedDocument(byte[] xmlData)
@@ -124,8 +144,7 @@ public class DOMUtils {
   }
 
   public static Document getDocument(byte[] xmlData) throws IOException, SAXException, ParserConfigurationException {
-    Document doc = safeDocBuilderFactory.newDocumentBuilder().parse(new ByteArrayInputStream(xmlData));
-    return doc;
+    return safeDocBuilderFactory.newDocumentBuilder().parse(new ByteArrayInputStream(xmlData));
   }
 
   /**
@@ -142,17 +161,6 @@ public class DOMUtils {
     doc.getDocumentElement().normalize();
     return doc;
 
-  }
-
-  /**
-   * Parse an XML file and returns an XML string
-   *
-   * @param xmlFile The XML file being parsed
-   * @return XML String
-   */
-  public static String getParsedXMLText(File xmlFile)
-    throws IOException, ParserConfigurationException, SAXException, TransformerException {
-    return getDocText(loadXMLContent(xmlFile));
   }
 
 }
