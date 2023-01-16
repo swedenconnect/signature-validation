@@ -36,7 +36,6 @@ import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERUTF8String;
 import org.bouncycastle.asn1.x509.Extensions;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
 import lombok.Getter;
@@ -46,16 +45,13 @@ import se.swedenconnect.cert.extensions.utils.DOMUtils;
 
 /**
  * AuthnContext X.509 extension implementation for extending Bouncycastle.
- *
- * @author Martin Lindström (martin@idsec.se)
- * @author Stefan Santesson (stefan@idsec.se)
  */
 @Slf4j
 public class AuthnContext extends ASN1Object {
 
   public static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.2.752.201.5.1");
   public static final String CONTENT_TYPE = "http://id.elegnamnden.se/auth-cont/1.0/saci";
-  
+
   @Getter
   private List<SAMLAuthContext> statementInfoList = new ArrayList<>();
 
@@ -64,8 +60,7 @@ public class AuthnContext extends ASN1Object {
   /**
    * Creates an instance of the Authentication context extension
    *
-   * @param obj
-   *          object holding extension data
+   * @param obj object holding extension data
    * @return Authentication context extension
    */
   public static AuthnContext getInstance(final Object obj) {
@@ -75,8 +70,7 @@ public class AuthnContext extends ASN1Object {
   /**
    * Creates an instance of the Authentication context extension
    *
-   * @param obj
-   *          object holding extension data
+   * @param obj object holding extension data
    * @param strictMode strict syntax processing
    * @return Authentication context extension
    */
@@ -94,8 +88,7 @@ public class AuthnContext extends ASN1Object {
   /**
    * Creates an instance of the Authentication context extension
    *
-   * @param extensions
-   *          Authentication context extension
+   * @param extensions Authentication context extension
    * @return Authentication context extension
    */
   public static AuthnContext fromExtensions(final Extensions extensions) {
@@ -105,8 +98,7 @@ public class AuthnContext extends ASN1Object {
   /**
    * Creates an instance of the Authentication context extension
    *
-   * @param extensions
-   *          Authentication context extension
+   * @param extensions Authentication context extension
    * @param strictMode strict syntax processing
    * @return Authentication context extension
    */
@@ -116,11 +108,10 @@ public class AuthnContext extends ASN1Object {
 
   /**
    * Internal constructor
-   *
+   * <p>
    * Parse the content of ASN1 sequence to populate set values
    *
-   * @param seq
-   *          ASN1 sequence
+   * @param seq ASN1 sequence
    */
   private AuthnContext(final ASN1Sequence seq, boolean strictMode) {
     this.strictMode = strictMode;
@@ -137,15 +128,14 @@ public class AuthnContext extends ASN1Object {
       }
     }
     catch (final Exception e) {
-      throw new IllegalArgumentException("Bad extension content");
+      throw new IllegalArgumentException("Bad extension content", e);
     }
   }
 
   /**
    * Constructor
    *
-   * @param statementInfoList
-   *          list of statement infos
+   * @param statementInfoList list of statement infos
    */
   public AuthnContext(final List<SAMLAuthContext> statementInfoList) {
     this.statementInfoList = statementInfoList;
@@ -205,11 +195,9 @@ public class AuthnContext extends ASN1Object {
   /**
    * Creates a {@link SAMLAuthContext} object from an xml string
    *
-   * @param xml
-   *          xml string
+   * @param xml xml string
    * @return {@link SAMLAuthContext} object
-   * @throws IOException
-   *           on error parsing data
+   * @throws IOException on error parsing data
    */
   public static SAMLAuthContext getAuthnContext(final String xml, boolean strictMode) throws IOException {
 
@@ -225,15 +213,13 @@ public class AuthnContext extends ASN1Object {
   /**
    * Converts a {@link SAMLAuthContext} object to XML string
    *
-   * @param authnConext
-   *          {@link SAMLAuthContext} object
-   * @param formatted
-   *          true to generate pretty printing version
+   * @param authnConext {@link SAMLAuthContext} object
+   * @param formatted true to generate pretty printing version
    * @return XML string
-   * @throws IOException
-   *           on error parsing data
+   * @throws IOException on error parsing data
    */
-  public static String printAuthnContext(final SAMLAuthContext authnConext, final boolean formatted) throws IOException {
+  public static String printAuthnContext(final SAMLAuthContext authnConext, final boolean formatted)
+    throws IOException {
 
     try {
       Document document = authnConext.getDocument();

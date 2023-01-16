@@ -37,21 +37,39 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AuthContextInfo extends AbstractDomData {
 
+  /** AuthContextInfo element name */
   public static final String AUTH_CONTEXT_INFO_ELEMENT = "AuthContextInfo";
-
+  /** IdentityProvider element name */
   public static final String IDENTITY_PROVIDER = "IdentityProvider";
+  /** AuthenticationInstant element name */
   public static final String AUTHENTICATION_INSTANT = "AuthenticationInstant";
+  /** AuthnContextClassRef element name */
   public static final String AUTHN_CONTEXT_CLASS_REF = "AuthnContextClassRef";
+  /** AssertionRef element name */
   public static final String ASSERTION_REF = "AssertionRef";
+  /** ServiceID element name */
   public static final String SERVICE_ID = "ServiceID";
 
+  /** Identity provider name */
   private String identityProvider;
+  /** Authentication instant */
   private Instant authenticationInstant;
+  /** Authentication LOA URI */
   private String authnContextClassRef;
+  /** Assertion reference */
   private String assertionRef;
+  /** Service identifier */
   private String serviceID;
+  /** List of additional elements */
   private List<Element> anyList;
 
+  /**
+   * Constructs an AuthContextInfo object from an XML element
+   *
+   * @param element the input AuthContextInfo xml element
+   * @param strictMode true to strictly enforce content requirement rules
+   * @throws CertificateException content validation error
+   */
   public AuthContextInfo(Element element, boolean strictMode) throws CertificateException {
     super(element, strictMode);
   }
@@ -68,6 +86,7 @@ public class AuthContextInfo extends AbstractDomData {
     }
   }
 
+  /** {@inheritDoc} */
   @Override public Element getElement(Document document) {
     Element authContextInfo = document.createElementNS(SACI_NS, AUTH_CONTEXT_INFO_ELEMENT);
     setAttribute(authContextInfo, IDENTITY_PROVIDER, identityProvider);
@@ -79,6 +98,7 @@ public class AuthContextInfo extends AbstractDomData {
     return authContextInfo;
   }
 
+  /** {@inheritDoc} */
   @Override protected void setValuesFromElement(Element element) throws CertificateException {
     this.identityProvider = getAttributeValue(element, IDENTITY_PROVIDER);
     this.authenticationInstant = parseTime(getAttributeValue(element, AUTHENTICATION_INSTANT));

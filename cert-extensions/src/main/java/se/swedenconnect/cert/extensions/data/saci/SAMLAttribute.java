@@ -20,6 +20,8 @@ import java.security.cert.CertificateException;
 import java.util.List;
 import java.util.Objects;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -27,6 +29,7 @@ import org.w3c.dom.Element;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import se.swedenconnect.cert.extensions.utils.DOMUtils;
 
 /**
  * SAML Attribute dom implementation
@@ -36,20 +39,36 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SAMLAttribute extends AbstractDomData {
 
+  /** Attribute element name */
   public static final String ATTRIBUTE_ELEMENT = "Attribute";
+  /** AttributeValue element name */
   public static final String ATTRIBUTE_VALUE_ELEMENT = "AttributeValue";
 
+  /** Name attribute name */
   public static final String NAME = "Name";
+  /** NameFormat attribute name */
   public static final String NAME_FORMAT = "NameFormat";
+  /** FriendlyName attribute name */
   public static final String FRIENDLY_NAME = "FriendlyName";
 
+  /** SAML attribute name */
   private String name;
+  /** SAML attribute nameFormat */
   private String nameFormat;
+  /** SAML attribute friendly name */
   private String friendlyName;
+  /** SAML attribute other attributes */
   private List<Attr> anyAttrList;
+  /** SAML attribute value elements */
   private List<Element> attributeValues;
 
-  public SAMLAttribute(Element element, boolean strictMode) throws CertificateException {
+  /**
+   * Constructs a SAML attribute from XML element
+   * @param element source XML element
+   * @param strictMode true to strictly enforce content requirement rules
+   * @throws CertificateException content validation error
+   */
+  public SAMLAttribute(final Element element, final boolean strictMode) throws CertificateException {
     super(element, strictMode);
   }
 
@@ -60,13 +79,14 @@ public class SAMLAttribute extends AbstractDomData {
         Objects.requireNonNull(name, "Name attribute must be present");
       }
     }
-    catch (Exception ex) {
+    catch (final Exception ex) {
       throw new CertificateException(ex);
     }
   }
 
-  @Override public Element getElement(Document document) {
-    Element attribute = document.createElementNS(SAML_ASSERTION_NS, ATTRIBUTE_ELEMENT);
+  /** {@inheritDoc} */
+  @Override public Element getElement(final Document document) {
+    final Element attribute = document.createElementNS(SAML_ASSERTION_NS, ATTRIBUTE_ELEMENT);
     attribute.setPrefix("saml");
     setAttribute(attribute, NAME, name);
     setAttribute(attribute, NAME_FORMAT, nameFormat);
@@ -76,7 +96,8 @@ public class SAMLAttribute extends AbstractDomData {
     return attribute;
   }
 
-  @Override protected void setValuesFromElement(Element element) throws CertificateException {
+  /** {@inheritDoc} */
+  @Override protected void setValuesFromElement(final Element element) throws CertificateException {
     this.name = getAttributeValue(element, NAME);
     this.nameFormat = getAttributeValue(element, NAME_FORMAT);
     this.friendlyName = getAttributeValue(element, FRIENDLY_NAME);
@@ -84,8 +105,27 @@ public class SAMLAttribute extends AbstractDomData {
     this.attributeValues = getElements(element, SAML_ASSERTION_NS, ATTRIBUTE_VALUE_ELEMENT);
   }
 
-  public static Element createStringAttributeValue(Document document, String value) {
-    Element attrValue = document.createElementNS(AbstractDomData.SAML_ASSERTION_NS,
+  /**
+   * Creates a new attribute value with string content where the value is declared as xs:string
+   * The attribute value gets created from a new DOM document.
+   *
+   * @param value string value
+   * @return attribute value element
+   */
+  public static Element createStringAttributeValue(final String value) {
+    return createStringAttributeValue(DOMUtils.createNewDocument(), value);
+  }
+
+  /**
+   * Creates a new attribute value with string content where the value is declared as xs:string.
+   * The attribute value gets created as belonging to a provided DOM document
+   *
+   * @param document document to which this attribute belongs
+   * @param value string value
+   * @return attribute value element
+   */
+  public static Element createStringAttributeValue(final Document document, final String value) {
+    final Element attrValue = document.createElementNS(AbstractDomData.SAML_ASSERTION_NS,
       SAMLAttribute.ATTRIBUTE_VALUE_ELEMENT);
     attrValue.setPrefix("saml");
     attrValue.setTextContent(value);

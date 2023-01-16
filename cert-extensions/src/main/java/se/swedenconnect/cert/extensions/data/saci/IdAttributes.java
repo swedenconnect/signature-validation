@@ -33,10 +33,19 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class IdAttributes extends AbstractDomData {
 
+  /** IdAttributes element name */
   public static final String ID_ATTRIBUTES_ELEMENT = "IdAttributes";
 
+  /** List of attribute mapping data elements */
   private List<AttributeMapping> attributeMappings;
 
+  /**
+   * Constructs a new IdAttributes element data object from an existing XML element
+   *
+   * @param element IdAttributes XML element
+   * @param strictMode true to strictly enforce content requirement rules
+   * @throws CertificateException content requirement errors
+   */
   public IdAttributes(Element element, boolean strictMode) throws CertificateException {
     super(element, strictMode);
   }
@@ -49,7 +58,9 @@ public class IdAttributes extends AbstractDomData {
     }
   }
 
-  @Override public Element getElement(Document document) {
+
+  /** {@inheritDoc} */
+  @Override public Element getElement(final Document document) {
     Element idAttributes = document.createElementNS(SACI_NS, ID_ATTRIBUTES_ELEMENT);
     if (attributeMappings != null) {
       attributeMappings.forEach(attributeMapping -> idAttributes.appendChild(attributeMapping.getElement(document)));
@@ -57,7 +68,7 @@ public class IdAttributes extends AbstractDomData {
     return idAttributes;
   }
 
-  @Override protected void setValuesFromElement(Element element) throws CertificateException {
+  @Override protected void setValuesFromElement(final Element element) throws CertificateException {
     List<Element> elements = getElements(element, SACI_NS, AttributeMapping.ATTRIBUTE_MAPPING_ELEMENT);
     attributeMappings = new ArrayList<>();
     for (Element attrMapElm : elements) {

@@ -163,4 +163,13 @@ public class DOMUtils {
 
   }
 
+  public static Document createNewDocument() {
+    try {
+      return DOMUtils.getSafeDocBuilderFactory().newDocumentBuilder().newDocument();
+    }
+    catch (ParserConfigurationException e) {
+      throw new RuntimeException("Failed to create XML document");
+    }
+  }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020. Sweden Connect
+ * Copyright (c) 2020-2023.  Sweden Connect
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package se.swedenconnect.cert.extensions;
+package se.swedenconnect.cert.extensions.jaxb;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;

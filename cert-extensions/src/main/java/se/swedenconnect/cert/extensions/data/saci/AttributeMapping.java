@@ -37,17 +37,30 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AttributeMapping extends AbstractDomData {
 
+  /** AttributeMapping element name */
   public static final String ATTRIBUTE_MAPPING_ELEMENT = "AttributeMapping";
 
+  /** Type attribute name */
   public static final String TYPE = "Type";
+  /** Ref attribute name */
   public static final String REF = "Ref";
 
+  /** Type of attribute mapping */
   private Type type;
+  /** Reference identifying the certificate destination object (attribute, Subj alt name or directory attribute */
   private String ref;
+  /** The source SAML attribute data */
   private SAMLAttribute attribute;
+  /** List of extension elements */
   private List<Element> anyList;
 
-  public AttributeMapping(Element element, boolean strictMode) throws CertificateException {
+  /**
+   * Constructing attribute mapping from xml element
+   * @param element xml element holding the attribute mapping data
+   * @param strictMode true to strictly enforce content requirement rules
+   * @throws CertificateException content validation error
+   */
+  public AttributeMapping(final Element element, final boolean strictMode) throws CertificateException {
     super(element, strictMode);
   }
 
@@ -63,8 +76,9 @@ public class AttributeMapping extends AbstractDomData {
     }
   }
 
-  @Override public Element getElement(Document document) {
-    Element attributeMapping = document.createElementNS(SACI_NS, ATTRIBUTE_MAPPING_ELEMENT);
+  /** {@inheritDoc} */
+  @Override public Element getElement(final Document document) {
+    final Element attributeMapping = document.createElementNS(SACI_NS, ATTRIBUTE_MAPPING_ELEMENT);
     setAttribute(attributeMapping, TYPE, type.name());
     setAttribute(attributeMapping, REF, ref);
     attributeMapping.appendChild(attribute.getElement(document));
@@ -72,18 +86,19 @@ public class AttributeMapping extends AbstractDomData {
     return attributeMapping;
   }
 
-  @Override protected void setValuesFromElement(Element element) throws CertificateException {
+  /** {@inheritDoc} */
+  @Override protected void setValuesFromElement(final Element element) throws CertificateException {
     type = Type.getTypeFromName(getAttributeValue(element, TYPE));
     ref = getAttributeValue(element, REF);
 
-    Element attributeElm = getSingleElement(element, SAML_ASSERTION_NS, SAMLAttribute.ATTRIBUTE_ELEMENT);
+    final Element attributeElm = getSingleElement(element, SAML_ASSERTION_NS, SAMLAttribute.ATTRIBUTE_ELEMENT);
     if (attributeElm != null) {
       this.attribute = new SAMLAttribute(attributeElm, strictMode);
     }
     anyList = new ArrayList<>();
-    NodeList childNodes = element.getChildNodes();
+    final NodeList childNodes = element.getChildNodes();
     for (int i = 0; i < childNodes.getLength(); i++) {
-      Node node = childNodes.item(i);
+      final Node node = childNodes.item(i);
       if (node instanceof Element) {
         if (!node.getNamespaceURI().equals(SAML_ASSERTION_NS) || !node.getLocalName()
           .equals(SAMLAttribute.ATTRIBUTE_ELEMENT)) {
@@ -93,9 +108,22 @@ public class AttributeMapping extends AbstractDomData {
     }
   }
 
+  /**
+   * Enumeration of mapping types
+   */
   public static enum Type {
-    rdn, san, sda;
+    /** The target certificate object is a Relative Distinguished Name in the Subject field */
+    rdn,
+    /** The target certificate object is a SubjectAltName value */
+    san,
+    /** The target certificate object is a Subject Directory Attribute extension value */
+    sda;
 
+    /**
+     * Get type matching the name of the type
+     * @param name name of the Type
+     * @return the Type enum object matching the name or null no such value is present
+     */
     public static Type getTypeFromName(String name) {
       return Arrays.stream(values())
         .filter(type -> type.name().equals(name))

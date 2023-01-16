@@ -44,7 +44,9 @@ import org.bouncycastle.asn1.x509.GeneralName;
  */
 public class SubjectInformationAccess extends ASN1Object {
 
+    /** caRepository access method OID */
     public static final ASN1ObjectIdentifier caRepository = new ASN1ObjectIdentifier(OidName.id_pkix_ad_caRepository.getOid());
+    /** timeStamping access method OID */
     public static final ASN1ObjectIdentifier timeStamping = new ASN1ObjectIdentifier(OidName.id_pkix_ad_timestamping.getOid());
     /** Access descriptions */
     @Getter private AccessDescription[] accessDescriptions;

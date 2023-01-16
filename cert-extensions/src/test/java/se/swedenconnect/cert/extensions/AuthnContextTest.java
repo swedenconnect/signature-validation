@@ -17,24 +17,28 @@
 package se.swedenconnect.cert.extensions;
 
 import java.security.Security;
+import java.security.cert.CertificateException;
 import java.util.List;
 
+import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 
+import lombok.extern.slf4j.Slf4j;
 import se.swedenconnect.cert.extensions.data.saci.AttributeMapping;
 import se.swedenconnect.cert.extensions.data.saci.SAMLAttribute;
 import se.swedenconnect.cert.extensions.data.saci.SAMLAuthContext;
+import se.swedenconnect.cert.extensions.jaxb.JaxbAuthnContext;
+import se.swedenconnect.cert.extensions.jaxb.JaxbTestData;
 
 /**
- * Description
- *
- * @author Martin Lindström (martin@idsec.se)
- * @author Stefan Santesson (stefan@idsec.se)
+ * Testing AuthContext DOM implementation
  */
+@Slf4j
 class AuthnContextTest {
 
   @BeforeAll
@@ -50,23 +54,37 @@ class AuthnContextTest {
     SAMLAuthContext samlAuthnContext = AuthnContext.getAuthnContext(TestData.samlAuthContextXml, false);
 
     String xmlPrint = AuthnContext.printAuthnContext(samlAuthnContext, true);
-    String xmlPrint2 = AuthnContext.printAuthnContext(samlAuthnContext, true);
+    log.info("Parsed formatted SAMLAuthcontext \n", xmlPrint);
 
     AttributeMapping attributeMapping = samlAuthnContext.getIdAttributes().getAttributeMappings().get(0);
     SAMLAttribute attribute = attributeMapping.getAttribute();
     Element attrVal = attribute.getAttributeValues().get(0);
     NamedNodeMap attributes = attrVal.getAttributes();
+    Assertions.assertEquals(3, attributes.getLength());
     String textContent = attrVal.getTextContent();
-    //attribute.setAttributeValues(List.of(DOMUtils.createStringAttributeValue(samlAuthnContext.getDocument(), "new Value")));
+    Assertions.assertEquals("197010632391", textContent);
 
-    Element newValue = SAMLAttribute.createStringAttributeValue(samlAuthnContext.getDocument(), "1234209871934789");
+    Element newValue = SAMLAttribute.createStringAttributeValue("1234209871934789");
     String newTextContent = newValue.getTextContent();
+    Assertions.assertEquals("1234209871934789", newTextContent);
     NamedNodeMap newAttrNodeMap = newValue.getAttributes();
+    Assertions.assertEquals(3, newAttrNodeMap.getLength());
 
     attribute.setAttributeValues(List.of(newValue));
     String xmlPrint3 = AuthnContext.printAuthnContext(samlAuthnContext, false);
-
-    int sdf=0;
-
   }
+
+  @Test
+  void interopTest() throws Exception {
+    AuthnContext.getInstance(JaxbTestData.getTestContext().toASN1Primitive());
+    AuthnContext.getInstance(JaxbTestData.nullSamlNameJaxbAuthContext.toASN1Primitive(), false);
+
+    IllegalArgumentException exception = Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      AuthnContext.getInstance(JaxbTestData.nullSamlNameJaxbAuthContext.toASN1Primitive(), true);
+    });
+
+    JaxbAuthnContext jaxbAuthnContext = JaxbAuthnContext.getInstance(TestData.getTestContext(true).toASN1Primitive());
+  }
+
+
 }

@@ -36,26 +36,51 @@ import se.swedenconnect.cert.extensions.utils.DOMUtils;
 @EqualsAndHashCode(callSuper = true) @Data
 public class SAMLAuthContext extends AbstractDomData {
 
+  /** SAMLAuthContext element name */
   private static final String SAML_AUTH_CONTEXT_ELEMENT = "SAMLAuthContext";
 
+  /** AuthContextInfo element data */
   private AuthContextInfo authContextInfo;
+  /** IdAttributes element data */
   private IdAttributes idAttributes;
 
+  /** The XML document of the created SAMLAuthContext XML used to create all its elements */
   private Document document;
 
-  public SAMLAuthContext(boolean strictMode) {
-    this.document = createNewDocument();
+  /**
+   * Creates a new empty SAMLAuthContext object
+   *
+   * @param strictMode true to strictly enforce content requirement rules
+   */
+  public SAMLAuthContext(final boolean strictMode) {
+    this.document = DOMUtils.createNewDocument();
     this.strictMode = strictMode;
   }
 
-  public SAMLAuthContext(Document document, boolean strictMode) throws CertificateException {
+  /**
+   * Creates a SAMLAuthContext object from an XML document
+   *
+   * @param document document holding SAMLAuthContext data
+   * @param strictMode true to strictly enforce content requirement rules
+   * @throws CertificateException content validation errors
+   */
+  public SAMLAuthContext(final Document document, final boolean strictMode) throws CertificateException {
     super(document.getDocumentElement(), strictMode);
     this.document = document;
-    // Finally check the document element
     validateDocument();
   }
 
-  public SAMLAuthContext(String xml, boolean strictMode)
+  /**
+   * Creates a SAMLAuthContext object from XML text
+   *
+   * @param xml xml text source
+   * @param strictMode true to strictly enforce content requirement rules
+   * @throws IOException errors parsing xml content
+   * @throws ParserConfigurationException errors parsing xml content
+   * @throws SAXException errors parsing xml content
+   * @throws CertificateException content validation errors
+   */
+  public SAMLAuthContext(final String xml, final boolean strictMode)
     throws IOException, ParserConfigurationException, SAXException, CertificateException {
     this.strictMode = strictMode;
     this.document = DOMUtils.getDocument(xml.getBytes(StandardCharsets.UTF_8));
@@ -65,11 +90,25 @@ public class SAMLAuthContext extends AbstractDomData {
 
   /** {@inheritDoc} */
   @Override protected void validate() throws CertificateException {
-    // No checks to make as both elements are optional
+    /**
+     * Checks made here are called from the Abstract class constructor.
+     *
+     * These checks are unaware of the Document that may be set and used to
+     * import data and only includes checks of the actual content of the XML element
+     * represented by this class.
+     *
+     * As no elements are required (all optional) no checks are done here
+     */
   }
 
+  /**
+   * Additional checks made on the root element adding checks on the actual DOM document
+   * used to import data to ensure that the actual root element properties are valid
+   *
+   * @throws CertificateException content validation errors
+   */
   private void validateDocument() throws CertificateException {
-    Element root = document.getDocumentElement();
+    final Element root = document.getDocumentElement();
     if (!SACI_NS.equals(root.getNamespaceURI()) && !SAML_AUTH_CONTEXT_ELEMENT.equals(root.getLocalName())) {
       throw new CertificateException("Illegal root element name");
     }
@@ -81,15 +120,15 @@ public class SAMLAuthContext extends AbstractDomData {
    * @return SAMLAuthContext XML document
    */
   public Document getDocument() {
-    this.document = createNewDocument();
-    Element samlAuthContext = getElement(document);
+    this.document = DOMUtils.createNewDocument();
+    final Element samlAuthContext = getElement(document);
     document.appendChild(samlAuthContext);
     return document;
   }
 
   /** {@inheritDoc} */
-  @Override protected Element getElement(Document owner) {
-    Element samlAuthContext = owner.createElementNS(SACI_NS, SAML_AUTH_CONTEXT_ELEMENT);
+  @Override protected Element getElement(final Document owner) {
+    final Element samlAuthContext = owner.createElementNS(SACI_NS, SAML_AUTH_CONTEXT_ELEMENT);
     if (authContextInfo != null){
       samlAuthContext.appendChild(authContextInfo.getElement(owner));
     }
@@ -100,23 +139,15 @@ public class SAMLAuthContext extends AbstractDomData {
   }
 
   /** {@inheritDoc} */
-  @Override protected void setValuesFromElement(Element element) throws CertificateException {
-    Element authContextInfoElm = getSingleElement(element, SACI_NS, AuthContextInfo.AUTH_CONTEXT_INFO_ELEMENT);
+  @Override protected void setValuesFromElement(final Element element) throws CertificateException {
+    final Element authContextInfoElm = getSingleElement(element, SACI_NS, AuthContextInfo.AUTH_CONTEXT_INFO_ELEMENT);
     if (authContextInfoElm != null) {
       authContextInfo = new AuthContextInfo(authContextInfoElm, strictMode);
     }
-    Element idAttributesElm = getSingleElement(element, AbstractDomData.SACI_NS, IdAttributes.ID_ATTRIBUTES_ELEMENT);
+    final Element idAttributesElm = getSingleElement(element, AbstractDomData.SACI_NS, IdAttributes.ID_ATTRIBUTES_ELEMENT);
     if (idAttributesElm != null) {
       idAttributes = new IdAttributes(idAttributesElm, strictMode);
     }
   }
 
-  private Document createNewDocument() {
-    try {
-      return DOMUtils.getSafeDocBuilderFactory().newDocumentBuilder().newDocument();
-    }
-    catch (ParserConfigurationException e) {
-      throw new RuntimeException("Failed to create XML document");
-    }
-  }
 }
