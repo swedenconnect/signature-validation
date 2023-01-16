@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,8 +44,7 @@ public abstract class AbstractDomData {
 
   /** Formatter for XML date element content */
   public static final DateTimeFormatter XML_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(
-    "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ",
-    Locale.ENGLISH).withZone(ZoneId.systemDefault());
+    "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ", Locale.ENGLISH).withZone(ZoneId.systemDefault());
 
   /** XML name space URI for the RFC 7773 SAMLAuthContext XML element */
   public static final String SACI_NS = "http://id.elegnamnden.se/auth-cont/1.0/saci";
@@ -274,7 +274,9 @@ public abstract class AbstractDomData {
     if (xmlTimeStr == null) {
       return null;
     }
-    return LocalDateTime.parse(xmlTimeStr, XML_DATE_TIME_FORMATTER).toInstant(ZoneOffset.UTC);
+    ZonedDateTime zonedDateTime = LocalDateTime.parse(xmlTimeStr, XML_DATE_TIME_FORMATTER)
+      .atZone(ZoneId.systemDefault());
+    return Instant.from(zonedDateTime);
   }
 
 }

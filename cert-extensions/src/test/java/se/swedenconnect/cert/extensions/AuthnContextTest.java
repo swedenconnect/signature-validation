@@ -18,6 +18,7 @@ package se.swedenconnect.cert.extensions;
 
 import java.security.Security;
 import java.security.cert.CertificateException;
+import java.time.Instant;
 import java.util.List;
 
 import org.bouncycastle.asn1.x509.BasicConstraints;
@@ -29,6 +30,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 
 import lombok.extern.slf4j.Slf4j;
+import se.swedenconnect.cert.extensions.data.saci.AbstractDomData;
 import se.swedenconnect.cert.extensions.data.saci.AttributeMapping;
 import se.swedenconnect.cert.extensions.data.saci.SAMLAttribute;
 import se.swedenconnect.cert.extensions.data.saci.SAMLAuthContext;
@@ -82,6 +84,16 @@ class AuthnContextTest {
     IllegalArgumentException exception = Assertions.assertThrows(IllegalArgumentException.class, () -> {
       AuthnContext.getInstance(JaxbTestData.nullSamlNameJaxbAuthContext.toASN1Primitive(), true);
     });
+
+    AuthnContext testContext = TestData.getTestContext(true);
+    SAMLAuthContext samlAuthContext = testContext.getStatementInfoList().get(0);
+    Instant authInstant = samlAuthContext.getAuthContextInfo().getAuthenticationInstant();
+    String printAuthContext = AuthnContext.printAuthnContext(samlAuthContext, false);
+    SAMLAuthContext parseSAMLAuthContext = new SAMLAuthContext(printAuthContext, false);
+    Assertions.assertEquals(
+      AbstractDomData.instantToString(authInstant),
+      AbstractDomData.instantToString(parseSAMLAuthContext.getAuthContextInfo().getAuthenticationInstant()));
+    log.info("Time expressed is expected: " + AbstractDomData.instantToString(authInstant));
 
     JaxbAuthnContext jaxbAuthnContext = JaxbAuthnContext.getInstance(TestData.getTestContext(true).toASN1Primitive());
   }
