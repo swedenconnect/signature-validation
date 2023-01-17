@@ -20,15 +20,12 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.w3c.dom.Document;
-
 import lombok.SneakyThrows;
 import se.swedenconnect.cert.extensions.data.saci.AttributeMapping;
 import se.swedenconnect.cert.extensions.data.saci.AuthContextInfo;
 import se.swedenconnect.cert.extensions.data.saci.IdAttributes;
-import se.swedenconnect.cert.extensions.data.saci.SAMLAttribute;
+import se.swedenconnect.cert.extensions.data.saci.Attribute;
 import se.swedenconnect.cert.extensions.data.saci.SAMLAuthContext;
-import se.swedenconnect.cert.extensions.utils.DOMUtils;
 
 /**
  * Description
@@ -83,9 +80,9 @@ public class TestData {
     mapping.setType(type);
     mapping.setRef(ref);
 
-    SAMLAttribute attribute = new SAMLAttribute();
+    Attribute attribute = new Attribute();
     attribute.setName(samlName);
-    attribute.setAttributeValues(List.of(SAMLAttribute.createStringAttributeValue(val)));
+    attribute.setAttributeValues(List.of(Attribute.createStringAttributeValue(val)));
     mapping.setAttribute(attribute);
     return mapping;
   }

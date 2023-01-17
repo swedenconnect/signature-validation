@@ -23,13 +23,12 @@ import java.util.List;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * IdAttributes dom implementation
  */
-@Data
 @NoArgsConstructor
 public class IdAttributes extends AbstractDomData {
 
@@ -37,6 +36,7 @@ public class IdAttributes extends AbstractDomData {
   public static final String ID_ATTRIBUTES_ELEMENT = "IdAttributes";
 
   /** List of attribute mapping data elements */
+  @Setter
   private List<AttributeMapping> attributeMappings;
 
   /**
@@ -50,6 +50,18 @@ public class IdAttributes extends AbstractDomData {
     super(element, strictMode);
   }
 
+  /**
+   * Get the list of attribute mappings. If no list exist, a new list is created
+   *
+   * @return the list of attribute mappings
+   */
+  public List<AttributeMapping> getAttributeMappings() {
+    if (attributeMappings == null) {
+      attributeMappings = new ArrayList<>();
+    }
+    return attributeMappings;
+  }
+
   /** {@inheritDoc} */
   @Override protected void validate() throws CertificateException {
     if (attributeMappings == null || attributeMappings.isEmpty()) {
@@ -57,7 +69,6 @@ public class IdAttributes extends AbstractDomData {
         + "At least one Attribute mapping must be present in IdAttributes");
     }
   }
-
 
   /** {@inheritDoc} */
   @Override public Element getElement(final Document document) {

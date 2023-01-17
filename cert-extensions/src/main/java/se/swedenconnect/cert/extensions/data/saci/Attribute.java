@@ -17,27 +17,26 @@
 package se.swedenconnect.cert.extensions.data.saci;
 
 import java.security.cert.CertificateException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import se.swedenconnect.cert.extensions.utils.DOMUtils;
 
 /**
  * SAML Attribute dom implementation
  */
-@Data
 @NoArgsConstructor
 @Slf4j
-public class SAMLAttribute extends AbstractDomData {
+public class Attribute extends AbstractDomData {
 
   /** Attribute element name */
   public static final String ATTRIBUTE_ELEMENT = "Attribute";
@@ -52,14 +51,26 @@ public class SAMLAttribute extends AbstractDomData {
   public static final String FRIENDLY_NAME = "FriendlyName";
 
   /** SAML attribute name */
+  @Getter
+  @Setter
   private String name;
+
   /** SAML attribute nameFormat */
+  @Getter
+  @Setter
   private String nameFormat;
+
   /** SAML attribute friendly name */
+  @Getter
+  @Setter
   private String friendlyName;
+
   /** SAML attribute other attributes */
+  @Setter
   private List<Attr> anyAttrList;
+
   /** SAML attribute value elements */
+  @Setter
   private List<Element> attributeValues;
 
   /**
@@ -68,8 +79,32 @@ public class SAMLAttribute extends AbstractDomData {
    * @param strictMode true to strictly enforce content requirement rules
    * @throws CertificateException content validation error
    */
-  public SAMLAttribute(final Element element, final boolean strictMode) throws CertificateException {
+  public Attribute(final Element element, final boolean strictMode) throws CertificateException {
     super(element, strictMode);
+  }
+
+  /**
+   * Get the list of attribute values. If this list is absent, a new list will be created
+   *
+   * @return the list of attribute values
+   */
+  public List<Element> getAttributeValues() {
+    if (attributeValues == null) {
+      attributeValues = new ArrayList<>();
+    }
+    return attributeValues;
+  }
+
+  /**
+   * Get the list of additional element attributes. If this list is absent, a new list will be created
+   *
+   * @return the list of element attributes
+   */
+  public List<Attr> getAnyAttrList() {
+    if (anyAttrList == null) {
+      anyAttrList = new ArrayList<>();
+    }
+    return anyAttrList;
   }
 
   /** {@inheritDoc} */
@@ -126,7 +161,7 @@ public class SAMLAttribute extends AbstractDomData {
    */
   public static Element createStringAttributeValue(final Document document, final String value) {
     final Element attrValue = document.createElementNS(AbstractDomData.SAML_ASSERTION_NS,
-      SAMLAttribute.ATTRIBUTE_VALUE_ELEMENT);
+      Attribute.ATTRIBUTE_VALUE_ELEMENT);
     attrValue.setPrefix("saml");
     attrValue.setTextContent(value);
     Attr xsiAttr = document.createAttributeNS("http://www.w3.org/2001/XMLSchema-instance", "xsi:type");

@@ -27,13 +27,13 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * AuthContextInfo element dom implementation
  */
-@Data
 @NoArgsConstructor
 public class AuthContextInfo extends AbstractDomData {
 
@@ -51,16 +51,32 @@ public class AuthContextInfo extends AbstractDomData {
   public static final String SERVICE_ID = "ServiceID";
 
   /** Identity provider name */
+  @Setter
+  @Getter
   private String identityProvider;
+
   /** Authentication instant */
+  @Setter
+  @Getter
   private Instant authenticationInstant;
+
   /** Authentication LOA URI */
+  @Setter
+  @Getter
   private String authnContextClassRef;
+
   /** Assertion reference */
+  @Setter
+  @Getter
   private String assertionRef;
+
   /** Service identifier */
+  @Setter
+  @Getter
   private String serviceID;
+
   /** List of additional elements */
+  @Setter
   private List<Element> anyList;
 
   /**
@@ -84,6 +100,18 @@ public class AuthContextInfo extends AbstractDomData {
     catch (Exception ex) {
       throw new CertificateException(ex);
     }
+  }
+
+  /**
+   * Get the list of additional elements. If this list is absent, a new list will be created
+   *
+   * @return the list of additional elements
+   */
+  public List<Element> getAnyList() {
+    if (anyList == null) {
+      anyList = new ArrayList<>();
+    }
+    return anyList;
   }
 
   /** {@inheritDoc} */

@@ -17,11 +17,9 @@
 package se.swedenconnect.cert.extensions;
 
 import java.security.Security;
-import java.security.cert.CertificateException;
 import java.time.Instant;
 import java.util.List;
 
-import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -32,7 +30,7 @@ import org.w3c.dom.NamedNodeMap;
 import lombok.extern.slf4j.Slf4j;
 import se.swedenconnect.cert.extensions.data.saci.AbstractDomData;
 import se.swedenconnect.cert.extensions.data.saci.AttributeMapping;
-import se.swedenconnect.cert.extensions.data.saci.SAMLAttribute;
+import se.swedenconnect.cert.extensions.data.saci.Attribute;
 import se.swedenconnect.cert.extensions.data.saci.SAMLAuthContext;
 import se.swedenconnect.cert.extensions.jaxb.JaxbAuthnContext;
 import se.swedenconnect.cert.extensions.jaxb.JaxbTestData;
@@ -59,14 +57,14 @@ class AuthnContextTest {
     log.info("Parsed formatted SAMLAuthcontext \n", xmlPrint);
 
     AttributeMapping attributeMapping = samlAuthnContext.getIdAttributes().getAttributeMappings().get(0);
-    SAMLAttribute attribute = attributeMapping.getAttribute();
+    Attribute attribute = attributeMapping.getAttribute();
     Element attrVal = attribute.getAttributeValues().get(0);
     NamedNodeMap attributes = attrVal.getAttributes();
     Assertions.assertEquals(3, attributes.getLength());
     String textContent = attrVal.getTextContent();
     Assertions.assertEquals("197010632391", textContent);
 
-    Element newValue = SAMLAttribute.createStringAttributeValue("1234209871934789");
+    Element newValue = Attribute.createStringAttributeValue("1234209871934789");
     String newTextContent = newValue.getTextContent();
     Assertions.assertEquals("1234209871934789", newTextContent);
     NamedNodeMap newAttrNodeMap = newValue.getAttributes();

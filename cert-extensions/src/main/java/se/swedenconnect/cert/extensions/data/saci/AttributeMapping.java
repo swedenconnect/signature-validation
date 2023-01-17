@@ -27,13 +27,13 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Attribute mapping element
  */
-@Data
 @NoArgsConstructor
 public class AttributeMapping extends AbstractDomData {
 
@@ -46,12 +46,22 @@ public class AttributeMapping extends AbstractDomData {
   public static final String REF = "Ref";
 
   /** Type of attribute mapping */
+  @Getter
+  @Setter
   private Type type;
+
   /** Reference identifying the certificate destination object (attribute, Subj alt name or directory attribute */
+  @Getter
+  @Setter
   private String ref;
+
   /** The source SAML attribute data */
-  private SAMLAttribute attribute;
+  @Getter
+  @Setter
+  private Attribute attribute;
+
   /** List of extension elements */
+  @Setter
   private List<Element> anyList;
 
   /**
@@ -62,6 +72,19 @@ public class AttributeMapping extends AbstractDomData {
    */
   public AttributeMapping(final Element element, final boolean strictMode) throws CertificateException {
     super(element, strictMode);
+  }
+
+
+  /**
+   * Get the list of additional elements. If this list is absent, a new list will be created
+   *
+   * @return the list of additional elements
+   */
+  public List<Element> getAnyList() {
+    if (anyList == null) {
+      anyList = new ArrayList<>();
+    }
+    return anyList;
   }
 
   /** {@inheritDoc} */
@@ -91,9 +114,9 @@ public class AttributeMapping extends AbstractDomData {
     type = Type.getTypeFromName(getAttributeValue(element, TYPE));
     ref = getAttributeValue(element, REF);
 
-    final Element attributeElm = getSingleElement(element, SAML_ASSERTION_NS, SAMLAttribute.ATTRIBUTE_ELEMENT);
+    final Element attributeElm = getSingleElement(element, SAML_ASSERTION_NS, Attribute.ATTRIBUTE_ELEMENT);
     if (attributeElm != null) {
-      this.attribute = new SAMLAttribute(attributeElm, strictMode);
+      this.attribute = new Attribute(attributeElm, strictMode);
     }
     anyList = new ArrayList<>();
     final NodeList childNodes = element.getChildNodes();
@@ -101,7 +124,7 @@ public class AttributeMapping extends AbstractDomData {
       final Node node = childNodes.item(i);
       if (node instanceof Element) {
         if (!node.getNamespaceURI().equals(SAML_ASSERTION_NS) || !node.getLocalName()
-          .equals(SAMLAttribute.ATTRIBUTE_ELEMENT)) {
+          .equals(Attribute.ATTRIBUTE_ELEMENT)) {
           anyList.add((Element) node);
         }
       }
