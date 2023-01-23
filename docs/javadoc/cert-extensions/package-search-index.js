@@ -1,1 +1,1 @@
-packageSearchIndex = [{"l":"All Packages","url":"allpackages-index.html"},{"l":"se.swedenconnect.cert.extensions"},{"l":"se.swedenconnect.cert.extensions.data"},{"l":"se.swedenconnect.cert.extensions.utils"}]
+packageSearchIndex = [{"l":"All Packages","url":"allpackages-index.html"},{"l":"se.swedenconnect.cert.extensions"},{"l":"se.swedenconnect.cert.extensions.data"},{"l":"se.swedenconnect.cert.extensions.data.saci"},{"l":"se.swedenconnect.cert.extensions.utils"}]

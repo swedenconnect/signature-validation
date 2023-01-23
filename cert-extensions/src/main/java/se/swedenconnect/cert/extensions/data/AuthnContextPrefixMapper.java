@@ -16,8 +16,6 @@
 
 package se.swedenconnect.cert.extensions.data;
 
-import com.sun.xml.bind.marshaller.NamespacePrefixMapper;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,9 +25,12 @@ import java.util.Map;
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-public class AuthnContextPrefixMapper extends NamespacePrefixMapper {
+public class AuthnContextPrefixMapper {
 
-  /** Map holding XML name space prefixes */
+/*
+  */
+/** Map holding XML name space prefixes *//*
+
   private static final Map<String, String> prefixMap = new HashMap<String, String>();
 
   static {
@@ -41,11 +42,14 @@ public class AuthnContextPrefixMapper extends NamespacePrefixMapper {
     prefixMap.put("http://id.elegnamnden.se/auth-cont/1.0/saml", "saci");
   }
 
-  /** {@inheritDoc} */
+  */
+/** {@inheritDoc} *//*
+
   @Override public String getPreferredPrefix(String namespaceUri, String suggestion, boolean requirePrefix) {
     if (prefixMap.containsKey(namespaceUri)){
       return prefixMap.get(namespaceUri);
     }
     return suggestion;
   }
+*/
 }

@@ -10,7 +10,7 @@
   <parent>
     <artifactId>sigval-parent</artifactId>
     <groupId>se.swedenconnect.sigval</groupId>
-    <version>1.2.1-SNAPSHOT</version>
+    <version>1.2.1</version>
   </parent>
 
   <name>Sweden Connect :: Signature validation :: X.509 Certificate Extensions</name>
@@ -67,18 +67,23 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
-      <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk15on</artifactId>
+      <artifactId>bcpkix-jdk18on</artifactId>
     </dependency>
 
 
     <dependency>
       <groupId>se.swedenconnect.schemas.cert</groupId>
       <artifactId>authcontextinfo10-jaxb</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jaxb</groupId>
+      <artifactId>jaxb-runtime</artifactId>
+      <scope>test</scope>
     </dependency>
 
 <!--
@@ -87,11 +92,6 @@
       <artifactId>jaxb2-basics-runtime</artifactId>
     </dependency>
 -->
-    <dependency>
-      <groupId>org.glassfish.jaxb</groupId>
-      <artifactId>jaxb-runtime</artifactId>
-      <scope>provided</scope>
-    </dependency>
 
 
   </dependencies>
