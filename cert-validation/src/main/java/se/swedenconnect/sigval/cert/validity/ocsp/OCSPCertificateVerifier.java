@@ -26,6 +26,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.lang.StringUtils;
 import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
@@ -106,6 +107,25 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
    * @return validation status
    */
   public ValidationStatus checkValidity(Date validationDate) {
+      return checkValidity(validationDate, null);
+  }
+  
+  /**
+   * Check validity to a specific certificate authority
+   * @param url certificate authority ocsp url to validate against
+   * @return validation status
+   */
+  public ValidationStatus checkValidity(String url) {
+      return checkValidity(new Date(), url);
+  }
+  
+  /**
+   * Check validity based on a specific validation date
+   * @param validationDate validation date
+   * @param url certificate authority ocsp url to validate against
+   * @return validation status
+   */
+  public ValidationStatus checkValidity(Date validationDate, String url) {
     ValidationStatus status = ValidationStatus.builder()
       .certificate(certificate)
       .issuer(issuer)
@@ -117,7 +137,7 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
     try {
       Principal subject = certificate.getSubjectX500Principal();
 
-      String ocspUrl = CertUtils.getOCSPUrl(certificate);
+      String ocspUrl = StringUtils.isBlank(url) ? CertUtils.getOCSPUrl(certificate) : url;
       if (ocspUrl == null) {
         log.debug("OCSP URL for '{}' is empty" , subject);
         status.setStatusSignatureValid(false);
