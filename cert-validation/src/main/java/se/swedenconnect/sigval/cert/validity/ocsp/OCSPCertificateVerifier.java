@@ -120,7 +120,8 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
   }
   
   /**
-   * Check validity based on a specific validation date
+   * Check validity based on a specific validation date and
+   * to a specific certificate authority
    * @param validationDate validation date
    * @param url certificate authority ocsp url to validate against
    * @return validation status
