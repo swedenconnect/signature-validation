@@ -24,8 +24,10 @@ import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 
+import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
@@ -223,10 +225,26 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
     if (responseNonce == null || responseNonce.length > 1024){
       throw new IOException("Response nonce has illegal content");
     }
+    // Check if the nonce value is equal to a OCTETSTRING wrapped nonce value
+    if (Arrays.equals(wrapNonce(nonce), responseNonce)){
+      return;
+    }
     if (Arrays.equals(nonce, responseNonce)){
+      // If not, then we do accept if the nonce is equal to the raw extension value
       return;
     }
     throw new IOException("Nonce in request does not match nonce provided in the response");
+  }
+
+  private byte[] wrapNonce(final byte[] nonce) {
+    Objects.requireNonNull(nonce, "Nonce value must not be null");
+    try {
+      return new DEROctetString(nonce).getEncoded("DER");
+    }
+    catch (IOException e) {
+      // There should never be an issue encoding a byte value
+      throw new RuntimeException("Unexpected critical ASN.1 encoding error");
+    }
   }
 
   /**
@@ -237,7 +255,7 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
     if (!includeNonce) {
       return null;
     }
-    byte[] nonceBytes = new byte[20];
+    byte[] nonceBytes = new byte[30];
     RNG.nextBytes(nonceBytes);
     return nonceBytes;
   }
@@ -253,7 +271,7 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
     X509CertificateHolder[] responeCerts = basicOCSPResp.getCerts();
     List<X509Certificate> certList = CertUtils.getCertificateList(responeCerts);
     if (certList.isEmpty()) {
-      certList.add(issuer);
+      certList = List.of(issuer);
     }
 
     for (X509Certificate cert : certList) {
@@ -279,9 +297,10 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
    */
   protected OCSPReq generateOCSPRequest(CertificateID certificateId, byte[] nonce) throws OCSPException {
     OCSPReqBuilder ocspReqGenerator = new OCSPReqBuilder();
-    Extensions extensions = (nonce == null)
-      ? null
-      : new Extensions(new Extension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce, false, nonce));
+    Extensions extensions = null;
+    if (nonce != null) {
+      extensions = new Extensions(new Extension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce, false, wrapNonce(nonce)));
+    }
     ocspReqGenerator.addRequest(certificateId);
     ocspReqGenerator.setRequestExtensions(extensions);
     return ocspReqGenerator.build();
