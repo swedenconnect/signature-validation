@@ -9,7 +9,7 @@
   <parent>
     <artifactId>sigval-parent</artifactId>
     <groupId>se.swedenconnect.sigval</groupId>
-    <version>1.2.1</version>
+    <version>1.2.2</version>
   </parent>
 
   <name>Sweden Connect :: Signature validation :: JOSE</name>
@@ -56,7 +56,7 @@
     <dependency>
       <groupId>se.swedenconnect.sigval</groupId>
       <artifactId>sigval-commons</artifactId>
-      <version>1.2.1</version>
+      <version>${project.version}</version>
     </dependency>
     
     <dependency>
