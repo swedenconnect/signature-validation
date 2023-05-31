@@ -81,7 +81,14 @@ public class JOSESignedDocumentValidator {
     return getConcludingSigVerifyResult(validate(document, detachedPayload));
   }
 
-  /** {@inheritDoc} */
+  /**
+   * Validate the signed document
+   *
+    * @param document JWS data bytes
+   * @param detachedPayload optional detached payload
+   * @return A list of signature validation results representing one signature each
+   * @throws SignatureException error validating the signed document
+   */
   public List<SignatureValidationResult> validate(byte[] document, Payload detachedPayload) throws SignatureException {
 
     List<JOSESignatureData> signatureDataList = getJOSEDocumentSignatureData(document, detachedPayload);
@@ -211,8 +218,13 @@ public class JOSESignedDocumentValidator {
     throw new IOException("Unsupported algorithm type");
   }
 
-
-  /** {@inheritDoc} */
+  /**
+   * Test if the provided document is signed
+   *
+   * @param document the document to test
+   * @return true if the document is signed
+   * @throws IllegalArgumentException error processing the provided document
+   */
   public boolean isSigned(final byte[] document) throws IllegalArgumentException {
     try {
       JWSObject jwsObject = JWSObject.parse(new String(document, StandardCharsets.UTF_8));
@@ -235,12 +247,19 @@ public class JOSESignedDocumentValidator {
     return false;
   }
 
-  /** {@inheritDoc} */
+  /**
+   * Not implemented feature not relevant for this validation logic
+   *
+   * @return empty list
+   */
   public List<X509Certificate> getRequiredSignerCertificates() {
     return new ArrayList<>();
   }
 
-  /** {@inheritDoc} */
+  /**
+   * Get the certificate validator used by this signature validator
+   * @return certificate validator
+   */
   public CertificateValidator getCertificateValidator() {
     return joseSignatureDataValidator.getCertificateValidator();
   }

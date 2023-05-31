@@ -17,6 +17,7 @@
 package se.swedenconnect.sigval.cert.validity.crl;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.bouncycastle.asn1.x509.CRLDistPoint;
 
@@ -27,6 +28,12 @@ import org.bouncycastle.asn1.x509.CRLDistPoint;
  * @author Stefan Santesson (stefan@idsec.se)
  */
 public interface CRLCache {
+
+  String LDAP_CONNECT_TIMEOUT = "com.sun.jndi.ldap.connect.timeout";
+  String LDAP_READ_TIMEOUT = "com.sun.jndi.ldap.read.timeout";
+  String LDAP_CONTEXT_FACTORY = "com.sun.jndi.ldap.LdapCtxFactory";
+  int DEFAULT_CONNECT_TIMEOUT = 1000;
+  int DEFAULT_READ_TIMEOUT = 7000;
 
   /**
    * Obtains the current CRL indicated by a CRL distribution point extension and add this CRL to the active cache.
@@ -49,5 +56,7 @@ public interface CRLCache {
    * Update the current cache. Implementations of this function must be thread safe, allowing use of the CRL cache while it is being updated.
    */
   void recache();
+
+  List<CRLCacheRecord> getCrlCacheRecords();
 
 }

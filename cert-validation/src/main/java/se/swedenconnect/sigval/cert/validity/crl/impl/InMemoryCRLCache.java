@@ -15,21 +15,25 @@
  */
 package se.swedenconnect.sigval.cert.validity.crl.impl;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.cert.CRLException;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509CRL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -53,51 +57,33 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import se.swedenconnect.sigval.cert.validity.crl.CRLCache;
-import se.swedenconnect.sigval.cert.validity.crl.CRLCacheData;
 import se.swedenconnect.sigval.cert.validity.crl.CRLCacheRecord;
 import se.swedenconnect.sigval.cert.validity.crl.CRLInfo;
 import se.swedenconnect.sigval.cert.validity.http.DefaultRevocationDataConnector;
 
 /**
  * CRL cache implementation. Two main functions allows retrieval of a CRL from this cache which adds the CRL to the
- * cache if not present, and a function for re-caching all CRLs on the cache. The latter function is meant to be called
- * periodically by a daemon process in the background
+ * cache if not present.
  *
- * @author Martin Lindström (martin@idsec.se)
- * @author Stefan Santesson (stefan@idsec.se)
+ * This implementation of CRL cache store all cached data in memory and stores nothing on disk. The cache is destroyed
+ * on application restart.
+ *
+ * IMPORTANT NOTE: Do not use this implementation unless this application has the resources to store all CRL data in memory
+ * for all cached CRL:s. If this is not the case, the file backed {@link CRLCacheImpl} implementation should be used instead.
+ *
  */
 @Slf4j
-public class CRLCacheImpl implements CRLCache {
-
-  /** Object mapper for JSON serialization */
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
-
-  /** Default name of the cache file */
-  private static final String CACHE_DATA_FILE = "crlCache.json";
-
-  /** Default name of the cache directory */
-  private static final String CACHE_DIR = "cache";
-
-  /** Default name of the cache temporary directory */
-  private static final String TEMP_DIR = "temp";
+public class InMemoryCRLCache implements CRLCache {
 
   /** Minimum age of a cache when any re-cache attempt is skipped */
   private final long recacheGracePeriod;
-
-  /** The cached CRL data */
-  private CRLCacheData crlCacheData;
-
-  /** Directory where CRL cache data is stored */
-  private final File cacheDir;
-
-  /** Temporary directory for CRL data */
-  private final File tempDir;
-
-  /** File where CRL cache data is stored */
-  private File crlCacheFile;
-
-  /**  */
   private final CRLDataLoader crlDataLoader;
+
+  /** Cached CRL data */
+  Map<String, CRLCacheRecord> crlCacheMap;
+
+  /** Map storing the actual bytes of the cached CRLs */
+  Map<String, byte[]> crlDataMap;
 
   /**
    * Setter for connection timout for LDAP and HTTP
@@ -117,41 +103,28 @@ public class CRLCacheImpl implements CRLCache {
   private int readTimeout;
 
   /**
-   * Constructor for the CRL cache.
+   * Constructor for the in memory CRL cache.
    *
-   * @param cacheDataFolder
-   *          the data folder used to store cache data
-   * @param recacheGracePeriod
-   *          time in milliseconds for the time after last cache instance when first re-cache will be attempted
    */
-  public CRLCacheImpl(File cacheDataFolder, long recacheGracePeriod) {
-    this(cacheDataFolder, recacheGracePeriod, null);
+  public InMemoryCRLCache() {
+    this(5000, null);
   }
 
   /**
    * Constructor for the CRL cache.
    *
-   * @param cacheDataFolder
-   *          the data folder used to store cache data
    * @param recacheGracePeriod
    *          time in milliseconds for the time after last cache instance when first re-cache will be attempted
    * @param crlDataLoader
    *          data loader for downloading CRL data or null to use default CRL data loader
    */
-  public CRLCacheImpl(File cacheDataFolder, long recacheGracePeriod, CRLDataLoader crlDataLoader) {
+  public InMemoryCRLCache(long recacheGracePeriod, CRLDataLoader crlDataLoader) {
     this.recacheGracePeriod = recacheGracePeriod;
-    this.cacheDir = new File(cacheDataFolder, CACHE_DIR);
-    this.tempDir = new File(cacheDataFolder, TEMP_DIR);
-    this.crlCacheFile = new File(cacheDataFolder, CACHE_DATA_FILE);
     this.connectTimeout = DEFAULT_CONNECT_TIMEOUT;
     this.readTimeout = DEFAULT_READ_TIMEOUT;
-    if (!cacheDir.exists()) {
-      cacheDir.mkdirs();
-    }
-    if (!tempDir.exists()) {
-      tempDir.mkdirs();
-    }
     this.crlDataLoader = (crlDataLoader == null) ? new DefaultRevocationDataConnector() : crlDataLoader;
+    crlCacheMap = new HashMap<>();
+    crlDataMap = new HashMap<>();
     recache();
   }
 
@@ -160,9 +133,8 @@ public class CRLCacheImpl implements CRLCache {
    *
    * @return list of cached CRLs
    */
-  @Override
-  public List<CRLCacheRecord> getCrlCacheRecords() {
-    return crlCacheData.getCrlCacheRecordList();
+  public   Map<String, CRLCacheRecord> getCrlCacheMap() {
+    return this.crlCacheMap;
   }
 
   /**
@@ -212,7 +184,7 @@ public class CRLCacheImpl implements CRLCache {
 
     }
     if (approvedUriList.isEmpty()) {
-      // We didn't find any acceptable distribution points. Throw exception
+      // We didnt find any acceptable distribution points. Throw exception
       if (crlIssuerPresent) {
         log.debug("No acceptable CRL distribution point found. Declaration of crlIssuer is not allowed");
         throw new IOException("No acceptable CRL distribution point found. Declaration of crlIssuer is not allowed");
@@ -274,8 +246,9 @@ public class CRLCacheImpl implements CRLCache {
       throw new IOException("Malformed url in requested CRL: " + url);
     }
 
-    Optional<CRLCacheRecord> cacheRecordOptional = crlCacheData.getCrlCacheRecordList()
+    Optional<CRLCacheRecord> cacheRecordOptional = crlCacheMap.keySet()
       .stream()
+      .map(s -> crlCacheMap.get(s))
       .filter(crlCacheRecord -> url.equalsIgnoreCase(crlCacheRecord.getUrl()))
       .findFirst();
 
@@ -306,9 +279,8 @@ public class CRLCacheImpl implements CRLCache {
       // Cache CRL
       cacheCrlRecord(crlCacheRecord);
       // Add cache record data
-      crlCacheData.getCrlCacheRecordList().add(crlCacheRecord);
-      // Save cache data file
-      FileUtils.writeByteArrayToFile(crlCacheFile, jsonMapper.writeValueAsBytes(crlCacheData));
+      crlCacheMap.put(crlCacheRecord.getUrl(), crlCacheRecord);
+      //FileUtils.writeByteArrayToFile(crlCacheFile, jsonMapper.writeValueAsBytes(crlCacheData));
       // Return cached CRL
       return CRLInfo.builder().crl(getCachedCrl(crlCacheRecord.getFileName())).location(crlCacheRecord.getUrl()).build();
     }
@@ -324,45 +296,42 @@ public class CRLCacheImpl implements CRLCache {
   @Override
   public void recache() {
     log.info("Re-caching CRL data...");
-    List<String> badUrlList = new ArrayList<>();
+    List<CRLCacheRecord> badUrlList = new ArrayList<>();
     try {
       // Reload configuration
-      reloadCrlCacheData();
-      crlCacheData.getCrlCacheRecordList().stream().forEach(crlCacheRecord -> {
+      crlCacheMap.keySet().stream()
+        .map(s -> crlCacheMap.get(s))
+        .forEach(crlCacheRecord -> {
         try {
           // Attempt to reload this cache
           cacheCrlRecord(crlCacheRecord);
         }
         catch (Exception ex) {
           log.warn("Unable to cache CRL from: " + crlCacheRecord.getUrl() + ". Removing it from cache. " + ex.getMessage());
-          badUrlList.add(crlCacheRecord.getUrl());
+          badUrlList.add(crlCacheRecord);
         }
       });
 
       if (!badUrlList.isEmpty()) {
         // We found bad URL:s that could not be cached. We remove them from the cache for now.
-        List<CRLCacheRecord> filteredCacheRecords = crlCacheData.getCrlCacheRecordList()
-          .stream()
-          .filter(crlCacheRecord -> !badUrlList.contains(crlCacheRecord.getUrl()))
-          .collect(Collectors.toList());
-        // Remove cached CRL
-        crlCacheData.getCrlCacheRecordList()
-          .stream()
-          .filter(crlCacheRecord -> badUrlList.contains(crlCacheRecord.getUrl()))
-          .forEach(crlCacheRecord -> {
-            File cacheFile = new File(cacheDir, crlCacheRecord.getFileName());
-            cacheFile.delete();
-          });
-        // Set the consolidated list
-        crlCacheData.setCrlCacheRecordList(filteredCacheRecords);
+        for (CRLCacheRecord badCachedCrl : badUrlList) {
+          // Remove this cache data item if present
+          crlCacheMap.remove(badCachedCrl.getUrl());
+          // Remove cached CRL data bytes if present
+          crlDataMap.remove(badCachedCrl.getFileName());
+        }
       }
-      // Save cache data file, storing any changes made to it.
-      FileUtils.writeByteArrayToFile(crlCacheFile, jsonMapper.writeValueAsBytes(crlCacheData));
     }
     catch (Exception e) {
       log.error("Unable to re-cache CRL data", e);
       return;
     }
+  }
+
+  @Override public List<CRLCacheRecord> getCrlCacheRecords() {
+    return crlCacheMap.keySet().stream()
+      .map(s -> crlCacheMap.get(s))
+      .collect(Collectors.toList());
   }
 
   /**
@@ -380,59 +349,37 @@ public class CRLCacheImpl implements CRLCache {
       return;
     }
     log.debug("Re-caching CRL from: " + urlStr);
-    File tempFile = new File(tempDir, crlCacheRecord.getFileName());
-    File cacheFile = new File(cacheDir, crlCacheRecord.getFileName());
 
     byte[] downloadedCrlBytes = crlDataLoader.downloadCrl(urlStr, connectTimeout, readTimeout);
-    FileUtils.writeByteArrayToFile(tempFile, downloadedCrlBytes);
+    crlDataMap.put(crlCacheRecord.getFileName(), downloadedCrlBytes);
 
     // If data was downloaded but deletion is not done due to exception condition. Then at least remove temp file on
     // exit.
-    tempFile.deleteOnExit();
-    X509CRL crl = getCachedCrl(tempFile);
+    X509CRL crl = getCachedCrl(crlCacheRecord.getFileName());
     Date nextUpdate = crl.getNextUpdate();
     if (nextUpdate.before(new Date())) {
-      tempFile.delete();
+      crlCacheMap.remove(crlCacheRecord.getUrl());
+      crlDataMap.remove(crlCacheRecord.getFileName());
       throw new IOException("Downloaded CRL expired " + nextUpdate.toString());
     }
     crlCacheRecord.setNextUpdate(nextUpdate.getTime());
     crlCacheRecord.setLastCache(System.currentTimeMillis());
-    FileUtils.copyFile(tempFile, cacheFile);
-    tempFile.delete();
   }
 
-  private X509CRL getCachedCrl(String fileName) throws IOException {
-    File cacheFile = new File(cacheDir, fileName);
-    try {
-      return getCachedCrl(cacheFile);
-    }
-    catch (Exception e) {
-      throw new IOException(e.getMessage());
-    }
-  }
+  private X509CRL getCachedCrl(String crlFile) throws IOException {
 
-  private X509CRL getCachedCrl(File crlFile) throws Exception {
-    InputStream inStream = null;
-    try {
-      inStream = new FileInputStream(crlFile);
+    try (InputStream inStream = new ByteArrayInputStream(crlDataMap.get(crlFile))){
       CertificateFactory cf = CertificateFactory.getInstance("X.509");
       return (X509CRL) cf.generateCRL(inStream);
     }
-    finally {
-      if (inStream != null) {
-        inStream.close();
-      }
+    catch (CertificateException e) {
+      throw new RuntimeException(e);
+    }
+    catch (CRLException e) {
+      throw new RuntimeException(e);
     }
   }
 
-  private void reloadCrlCacheData() throws Exception {
-    if (!crlCacheFile.canRead()) {
-      crlCacheData = CRLCacheData.builder().crlCacheRecordList(new ArrayList<>()).build();
-      FileUtils.writeByteArrayToFile(crlCacheFile, jsonMapper.writeValueAsBytes(crlCacheData));
-      return;
-    }
-    crlCacheData = jsonMapper.readValue(crlCacheFile, CRLCacheData.class);
-  }
 
   private String getFileName(String url) throws Exception {
     MessageDigest digest = MessageDigest.getInstance("SHA-1");

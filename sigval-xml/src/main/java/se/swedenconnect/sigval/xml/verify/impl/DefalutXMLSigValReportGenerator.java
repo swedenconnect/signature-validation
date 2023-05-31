@@ -108,7 +108,7 @@ public class DefalutXMLSigValReportGenerator extends AbstractSigValReportGenerat
    * Get the signature value
    *
    * @param sigValResult
-   * @return
+   * @return the bytes of the signature value
    */
   @Override protected byte[] getSignatureValue(ExtendedXmlSigvalResult sigValResult) throws IOException {
     try {

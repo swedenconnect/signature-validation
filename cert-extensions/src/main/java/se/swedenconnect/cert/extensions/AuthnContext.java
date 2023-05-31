@@ -196,6 +196,7 @@ public class AuthnContext extends ASN1Object {
    * Creates a {@link SAMLAuthContext} object from an xml string
    *
    * @param xml xml string
+   * @param strictMode true to strictly enforce content requirement rules
    * @return {@link SAMLAuthContext} object
    * @throws IOException on error parsing data
    */

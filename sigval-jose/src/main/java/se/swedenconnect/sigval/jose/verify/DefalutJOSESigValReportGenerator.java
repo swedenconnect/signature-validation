@@ -106,7 +106,7 @@ public class DefalutJOSESigValReportGenerator extends AbstractSigValReportGenera
   /**
    * Get the signature value
    *
-   * @param sigValResult
+   * @param sigValResult signature validation result
    * @return signature value
    */
   @Override protected byte[] getSignatureValue(ExtendedJOSESigvalResult sigValResult) throws IOException {

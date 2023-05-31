@@ -81,6 +81,7 @@ public abstract class AbstractDomData {
    * Creates an instance of this elements data from a DOM element
    *
    * @param element xml element providing content data
+   * @throws CertificateException content validation error
    */
   protected abstract void setValuesFromElement(final Element element) throws CertificateException;
 
