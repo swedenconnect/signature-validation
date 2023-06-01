@@ -69,21 +69,34 @@ import se.swedenconnect.sigval.cert.validity.http.DefaultRevocationDataConnector
 @Slf4j
 public class CRLCacheImpl implements CRLCache {
 
+  /** Object mapper for JSON serialization */
   private static final ObjectMapper jsonMapper = new ObjectMapper();
-  private static final String CACHE_DATA_FILE = "crlCache.json";
-  private static final String CACHE_DIR = "cache";
-  private static final String TEMP_DIR = "temp";
-  private static final String LDAP_CONNECT_TIMEOUT = "com.sun.jndi.ldap.connect.timeout";
-  private static final String LDAP_READ_TIMEOUT = "com.sun.jndi.ldap.read.timeout";
-  private static final String LDAP_CONTEXT_FACTORY = "com.sun.jndi.ldap.LdapCtxFactory";
-  private static final int DEFAULT_CONNECT_TIMEOUT = 1000;
-  private static final int DEFAULT_READ_TIMEOUT = 7000;
 
+  /** Default name of the cache file */
+  private static final String CACHE_DATA_FILE = "crlCache.json";
+
+  /** Default name of the cache directory */
+  private static final String CACHE_DIR = "cache";
+
+  /** Default name of the cache temporary directory */
+  private static final String TEMP_DIR = "temp";
+
+  /** Minimum age of a cache when any re-cache attempt is skipped */
   private final long recacheGracePeriod;
+
+  /** The cached CRL data */
   private CRLCacheData crlCacheData;
+
+  /** Directory where CRL cache data is stored */
   private final File cacheDir;
+
+  /** Temporary directory for CRL data */
   private final File tempDir;
+
+  /** File where CRL cache data is stored */
   private File crlCacheFile;
+
+  /**  */
   private final CRLDataLoader crlDataLoader;
 
   /**
@@ -147,6 +160,7 @@ public class CRLCacheImpl implements CRLCache {
    *
    * @return list of cached CRLs
    */
+  @Override
   public List<CRLCacheRecord> getCrlCacheRecords() {
     return crlCacheData.getCrlCacheRecordList();
   }
@@ -198,7 +212,7 @@ public class CRLCacheImpl implements CRLCache {
 
     }
     if (approvedUriList.isEmpty()) {
-      // We didnt find any acceptable distribution points. Throw exception
+      // We didn't find any acceptable distribution points. Throw exception
       if (crlIssuerPresent) {
         log.debug("No acceptable CRL distribution point found. Declaration of crlIssuer is not allowed");
         throw new IOException("No acceptable CRL distribution point found. Declaration of crlIssuer is not allowed");
@@ -317,7 +331,6 @@ public class CRLCacheImpl implements CRLCache {
       crlCacheData.getCrlCacheRecordList().stream().forEach(crlCacheRecord -> {
         try {
           // Attempt to reload this cache
-          log.debug("Re-caching CRL from {}", crlCacheRecord.getUrl());
           cacheCrlRecord(crlCacheRecord);
         }
         catch (Exception ex) {

@@ -5,13 +5,12 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>cert-validation</artifactId>
-  <version>1.2.2-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <parent>
     <artifactId>sigval-parent</artifactId>
     <groupId>se.swedenconnect.sigval</groupId>
-    <version>1.2.1</version>
+    <version>1.2.2</version>
   </parent>
 
   <name>Sweden Connect :: Signature validation :: X.509 Certificate Validation</name>
@@ -63,8 +62,7 @@
     <dependency>
       <groupId>se.swedenconnect.sigval</groupId>
       <artifactId>cert-extensions</artifactId>
-      <version>1.2.1</version>
-<!--      <version>${project.version}</version>-->
+    <version>${project.version}</version>
     </dependency>
 
     <dependency>

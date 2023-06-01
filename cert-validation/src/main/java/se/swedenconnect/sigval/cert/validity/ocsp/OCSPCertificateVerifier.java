@@ -292,6 +292,7 @@ public class OCSPCertificateVerifier extends AbstractValidityChecker {
   /**
    * Create OCSP request
    * @param certificateId certID according to OCSP
+   * @param nonce optional nonce used in the OCSP request
    * @return OCSP response
    * @throws OCSPException error creating the OCSP response
    */

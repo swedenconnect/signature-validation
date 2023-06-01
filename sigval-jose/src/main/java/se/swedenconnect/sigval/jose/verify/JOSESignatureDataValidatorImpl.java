@@ -36,7 +36,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.UnprotectedHeader;
-import com.nimbusds.jose.shaded.json.JSONArray;
+import com.nimbusds.jose.shaded.gson.JsonArray;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -295,11 +295,11 @@ public class JOSESignatureDataValidatorImpl implements JOSESignatureDataValidato
       return new ArrayList<>();
     }
     final Object etsiUObject = unprotectedHeader.getParam("etsiU");
-    if (etsiUObject == null || !(etsiUObject instanceof JSONArray)) {
+    if (etsiUObject == null || !(etsiUObject instanceof JsonArray)) {
       return new ArrayList<>();
     }
 
-    JSONArray etsiUArray = (JSONArray) etsiUObject;
+    JsonArray etsiUArray = (JsonArray) etsiUObject;
     List<EtsiUComponent> etsiUComponentList = new ArrayList<>();
     boolean base64URLEncoded = false;
     boolean plainJson = false;

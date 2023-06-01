@@ -104,7 +104,9 @@ public class DOMUtils {
    * functions.
    *
    * @param doc The doc being processed
+   * @param xmlDeclaration defines if an XML declaration prefix should be included
    * @return Test representation of the XML document
+   * @throws TransformerException error processing the xml document
    */
   public static String getStyledDocText(Document doc, boolean xmlDeclaration) throws TransformerException {
     Objects.requireNonNull(doc, "Document must not be null");
@@ -124,7 +126,9 @@ public class DOMUtils {
    * is to try to preserve integrity of an existing signature.
    *
    * @param doc The XML document being processed.
+   * @param xmlDeclaration true to include XML declaration prefix
    * @return XML String
+   * @throws TransformerException error processing the xml document
    */
   public static byte[] getCanonicalDocText(Document doc, boolean xmlDeclaration) throws TransformerException {
     ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -152,6 +156,9 @@ public class DOMUtils {
    *
    * @param xmlFile The XML file being parsed
    * @return XML document
+   * @throws IOException IO data exception
+   * @throws ParserConfigurationException error setting up XML parser
+   * @throws SAXException xml processing error
    */
   public static Document loadXMLContent(File xmlFile) throws IOException, ParserConfigurationException, SAXException {
     Document doc;
@@ -163,6 +170,11 @@ public class DOMUtils {
 
   }
 
+  /**
+   * Create new empty XML document
+   *
+   * @return new empty XML document
+   */
   public static Document createNewDocument() {
     try {
       return DOMUtils.getSafeDocBuilderFactory().newDocumentBuilder().newDocument();

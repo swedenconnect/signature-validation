@@ -18,7 +18,7 @@ package se.swedenconnect.sigval.jose.svt;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.UnprotectedHeader;
-import com.nimbusds.jose.shaded.json.JSONArray;
+import com.nimbusds.jose.shaded.gson.JsonArray;
 import com.nimbusds.jose.util.Base64;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.AllArgsConstructor;
@@ -246,8 +246,8 @@ public class JOSESVTValidator extends SVTValidator<JOSESVTValInput> {
       return svtTokenList;
     }
     final Object svtObject = unprotectedHeader.getParam("svt");
-    if (svtObject instanceof JSONArray) {
-      JSONArray svtArray = (JSONArray) svtObject;
+    if (svtObject instanceof JsonArray) {
+      JsonArray svtArray = (JsonArray) svtObject;
       for (int i = 0; i<svtArray.size(); i++){
         final Object svtItemObject = svtArray.get(i);
         if (svtItemObject instanceof String){

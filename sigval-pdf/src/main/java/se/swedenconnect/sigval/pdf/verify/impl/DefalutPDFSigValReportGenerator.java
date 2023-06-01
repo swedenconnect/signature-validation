@@ -113,7 +113,7 @@ public class DefalutPDFSigValReportGenerator extends AbstractSigValReportGenerat
    * Get the signature value
    *
    * @param sigValResult
-   * @return
+   * @return the bytes of the signature value
    */
   @Override protected byte[] getSignatureValue(ExtendedPdfSigValResult sigValResult) throws IOException {
 
