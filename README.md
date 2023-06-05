@@ -64,13 +64,23 @@ The [CRLCache](https://github.com/swedenconnect/signature-validation/blob/master
 
 The default implementation [CRLCacheImpl](https://github.com/swedenconnect/signature-validation/blob/master/cert-validation/src/main/java/se/swedenconnect/sigval/cert/validity/crl/impl/CRLCacheImpl.java) implements a cache where downloaded CRL:s are cached and stored in a specified location.
 
-The following code demonstrate creation of a CRL cache:
+The following code demonstrate creation of the default CRL cache:
 
 ```
-new CRLCacheImpl(cacheFolderFile, recacheGracePeriod);
+CRLCache crlCache = new CRLCacheImpl(cacheFolderFile, recacheGracePeriod);
 ```
 
 The `recacheGracePeriod` parameter indicates the time in milliseconds before a recently cached CRL is allowed to be re-cached. If the time since last re-cache is less than this time, no re-caching is performed even if the re-cache function is called.
+
+An in memory storage CRL Cache is available for simplified usage of the certificate validator where the projected amount of cacehed data can safely be stored and processed in memory. This implementation sotres all information, including all CRLs in memory until program restart.
+
+The following code demonstrate creation of the in memory CRL cache:
+
+```
+CRLCache crlCache = new InMemoryCRLCache()
+```
+
+
 
 #### Validity Checker
 
@@ -138,11 +148,11 @@ The following code example creates a PDF signature validator:
 ExtendedPDFSignatureValidator createPdfSignatureValidator(
   final CertificateValidator certificateValidator) {
 
-  final TimeStampPolicyVerifier timeStampPolicyVerifier = 
+  final TimeStampPolicyVerifier timeStampPolicyVerifier =
     new BasicTimstampPolicyVerifier(certificateValidator)
-  final PDFSignaturePolicyValidator signaturePolicyValidator = 
+  final PDFSignaturePolicyValidator signaturePolicyValidator =
     new PkixPdfSignaturePolicyValidator();
-    
+
   final PDFSingleSignatureValidator pdfSignatureVerifier = new PDFSingleSignatureValidatorImpl(
     certificateValidator, signaturePolicyValidator, timeStampPolicyVerifier);
 
@@ -173,7 +183,7 @@ The PDF SVT token is created by the SVT claims issuer. This component issues the
 PDFSVTSigValClaimsIssuer createPdfsvtSigValClaimsIssuer(
   final JWSAlgorithm svtJWSAlgorithm,
   final PrivateKey privateKey,
-  final List<X509Certificate> certificates, 
+  final List<X509Certificate> certificates,
   final ExtendedPDFSignatureValidator pdfSignatureValidator)
 {
   return new PDFSVTSigValClaimsIssuer(
@@ -247,7 +257,7 @@ ExtendedXMLSignedDocumentValidator createXmlSignedDocumentValidator() {
 XMLSignatureElementValidator createXmlSignatureElementValidator(
   final CertificateValidator certificateValidator){
 
-  final TimeStampPolicyVerifier timeStampPolicyVerifier = 
+  final TimeStampPolicyVerifier timeStampPolicyVerifier =
     new BasicTimstampPolicyVerifier(certificateValidator)
   final XMLSignaturePolicyValidator xmlSignaturePolicyValidator =
     new PkixXmlSignaturePolicyValidator();
@@ -279,7 +289,7 @@ The XML SVT token is created by the SVT claims issuer. This component issues the
 
 ```
 XMLSVTSigValClaimsIssuer createClaimsIssuer(
-  final JWSAlgorithm svtJWSAlgorithm, final PrivateKey privateKey, 
+  final JWSAlgorithm svtJWSAlgorithm, final PrivateKey privateKey,
   final List<X509Certificate> certificates,
   final XMLSignatureElementValidator xmlSignatureElementValidator)
 {
