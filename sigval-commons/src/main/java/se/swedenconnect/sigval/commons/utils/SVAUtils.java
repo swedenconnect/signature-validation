@@ -32,6 +32,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.util.JSONObjectUtils;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
@@ -49,6 +50,8 @@ import se.swedenconnect.sigval.svt.claims.SVTClaims;
  */
 @Slf4j
 public class SVAUtils {
+
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   /**
    * test if a CMS signature is a SVT document timestamp signature
@@ -81,9 +84,8 @@ public class SVAUtils {
    */
   public static SVTClaims getSVTClaims(JWTClaimsSet jwtClaimsSet) throws IOException {
     try {
-      String svaClaimsJson = jwtClaimsSet.getClaim("sig_val_claims").toString();
-      ObjectMapper mapper = new ObjectMapper();
-      SVTClaims svaClaims = mapper.readValue(svaClaimsJson, SVTClaims.class);
+      String svaClaimsJson = JSONObjectUtils.toJSONString(jwtClaimsSet.getJSONObjectClaim("sig_val_claims"));
+      SVTClaims svaClaims = OBJECT_MAPPER.readValue(svaClaimsJson, SVTClaims.class);
       return svaClaims;
     }
     catch (Exception ex) {

@@ -6,7 +6,7 @@
   <groupId>se.swedenconnect.sigval</groupId>
   <artifactId>sigval-parent</artifactId>
   <packaging>pom</packaging>
-  <version>1.2.2</version>
+  <version>1.2.3</version>
 
   <name>Sweden Connect :: Parent POM for Signature Validation</name>
   <description>Parent POM for SignService Validation libraries</description>
