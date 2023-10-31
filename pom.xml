@@ -6,7 +6,7 @@
   <groupId>se.swedenconnect.sigval</groupId>
   <artifactId>sigval-parent</artifactId>
   <packaging>pom</packaging>
-  <version>1.2.3</version>
+  <version>1.2.4</version>
 
   <name>Sweden Connect :: Parent POM for Signature Validation</name>
   <description>Parent POM for SignService Validation libraries</description>
@@ -49,7 +49,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <bouncy-castle.version>1.73</bouncy-castle.version>
+    <bouncy-castle.version>1.76</bouncy-castle.version>
     <java.version>11</java.version>
   </properties>
 
@@ -165,7 +165,13 @@
         <type>jar</type>
         <scope>compile</scope>
       </dependency>
-            
+
+      <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>1.18.30</version>
+      </dependency>
+
     </dependencies>
 
   </dependencyManagement>

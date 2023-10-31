@@ -80,7 +80,8 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
    * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVA
    * @param pdfSignatureContextFactory factory for creating an instance of signature context for the validated document
    */
-  public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureValidator pdfSingleSignatureValidator, PDFSignatureContextFactory pdfSignatureContextFactory) {
+  public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureValidator pdfSingleSignatureValidator,
+    PDFSignatureContextFactory pdfSignatureContextFactory) {
     this.pdfSingleSignatureValidator = pdfSingleSignatureValidator;
     this.pdfSignatureContextFactory = pdfSignatureContextFactory;
     this.pdfsvtValidator = null;
@@ -90,10 +91,11 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
    * Constructor
    *
    * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVA
-   * @param pdfsvtValidator      Certificate verifier for the certificate used to sign SVA tokens
+   * @param pdfsvtValidator Certificate verifier for the certificate used to sign SVA tokens
    * @param pdfSignatureContextFactory factory for creating an instance of signature context for the validated document
    */
-  public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureValidator pdfSingleSignatureValidator, PDFSVTValidator pdfsvtValidator, PDFSignatureContextFactory pdfSignatureContextFactory) {
+  public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureValidator pdfSingleSignatureValidator,
+    PDFSVTValidator pdfsvtValidator, PDFSignatureContextFactory pdfSignatureContextFactory) {
     this.pdfSingleSignatureValidator = pdfSingleSignatureValidator;
     this.pdfsvtValidator = pdfsvtValidator;
     this.pdfSignatureContextFactory = pdfSignatureContextFactory;
@@ -132,13 +134,22 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       List<PDSignature> signatureList = new ArrayList<>();
 
       for (PDSignature signature : allSignatureList) {
-        String type = PDFSVAUtils.getSignatureType(signature, signature.getContents(pdfDocBytes));
+        String type;
+        try {
+          byte[] contents = signature.getContents(pdfDocBytes);
+          type = PDFSVAUtils.getSignatureType(signature, contents);
+        }
+        catch (Exception e) {
+          type = PDFSVAUtils.ILLEGAL_SIGNATURE_TYPE;
+          log.debug("Error parsing signature data: {}", e.getMessage());
+        }
         switch (type) {
         case PDFSVAUtils.SVT_TYPE:
         case PDFSVAUtils.DOC_TIMESTAMP_TYPE:
           docTsSigList.add(signature);
           break;
         case PDFSVAUtils.SIGNATURE_TYPE:
+        case PDFSVAUtils.ILLEGAL_SIGNATURE_TYPE:
           signatureList.add(signature);
         }
       }
@@ -149,11 +160,17 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       List<PDFDocTimeStamp> docTimeStampList = new ArrayList<>();
       boolean docTsVerified = false;
       // Obtain any SVT validation results from a present SVT validator
-      List<SignatureSVTValidationResult> svtValidationResults = pdfsvtValidator == null ? null : pdfsvtValidator.validate(pdfDocBytes);
+      List<SignatureSVTValidationResult> svtValidationResults =
+        pdfsvtValidator == null ? null : pdfsvtValidator.validate(pdfDocBytes);
 
       for (PDSignature signature : signatureList) {
         SignatureSVTValidationResult svtValResult = null;
+        try {
           svtValResult = getMatchingSvtValidation(PDFSVAUtils.getSignatureValueBytes(signature, pdfDocBytes), svtValidationResults);
+        } catch (Exception e) {
+          log.debug("Error looking for signature validation result: {}", e.getMessage());
+        }
+
         if (svtValResult == null) {
           // This signature is not covered by a valid SVT. Perform normal signature verification
           try {
@@ -163,7 +180,8 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
               docTsVerified = true;
             }
 
-            SignatureValidationResult directVerifyResult = pdfSingleSignatureValidator.verifySignature(signature, pdfDocBytes, docTimeStampList,
+            SignatureValidationResult directVerifyResult = pdfSingleSignatureValidator.verifySignature(signature,
+              pdfDocBytes, docTimeStampList,
               signatureContext);
             sigVerifyResultList.add(directVerifyResult);
           }
@@ -174,7 +192,8 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
         }
         else {
           // There is SVT validation results. Use them.
-          sigVerifyResultList.add(compliePDFSigValResultsFromSvtValidation(svtValResult, signature, pdfDocBytes, signatureContext));
+          sigVerifyResultList.add(
+            compliePDFSigValResultsFromSvtValidation(svtValResult, signature, pdfDocBytes, signatureContext));
         }
       }
       return sigVerifyResultList;
@@ -223,9 +242,9 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
    * Use the results obtained from SVT validation to produce general signature validation result as if the signature was validated using
    * complete validation.
    *
-   * @param svtValResult     results from SVT validation
-   * @param signature        the signature being validated
-   * @param pdfDocBytes      the bytes of the PDF document
+   * @param svtValResult results from SVT validation
+   * @param signature the signature being validated
+   * @param pdfDocBytes the bytes of the PDF document
    * @param signatureContext the context of the signature in the PDF document
    * @return {@link ExtendedPdfSigValResult} signature results
    */
@@ -247,8 +266,8 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       byte[] signedDocumentBytes = null;
       try {
         signedDocumentBytes = signatureContext.getSignedDocument(signature);
-      } 
-      catch (Exception ex){
+      }
+      catch (Exception ex) {
         log.warn("Error extracting the document version signed by this signature: {}", ex.getMessage());
       }
       cmsSVResult.setSignedDocument(signedDocumentBytes);
@@ -280,7 +299,8 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       cmsSVResult.setSignerCertificate(CMSSigCerts.getSigCert());
       cmsSVResult.setSignatureCertificateChain(CMSSigCerts.getChain());
       // Store the svt validated certificates as path of certificate validation results
-      CertificateValidationResult cvr = new DefaultCertificateValidationResult(SVAUtils.getOrderedCertList(svtValResult.getSignerCertificate(), svtValResult.getCertificateChain()));
+      CertificateValidationResult cvr = new DefaultCertificateValidationResult(
+        SVAUtils.getOrderedCertList(svtValResult.getSignerCertificate(), svtValResult.getCertificateChain()));
       cmsSVResult.setCertificateValidationResult(cvr);
 
       // Finalize
@@ -329,18 +349,22 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
 
   /**
    * Compare if the signature value match any of the listed SVT validation results
+   *
    * @param sigValueBytes signature value bytes
    * @param svtValidationResults validation result from SVT validation
    * @return The SVT validation results, or null on no match
    */
   private SignatureSVTValidationResult getMatchingSvtValidation(byte[] sigValueBytes,
     List<SignatureSVTValidationResult> svtValidationResults) {
-    if (svtValidationResults == null) return null;
+    if (svtValidationResults == null)
+      return null;
     for (SignatureSVTValidationResult svtValResult : svtValidationResults) {
       try {
-        MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(svtValResult.getSignedJWT().getHeader().getAlgorithm());
+        MessageDigest md = SVTAlgoRegistry.getMessageDigestInstance(
+          svtValResult.getSignedJWT().getHeader().getAlgorithm());
         String sigValueHashStr = Base64.encodeBase64String(md.digest(sigValueBytes));
-        if (sigValueHashStr.equals(svtValResult.getSignatureClaims().getSig_ref().getSig_hash()) && svtValResult.isSvtValidationSuccess()) {
+        if (sigValueHashStr.equals(svtValResult.getSignatureClaims().getSig_ref().getSig_hash())
+          && svtValResult.isSvtValidationSuccess()) {
           return svtValResult;
         }
       }
@@ -380,7 +404,8 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
    * @return PDF signature validation result objects
    */
   @Override
-  public SignedDocumentValidationResult<ExtendedPdfSigValResult> extendedResultValidation(byte[] pdfDocBytes) throws SignatureException{
+  public SignedDocumentValidationResult<ExtendedPdfSigValResult> extendedResultValidation(byte[] pdfDocBytes)
+    throws SignatureException {
     List<SignatureValidationResult> validationResults = validate(pdfDocBytes);
     return getConcludingSigVerifyResult(validationResults);
   }
