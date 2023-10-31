@@ -24,6 +24,7 @@ public class PDFSVAUtils {
 
   public static final String SIGNATURE_TYPE = "sig";
   public static final String DOC_TIMESTAMP_TYPE = "docts";
+  public static final String ILLEGAL_SIGNATURE_TYPE = "illegal";
   public static final String SVT_TYPE = "svt";
   public static final String UNKNOWN_TYPE = "unknown";
   public static final String PDF_SIG_SUBFILETER_LC = "adbe.pkcs7.detached";
