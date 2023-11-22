@@ -18,9 +18,8 @@ package se.swedenconnect.cert.extensions.data.saci;
 
 import java.security.cert.CertificateException;
 import java.time.Instant;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -274,9 +273,7 @@ public abstract class AbstractDomData {
     if (xmlTimeStr == null) {
       return null;
     }
-    ZonedDateTime zonedDateTime = LocalDateTime.parse(xmlTimeStr, XML_DATE_TIME_FORMATTER)
-      .atZone(ZoneId.systemDefault());
-    return Instant.from(zonedDateTime);
+    return Instant.from(OffsetDateTime.parse(xmlTimeStr));
   }
 
 }
