@@ -305,15 +305,16 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
 
       // Finalize
       SignatureClaims signatureClaims = svtValResult.getSignatureClaims();
+      List<PolicyValidationClaims> policyValidationClaims = signatureClaims.getSig_val();
       if (svtValResult.isSvtValidationSuccess()) {
-        cmsSVResult.setStatus(SignatureValidationResult.Status.SUCCESS);
+        cmsSVResult.setStatus(getStatusFromPolicyValidationClaims(policyValidationClaims));
       }
       else {
         cmsSVResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
         cmsSVResult.setStatusMessage("Unable to verify SVT signature");
       }
       cmsSVResult.setSignatureClaims(signatureClaims);
-      cmsSVResult.setValidationPolicyResultList(signatureClaims.getSig_val());
+      cmsSVResult.setValidationPolicyResultList(policyValidationClaims);
       // Since we verify with SVA. We ignore any present signature timestamps.
       // cmsSVResult.setSignatureTimeStampList(new ArrayList<>());
 
@@ -345,6 +346,25 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       return cmsSVResult;
     }
     return cmsSVResult;
+  }
+
+  private SignatureValidationResult.Status getStatusFromPolicyValidationClaims(List<PolicyValidationClaims> policyValidationClaims) {
+    if (policyValidationClaims == null) {
+      return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
+    }
+    if (policyValidationClaims.isEmpty()) {
+      return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
+    }
+    if (policyValidationClaims.stream().anyMatch(pvc -> pvc.getRes().equals(ValidationConclusion.PASSED))) {
+      return SignatureValidationResult.Status.SUCCESS;
+    }
+    if (policyValidationClaims.stream().anyMatch(pvc -> pvc.getRes().equals(ValidationConclusion.FAILED))) {
+      return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
+    }
+    if (policyValidationClaims.stream().anyMatch(pvc -> pvc.getRes().equals(ValidationConclusion.INDETERMINATE))) {
+      return SignatureValidationResult.Status.INTERDETERMINE;
+    }
+    return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
   }
 
   /**

@@ -492,7 +492,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       // Finalize
       final SignatureClaims signatureClaims = svtValResult.getSignatureClaims();
       if (svtValResult.isSvtValidationSuccess()) {
-        xmlSvResult.setStatus(SignatureValidationResult.Status.SUCCESS);
+        xmlSvResult.setStatus(getStatusFromPolicyValidationClaims(signatureClaims.getSig_val()));
       }
       else {
         xmlSvResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
@@ -528,5 +528,25 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
     }
     return xmlSvResult;
   }
+
+  private SignatureValidationResult.Status getStatusFromPolicyValidationClaims(List<PolicyValidationClaims> policyValidationClaims) {
+    if (policyValidationClaims == null) {
+      return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
+    }
+    if (policyValidationClaims.isEmpty()) {
+      return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
+    }
+    if (policyValidationClaims.stream().anyMatch(pvc -> pvc.getRes().equals(ValidationConclusion.PASSED))) {
+      return SignatureValidationResult.Status.SUCCESS;
+    }
+    if (policyValidationClaims.stream().anyMatch(pvc -> pvc.getRes().equals(ValidationConclusion.FAILED))) {
+      return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
+    }
+    if (policyValidationClaims.stream().anyMatch(pvc -> pvc.getRes().equals(ValidationConclusion.INDETERMINATE))) {
+      return SignatureValidationResult.Status.INTERDETERMINE;
+    }
+    return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
+  }
+
 
 }

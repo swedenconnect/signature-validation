@@ -85,14 +85,15 @@ public abstract class AbstractSVTSigValClaimsIssuer<T extends Object> extends SV
     List<X509Certificate> signatureCertificateChain = sigResult.getSignatureCertificateChain();
 
     CertificateValidationResult certificateValidationResult;
+    List<X509Certificate> validatedCertificatePath;
     try {
       certificateValidationResult = sigResult.getCertificateValidationResult();
+      validatedCertificatePath = certificateValidationResult.getValidatedCertificatePath();
     } catch (Exception ex){
       log.error("Unable to obtain the required certificate validation result object", ex);
       throw new IOException("Unable to obtain the required certificate validation result object");
     }
 
-    List<X509Certificate> validatedCertificatePath = certificateValidationResult.getValidatedCertificatePath();
     boolean altered = !isCertPathMatch(validatedCertificatePath, signatureCertificateChain);
     boolean hasValidatedCerts = validatedCertificatePath != null && !validatedCertificatePath.isEmpty();
 
