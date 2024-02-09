@@ -26,10 +26,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import se.swedenconnect.sigval.commons.svt.SVTExtendpolicy;
+import se.swedenconnect.sigval.commons.svt.SVTUtils;
 import se.swedenconnect.sigval.jose.data.JOSESignatureData;
 import se.swedenconnect.sigval.jose.verify.JOSESignedDocumentValidator;
 import se.swedenconnect.sigval.svt.issuer.SVTModel;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -57,11 +59,12 @@ public class JOSEDocumentSVTIssuer {
    * @param document The signed document to extend
    * @param svtModel model providing basic SVT parameters
    * @param svtMethod specifying the extension strategy as defined by options declared in {@link SVTExtendpolicy}
-   * @return bytes of signed XML document extended with SVT
-   * @throws Exception on critical errors that prevents the document from being extended as requested
+   * @param issueSvtOnFailedValidation indicates if SVT is issued on documents that failed signature validation
+   * @return bytes of the signed JOSE document extended with SVT
+   * @throws Exception on critical errors that prevent the document from being extended as requested
    */
-  public byte[] issueSvt(byte[] document, SVTModel svtModel, SVTExtendpolicy svtMethod) throws Exception {
-    return issueSvt(document, svtModel, svtMethod, null);
+  public byte[] issueSvt(byte[] document, SVTModel svtModel, SVTExtendpolicy svtMethod, boolean issueSvtOnFailedValidation) throws Exception {
+    return issueSvt(document, svtModel, svtMethod, null, issueSvtOnFailedValidation);
   }
 
   /**
@@ -70,10 +73,11 @@ public class JOSEDocumentSVTIssuer {
    * @param svtModel model providing basic SVT parameters
    * @param svtMethod specifying the extension strategy as defined by options declared in {@link SVTExtendpolicy}
    * @param detatchedPayload optional detached payload or null if the payload is embedded in the JOSE signature
-   * @return bytes of signed XML document extended with SVT
-   * @throws Exception on critical errors that prevents the document from being extended as requested
+   * @param issueSvtOnFailedValidation indicates if SVT is issued on documents that failed signature validation
+   * @return bytes of the signed JOSE document extended with SVT
+   * @throws Exception on critical errors that prevent the document from being extended as requested
    */
-  public byte[] issueSvt(byte[] document, SVTModel svtModel, SVTExtendpolicy svtMethod, Payload detatchedPayload) throws Exception {
+  public byte[] issueSvt(byte[] document, SVTModel svtModel, SVTExtendpolicy svtMethod, Payload detatchedPayload, boolean issueSvtOnFailedValidation) throws Exception {
 
     final List<JOSESignatureData> signatureDataList = JOSESignedDocumentValidator.getJOSEDocumentSignatureData(document, detatchedPayload);
 
@@ -81,7 +85,7 @@ public class JOSEDocumentSVTIssuer {
     //
     List<SVTExtensionData> svtExtensionDataList = new ArrayList<>();
     for (JOSESignatureData signatureData : signatureDataList) {
-      SignedJWT signedSvtJWT;
+      SignedJWT signedSvtJWT = null;
       SVTExtensionData svtExtensionData = new SVTExtensionData(null, signatureData, null);
       try {
         signedSvtJWT = svtClaimsIssuer.getSignedSvtJWT(
@@ -96,6 +100,9 @@ public class JOSEDocumentSVTIssuer {
       }
       catch (Exception ex) {
         log.error("Signature validation claims collection caused error: {}", ex.getMessage(), ex);
+      }
+      if (!SVTUtils.checkIfSVTShouldBeIssued(signedSvtJWT, issueSvtOnFailedValidation)){
+        throw new IOException("SVT request for document with invalid signatures");
       }
       svtExtensionDataList.add(svtExtensionData);
     }

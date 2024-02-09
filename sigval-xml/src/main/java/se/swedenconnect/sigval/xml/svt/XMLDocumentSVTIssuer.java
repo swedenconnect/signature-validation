@@ -28,6 +28,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import se.swedenconnect.sigval.commons.svt.SVTExtendpolicy;
+import se.swedenconnect.sigval.commons.svt.SVTUtils;
 import se.swedenconnect.sigval.svt.issuer.SVTModel;
 import se.swedenconnect.sigval.xml.utils.XMLDocumentBuilder;
 import se.swedenconnect.sigval.xml.utils.XMLSigUtils;
@@ -37,6 +38,7 @@ import se.swedenconnect.sigval.xml.xmlstruct.XMLSignatureContext;
 import se.swedenconnect.sigval.xml.xmlstruct.XMLSignatureContextFactory;
 import se.swedenconnect.sigval.xml.xmlstruct.impl.DefaultXMLSignatureContextFactory;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -61,13 +63,15 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
 
   /**
    * Issues Signature Validation Tokens to signatures of an XML document and extends the document signatures with the SVT tokens.
+   *
    * @param document The signed document to extend
    * @param svtModel model providing basic SVT parameters
    * @param svtMethod specifying the extension strategy as defined by options declared in {@link SVTExtendpolicy}
-   * @return bytes of signed XML document extended with SVT
-   * @throws Exception on critical errors that prevents the document from being extended as requested
+   * @param issueSvtOnFailedValidation indicates if SVT is issued on documents that failed signature validation
+   * @return bytes of the signed XML document extended with SVT
+   * @throws Exception on critical errors that prevent the document from being extended as requested
    */
-  public byte[] issueSvt(Document document, SVTModel svtModel, SVTExtendpolicy svtMethod) throws Exception {
+  public byte[] issueSvt(Document document, SVTModel svtModel, SVTExtendpolicy svtMethod, boolean issueSvtOnFailedValidation) throws Exception {
 
     List<Element> signatures = XMLSigUtils.getSignatures(document);
 
@@ -93,6 +97,9 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
       catch (Exception ex) {
         log.error("Signature validation claims collection caused error: {}", ex.getMessage(), ex);
       }
+      if (!SVTUtils.checkIfSVTShouldBeIssued(signedSvtJWT, issueSvtOnFailedValidation)){
+        throw new IOException("SVT request for document with invalid signatures");
+      }
     }
     return extendDocumentSignature(document, svtExtensionDataList);
   }
@@ -114,7 +121,7 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
       Element sigElement = svtExtensionData.getElement();
       SVTExtendpolicy svtMethod = svtExtensionData.getSvtMethod();
       List<Element> svtSignaturePropertyElements = getSvtSignaturePropertyElements(sigElement, new ArrayList<>());
-      // Remove old SVT objects if method is set to replace (if we have a new SVT) or replace all.
+      // Remove old SVT objects if the method is set to replace (if we have a new SVT) or replace all.
       if (svtMethod.equals(SVTExtendpolicy.REPLACE) && signedJWT != null){
         svtSignaturePropertyElements.stream().forEach(element -> removeElement(element));
       }
@@ -138,7 +145,7 @@ public class XMLDocumentSVTIssuer implements XMLSigConstants {
       signatureValidationToken.setTextContent(signedJWT.serialize());
     }
 
-    // Return resulting document with updated signature elements
+    // Return a resulting document with updated signature elements
     return XMLDocumentBuilder.getCanonicalDocBytes(document);
   }
 
