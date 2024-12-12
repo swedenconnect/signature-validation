@@ -358,26 +358,27 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
         rootDic.entrySet().stream().forEach(cosNameCOSBaseEntry -> {
           final COSName key = cosNameCOSBaseEntry.getKey();
           final ObjectValue value = new ObjectValue(cosNameCOSBaseEntry.getValue());
-          // TODO
-          //final ObjectValue lastValue = new ObjectValue(lastRoot.getObject().getItem(key));
-          final ObjectValue lastValue = new ObjectValue(lastRoot.getObject());
-          // Detect changes in root item values
-          if (lastValue.getType() != ObjectValueType.Null) {
-            if (lastValue.getType().equals(ObjectValueType.Other)) {
-              revData.setLegalRootObject(false);
-            }
-            else {
-              if (!value.matches(lastValue)) {
-                changedRootItems.add(key);
+          if (lastRoot.getObject() instanceof COSDictionary){
+            final ObjectValue lastValue = new ObjectValue(((COSDictionary)lastRoot.getObject()).getItem(key));
+            // Detect changes in root item values
+            if (lastValue.getType() != ObjectValueType.Null) {
+              if (lastValue.getType().equals(ObjectValueType.Other)) {
+                revData.setLegalRootObject(false);
+              }
+              else {
+                if (!value.matches(lastValue)) {
+                  changedRootItems.add(key);
+                }
               }
             }
+            else {
+              addedRootItems.add(key);
+            }
+            // Look for safe objects
+            addSafeObjects(key, cosNameCOSBaseEntry.getValue(), safeObjects, revData.getCosDocument());
+          } else {
+            revData.setLegalRootObject(false);
           }
-          else {
-            addedRootItems.add(key);
-          }
-          // Look for safe objects
-          addSafeObjects(key, cosNameCOSBaseEntry.getValue(), safeObjects, revData.getCosDocument());
-
         });
       }
       else {

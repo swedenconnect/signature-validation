@@ -59,7 +59,8 @@ class DefaultPDFSignatureContextTest {
   @Test
   void testSignatureContext() throws Exception {
     DefaultPDFSignatureContext pdfSignatureContext = new DefaultPDFSignatureContext(hideTextPdfBytes, new DefaultGeneralSafeObjects());
-    pdfSignatureContext.getPdfDocRevisions();
+    List<PDFDocRevision> docRevisions = pdfSignatureContext.getPdfDocRevisions();
+    int sdf = 0;
   }
 
   @Test
