@@ -75,17 +75,10 @@ class DefaultPDFSignatureContextTest {
         pdDocumentList.add(revDoc);
         final COSDocument cosDocument = revDoc.getDocument();
         rev.setCosDocument(cosDocument);
-        //TODO
-        //final List<COSObject> objects = cosDocument.getObjects();
-        Map<COSObjectKey, Long> xrefTable1 = cosDocument.getXrefTable();
-        final List<COSObject> objects = getCosObjects(cosDocument);
-
 
         final COSDictionary trailer = cosDocument.getTrailer();
         final long rootObjectId = getRootObjectId(trailer);
-        final COSObject rootObject = objects.stream()
-          .filter(cosObject -> cosObject.getObjectNumber() == rootObjectId)
-          .findFirst().get();
+        final COSObject rootObject = trailer.getCOSObject(COSName.ROOT);
         final Map<COSObjectKey, Long> xrefTable = cosDocument.getXrefTable();
 
         rev.setXrefTable(xrefTable);
@@ -100,12 +93,6 @@ class DefaultPDFSignatureContextTest {
       }
     }
     int sdf = 0;
-  }
-
-  private List<COSObject> getCosObjects(COSDocument cosDocument) {
-    return cosDocument.getXrefTable().keySet().stream()
-      .map(cosObjectKey -> cosDocument.getObjectFromPool(cosObjectKey))
-      .toList();
   }
 
   /**

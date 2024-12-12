@@ -208,14 +208,9 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
         pdDocumentList.add(revDoc);
         final COSDocument cosDocument = revDoc.getDocument();
         rev.setCosDocument(cosDocument);
-        //TODO
-        //final List<COSObject> objects = cosDocument.getObjects();
-        final List<COSObject> objects = null;
         final COSDictionary trailer = cosDocument.getTrailer();
         final long rootObjectId = getRootObjectId(trailer);
-        final COSObject rootObject = objects.stream()
-          .filter(cosObject -> cosObject.getObjectNumber() == rootObjectId)
-          .findFirst().get();
+        final COSObject rootObject = trailer.getCOSObject(COSName.ROOT);
         final Map<COSObjectKey, Long> xrefTable = cosDocument.getXrefTable();
 
         rev.setXrefTable(xrefTable);
