@@ -39,6 +39,7 @@ class DefaultPDFSignatureContextTest {
 
 
   static byte[] pdfBytes;
+  static byte[] hideTextPdfBytes;
    List<PDSignature> signatures = new ArrayList<>();
   List<PDFDocRevision> pdfDocRevisions;
 
@@ -50,6 +51,15 @@ class DefaultPDFSignatureContextTest {
     try(InputStream resourceAsStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("test-doc.pdf")){
       pdfBytes = IOUtils.toByteArray(resourceAsStream);
     }
+    try(InputStream resourceAsStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("hideQF1.pdf")){
+      hideTextPdfBytes = IOUtils.toByteArray(resourceAsStream);
+    }
+  }
+
+  @Test
+  void testSignatureContext() throws Exception {
+    DefaultPDFSignatureContext pdfSignatureContext = new DefaultPDFSignatureContext(hideTextPdfBytes, new DefaultGeneralSafeObjects());
+    pdfSignatureContext.getPdfDocRevisions();
   }
 
   @Test
