@@ -17,6 +17,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.IOUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
@@ -207,7 +208,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
   @Override public boolean isSigned(byte[] document) throws IllegalArgumentException {
     PDDocument pdfDocument = null;
     try {
-      pdfDocument = PDDocument.load(document);
+      pdfDocument = Loader.loadPDF(document);
       return !pdfDocument.getSignatureDictionaries().isEmpty();
     }
     catch (IOException e) {

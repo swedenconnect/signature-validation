@@ -24,9 +24,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBElement;
-import javax.xml.bind.JAXBException;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBElement;
+import jakarta.xml.bind.JAXBException;
 import javax.xml.datatype.XMLGregorianCalendar;
 import javax.xml.namespace.QName;
 
@@ -36,7 +36,7 @@ import org.w3c.dom.NodeList;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import se.idsec.signservice.xml.JAXBContextUtils;
+import se.swedenconnect.xml.jaxb.JAXBContextUtils;
 import se.swedenconnect.schemas.etsi.xades_1_3_2.DigestAlgAndValueType;
 import se.swedenconnect.schemas.etsi.xades_1_3_2.EncapsulatedPKIDataType;
 import se.swedenconnect.schemas.etsi.xades_1_3_2.QualifyingProperties;

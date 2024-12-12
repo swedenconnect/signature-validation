@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
@@ -186,7 +187,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
   private void extractPdfRevisionData() throws IOException {
 
     // Get all pdf document signatures and document timestamps
-    final PDDocument pdfDoc = PDDocument.load(this.pdfBytes);
+    final PDDocument pdfDoc = Loader.loadPDF(this.pdfBytes);
     this.signatures = pdfDoc.getSignatureDictionaries();
     pdfDoc.close();
     this.PDFDocRevisions = new ArrayList<>();
@@ -203,11 +204,13 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     for (final PDFDocRevision rev : this.PDFDocRevisions) {
       final byte[] revBytes = Arrays.copyOf(this.pdfBytes, rev.getLength());
       try {
-        final PDDocument revDoc = PDDocument.load(revBytes);
+        final PDDocument revDoc = Loader.loadPDF(revBytes);
         pdDocumentList.add(revDoc);
         final COSDocument cosDocument = revDoc.getDocument();
         rev.setCosDocument(cosDocument);
-        final List<COSObject> objects = cosDocument.getObjects();
+        //TODO
+        //final List<COSObject> objects = cosDocument.getObjects();
+        final List<COSObject> objects = null;
         final COSDictionary trailer = cosDocument.getTrailer();
         final long rootObjectId = getRootObjectId(trailer);
         final COSObject rootObject = objects.stream()
@@ -360,7 +363,9 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
         rootDic.entrySet().stream().forEach(cosNameCOSBaseEntry -> {
           final COSName key = cosNameCOSBaseEntry.getKey();
           final ObjectValue value = new ObjectValue(cosNameCOSBaseEntry.getValue());
-          final ObjectValue lastValue = new ObjectValue(lastRoot.getItem(key));
+          // TODO
+          //final ObjectValue lastValue = new ObjectValue(lastRoot.getObject().getItem(key));
+          final ObjectValue lastValue = new ObjectValue(lastRoot.getObject());
           // Detect changes in root item values
           if (lastValue.getType() != ObjectValueType.Null) {
             if (lastValue.getType().equals(ObjectValueType.Other)) {

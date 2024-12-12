@@ -20,7 +20,7 @@ import com.nimbusds.jwt.SignedJWT;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.xmlbeans.XmlAnyURI;
 import org.apache.xmlbeans.XmlCursor;
 import org.apache.xmlbeans.XmlObject;

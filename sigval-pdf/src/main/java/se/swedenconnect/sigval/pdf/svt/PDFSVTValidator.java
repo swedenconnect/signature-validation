@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.asn1.cms.SignedData;
@@ -67,7 +68,7 @@ public class PDFSVTValidator extends SVTValidator<byte[]> {
   }
 
   @Override protected List<SignatureSVTData> getSignatureSVTData(byte[] pdfDocBytes) throws Exception {
-    PDDocument pdfDocument = PDDocument.load(pdfDocBytes);
+    PDDocument pdfDocument = Loader.loadPDF(pdfDocBytes);
     List<PDSignature> allSignatureList = pdfDocument.getSignatureDictionaries();
     pdfDocument.close();
     List<PDSignature> svtSigList = new ArrayList<>();

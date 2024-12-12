@@ -44,10 +44,12 @@ public class AcroForm {
     }
     if (value.getType().equals(ObjectValueType.COSObject)) {
       try {
-        COSObject refObject = cosDocument.getObjectFromPool(new COSObjectKey((COSObject) objectValue));
+        //TODO
+        COSObject refObject = cosDocument.getObjectFromPool(objectValue.getKey());
+        //COSObject refObject = cosDocument.getObjectFromPool(new COSObjectKey((COSObject) objectValue));
         dictionary = new Dictionary((COSDictionary) refObject.getObject());
       }
-      catch (IOException e) {
+      catch (Exception e) {
         e.printStackTrace();
       }
     }

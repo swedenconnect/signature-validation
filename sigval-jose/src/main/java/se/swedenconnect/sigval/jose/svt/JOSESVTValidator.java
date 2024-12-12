@@ -23,7 +23,7 @@ import com.nimbusds.jwt.SignedJWT;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import se.idsec.signservice.security.certificate.CertificateValidator;
 import se.swedenconnect.sigval.jose.data.JOSESignatureData;
 import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithm;
