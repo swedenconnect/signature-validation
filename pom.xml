@@ -101,14 +101,6 @@
         <version>${bouncy-castle.version}</version>
       </dependency>
 
-<!--
-      <dependency>
-        <groupId>org.apache.santuario</groupId>
-        <artifactId>xmlsec</artifactId>
-        <version>2.2.6</version>
-      </dependency>
--->
-
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-collections4</artifactId>
@@ -174,14 +166,6 @@
   <dependencies>
 
     <!-- We use JUnit 5 and Mockito for our tests -->
-<!--
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <scope>test</scope>
-    </dependency>
--->
-
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>

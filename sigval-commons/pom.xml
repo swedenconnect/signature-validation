@@ -72,28 +72,6 @@
     <dependency>
       <groupId>se.idsec.signservice.commons</groupId>
       <artifactId>signservice-commons</artifactId>
-<!--      <exclusions>
-        <exclusion>
-          <groupId>org.opensaml</groupId>
-          <artifactId>opensaml-security-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.opensaml</groupId>
-          <artifactId>opensaml-security-impl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.google.code.findbugs</groupId>
-          <artifactId>jsr305</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>commons-codec</groupId>
-          <artifactId>commons-codec</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.nimbusds</groupId>
-          <artifactId>nimbus-jose-jwt</artifactId>
-        </exclusion>
-      </exclusions>-->
     </dependency>
     
     <dependency>
