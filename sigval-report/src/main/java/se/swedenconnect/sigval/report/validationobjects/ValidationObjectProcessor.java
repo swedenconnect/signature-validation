@@ -18,7 +18,7 @@ package se.swedenconnect.sigval.report.validationobjects;
 
 import lombok.extern.slf4j.Slf4j;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Hex;
 import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithm;

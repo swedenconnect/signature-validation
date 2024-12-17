@@ -87,4 +87,4 @@ format and data format is the same but in other signature formats such as JOSE, 
 
 ---
 
-Copyright &copy; [The Swedish Agency for Digital Government (DIGG)](https://www.digg.se), 2019-2022. All Rights Reserved.
+Copyright &copy; [The Swedish Agency for Digital Government (DIGG)](https://www.digg.se), 2019-2024. All Rights Reserved.

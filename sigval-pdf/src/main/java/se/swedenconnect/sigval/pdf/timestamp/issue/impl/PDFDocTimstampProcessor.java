@@ -20,6 +20,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
@@ -70,7 +71,7 @@ public class PDFDocTimstampProcessor {
     PDDocument pdfDocument = null;
 
     try {
-      pdfDocument = PDDocument.load(pdfDocumentBytes);
+      pdfDocument = Loader.loadPDF(pdfDocumentBytes);
       pdfSignatureProvider.setSvt(svt);
       // Create signature dictionary
       PDSignature signature = new PDSignature();
