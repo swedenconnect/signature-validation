@@ -58,7 +58,7 @@
     <dependency>
       <groupId>org.apache.xmlbeans</groupId>
       <artifactId>xmlbeans</artifactId>
-      <version>5.2.2</version>
+      <version>5.3.0</version>
     </dependency>
 
     <dependency>
@@ -88,17 +88,9 @@
     <plugins>
 
       <plugin>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok-maven-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
-
-      <plugin>
         <groupId>org.apache.xmlbeans</groupId>
         <artifactId>xmlbeans</artifactId>
-        <version>5.0.3</version>
+        <version>5.3.0</version>
         <executions>
           <execution>
             <goals>
@@ -113,7 +105,7 @@
           <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.17.2</version>
+            <version>2.24.3</version>
           </dependency>
         </dependencies>
       </plugin>
@@ -121,7 +113,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.0.0-M5</version>
+        <version>3.5.2</version>
         <configuration>
           <parallel>methods</parallel>
           <threadCount>10</threadCount>
@@ -134,7 +126,7 @@
         <configuration>
           <doctitle>Signature Validation Report Generation - ${project.version}</doctitle>
           <windowtitle>Signature Validation Report Generation - ${project.version}</windowtitle>
-          <source>11</source>
+          <source>17</source>
         </configuration>
       </plugin>
     </plugins>

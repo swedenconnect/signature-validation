@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  
+
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>sigval-pdf</artifactId>
@@ -59,26 +59,29 @@
         <artifactId>batik-transcoder</artifactId>
         <version>1.18</version>
       </dependency>
+
       <dependency>
         <groupId>org.apache.xmlgraphics</groupId>
         <artifactId>batik-codec</artifactId>
         <version>1.18</version>
       </dependency>
+
       <dependency>
         <groupId>org.apache.xmlgraphics</groupId>
         <artifactId>batik-bridge</artifactId>
         <version>1.18</version>
       </dependency>
+
     </dependencies>
   </dependencyManagement>
   <dependencies>
-  
+
     <dependency>
       <groupId>se.swedenconnect.sigval</groupId>
       <artifactId>sigval-commons</artifactId>
       <version>${project.version}</version>
     </dependency>
-    
+
     <dependency>
       <groupId>se.swedenconnect.sigval</groupId>
       <artifactId>sigvalreport</artifactId>
@@ -95,17 +98,17 @@
         </exclusion>
       </exclusions>
     </dependency>
-    
+
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
     </dependency>
-    
+
   </dependencies>
 
   <build>
     <plugins>
-    
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
@@ -118,7 +121,7 @@
           </links>
         </configuration>
       </plugin>
-      
+
     </plugins>
   </build>
 
