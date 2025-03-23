@@ -51,6 +51,9 @@ import se.swedenconnect.sigval.pdf.pdfstruct.PDFSignatureContext;
 /**
  * Examines a PDF document and gathers context data used to determine document revisions and if any of those revisions
  * may alter the document appearance with respect to document signatures.
+ * <p>
+ * This class collects data that is used to determine if there is a risk that the document visible content has changed
+ * since it was signed.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -70,15 +73,17 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
   private final GeneralSafeObjects safeObjectProvider;
 
   /**
-   * Constructor
+   * Constructs a DefaultPDFSignatureContext instance.
+   * This constructor initializes the context with the provided PDF document bytes
+   * and a safe object provider, and extracts revision data from the PDF document.
    *
    * @param pdfBytes
-   *          the bytes of a PDF document
+   *          the byte array representing the PDF document
    * @param safeObjectProvider
    *          provider of the logic to identify safe objects in the PDF documents that may be altered without changing
    *          the visual content of the document
    * @throws IOException
-   *           if theis docuemnt is not a well formed PDF document
+   *          if an error occurs while extracting PDF revision data
    */
   public DefaultPDFSignatureContext(final byte[] pdfBytes, final GeneralSafeObjects safeObjectProvider) throws IOException {
     this.pdfBytes = pdfBytes;
@@ -183,10 +188,13 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
   }
 
   /**
-   * Internal function used to extract data about all document revisions of the current PDF document
+   * Extracts PDF revision data by analyzing the signatures and revision segments of a PDF document.
+   * This method processes the PDF bytes to extract information such as signature dictionaries,
+   * cross-reference tables, root objects, and trailer objects for each revision.
+   * It consolidates, sorts, and validates the revisions, ensuring a structured representation
+   * of the document's historical states. Invalid revisions are skipped during the processing.
    *
-   * @throws IOException
-   *           on error loading PDF document data
+   * @throws IOException if an error occurs while handling the PDF document or its revisions
    */
   private void extractPdfRevisionData() throws IOException {
 
@@ -309,6 +317,17 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     return root.getKey().getNumber();
   }
 
+  /**
+   * Analyzes and identifies changes between the current document revision and the previous revision by inspecting
+   * cross-reference tables, root dictionary updates, and object validity. The method categorizes these changes
+   * as either safe or unsafe updates based on predefined validation rules.
+   *
+   * @param revData the current {@link PDFDocRevision} containing the details of the active document revision
+   *                including cross-reference tables and root dictionary.
+   * @param lastRevData the previous {@link PDFDocRevision} representing the last revision of the document. This
+   *                    parameter is used for comparison to identify changes. If null, all cross-references in
+   *                    the current revision are treated as new.
+   */
   private void getXrefUpdates(final PDFDocRevision revData, final PDFDocRevision lastRevData) {
     revData.setLegalRootObject(true);
     revData.setRootUpdate(false);

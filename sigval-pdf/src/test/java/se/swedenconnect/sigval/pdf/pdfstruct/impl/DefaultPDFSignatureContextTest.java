@@ -22,6 +22,7 @@ import org.apache.pdfbox.cos.*;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import se.swedenconnect.sigval.pdf.data.PDFConstants;
@@ -37,10 +38,10 @@ import java.util.*;
  */
 class DefaultPDFSignatureContextTest {
 
-
   static byte[] pdfBytes;
   static byte[] hideTextPdfBytes;
-   List<PDSignature> signatures = new ArrayList<>();
+  static byte[] addAnnotationPdfBytes;
+  List<PDSignature> signatures = new ArrayList<>();
   List<PDFDocRevision> pdfDocRevisions;
 
   @BeforeAll
@@ -48,18 +49,43 @@ class DefaultPDFSignatureContextTest {
     if (Security.getProvider("BC") == null) {
       Security.addProvider(new BouncyCastleProvider());
     }
-    try(InputStream resourceAsStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("test-doc.pdf")){
+    try (InputStream resourceAsStream = Thread.currentThread().getContextClassLoader()
+        .getResourceAsStream("test-doc.pdf")) {
       pdfBytes = IOUtils.toByteArray(resourceAsStream);
     }
-    try(InputStream resourceAsStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("hideQF1.pdf")){
+    try (InputStream resourceAsStream = Thread.currentThread().getContextClassLoader()
+        .getResourceAsStream("hideQF1.pdf")) {
       hideTextPdfBytes = IOUtils.toByteArray(resourceAsStream);
+    }
+    try (InputStream resourceAsStream = Thread.currentThread().getContextClassLoader()
+        .getResourceAsStream("add-annotation.pdf")) {
+      addAnnotationPdfBytes = IOUtils.toByteArray(resourceAsStream);
     }
   }
 
   @Test
-  void testSignatureContext() throws Exception {
-    DefaultPDFSignatureContext pdfSignatureContext = new DefaultPDFSignatureContext(hideTextPdfBytes, new DefaultGeneralSafeObjects());
-    pdfSignatureContext.getPdfDocRevisions();
+  void testSignatureContextOnVisibleAlterations() throws Exception {
+    DefaultPDFSignatureContext pdfSignatureContext =
+        new DefaultPDFSignatureContext(hideTextPdfBytes, new DefaultGeneralSafeObjects());
+    final List<PDFDocRevision> docRevisions = pdfSignatureContext.getPdfDocRevisions();
+    final PDDocument pdDocument = Loader.loadPDF(hideTextPdfBytes);
+    final List<PDSignature> signatureDictionaries = pdDocument.getSignatureDictionaries();
+    for (PDSignature signature : signatureDictionaries) {
+      final boolean signatureExtendedByNonSafeUpdates =
+          pdfSignatureContext.isSignatureExtendedByNonSafeUpdates(signature);
+      Assertions.assertTrue(signatureExtendedByNonSafeUpdates);
+    }
+  }
+
+  @Test
+  void testSignatureContextOnHiddenAnnotation() throws Exception {
+    DefaultPDFSignatureContext pdfSignatureContext =
+        new DefaultPDFSignatureContext(addAnnotationPdfBytes, new DefaultGeneralSafeObjects());
+    final PDDocument pdDocument = Loader.loadPDF(addAnnotationPdfBytes);
+    final List<PDSignature> signatures = pdDocument.getSignatureDictionaries();
+    final boolean signatureExtendedByNonSafeUpdates =
+        pdfSignatureContext.isSignatureExtendedByNonSafeUpdates(signatures.get(0));
+    Assertions.assertFalse(signatureExtendedByNonSafeUpdates);
   }
 
   @Test
@@ -109,8 +135,7 @@ class DefaultPDFSignatureContextTest {
    * Internal method for obtaining basic revision data for a document revision. Revision data is collected in reverse
    * order starting with the most recent revision. This is a natural con
    *
-   * @param priorRevision
-   *          Data obtained from the revision after this revision.
+   * @param priorRevision Data obtained from the revision after this revision.
    * @return
    */
   private PDFDocRevision getRevision(final PDFDocRevision priorRevision) {
@@ -129,10 +154,10 @@ class DefaultPDFSignatureContextTest {
     final byte secondNl = this.pdfBytes.length > revisionLen + 1 ? this.pdfBytes[revisionLen + 1] : 0x00;
 
     revisionLen = firstNl == 0x0a
-      ? revisionLen + 1
-      : firstNl == 0x0d && secondNl == 0x0a
-      ? revisionLen + 2
-      : revisionLen;
+        ? revisionLen + 1
+        : firstNl == 0x0d && secondNl == 0x0a
+            ? revisionLen + 2
+            : revisionLen;
 
     boolean revIsSignature = false;
     boolean revIsDocTs = false;
@@ -145,10 +170,10 @@ class DefaultPDFSignatureContextTest {
     }
 
     return PDFDocRevision.builder()
-      .length(revisionLen)
-      .signature(revIsSignature)
-      .documentTimestamp(revIsDocTs)
-      .build();
+        .length(revisionLen)
+        .signature(revIsSignature)
+        .documentTimestamp(revIsDocTs)
+        .build();
   }
 
   /**
