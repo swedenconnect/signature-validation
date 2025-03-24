@@ -25,12 +25,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSBase;
+import org.apache.pdfbox.cos.COSBoolean;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSNumber;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSObjectKey;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -48,10 +51,14 @@ import se.swedenconnect.sigval.pdf.pdfstruct.PDFSignatureContext;
 /**
  * Examines a PDF document and gathers context data used to determine document revisions and if any of those revisions
  * may alter the document appearance with respect to document signatures.
+ * <p>
+ * This class collects data that is used to determine if there is a risk that the document visible content has changed
+ * since it was signed.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
+@Slf4j
 public class DefaultPDFSignatureContext implements PDFSignatureContext {
 
   /** The characters indicating end of a PDF document revision */
@@ -66,15 +73,17 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
   private final GeneralSafeObjects safeObjectProvider;
 
   /**
-   * Constructor
+   * Constructs a DefaultPDFSignatureContext instance.
+   * This constructor initializes the context with the provided PDF document bytes
+   * and a safe object provider, and extracts revision data from the PDF document.
    *
    * @param pdfBytes
-   *          the bytes of a PDF document
+   *          the byte array representing the PDF document
    * @param safeObjectProvider
    *          provider of the logic to identify safe objects in the PDF documents that may be altered without changing
    *          the visual content of the document
    * @throws IOException
-   *           if theis docuemnt is not a well formed PDF document
+   *          if an error occurs while extracting PDF revision data
    */
   public DefaultPDFSignatureContext(final byte[] pdfBytes, final GeneralSafeObjects safeObjectProvider) throws IOException {
     this.pdfBytes = pdfBytes;
@@ -179,10 +188,13 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
   }
 
   /**
-   * Internal function used to extract data about all document revisions of the current PDF document
+   * Extracts PDF revision data by analyzing the signatures and revision segments of a PDF document.
+   * This method processes the PDF bytes to extract information such as signature dictionaries,
+   * cross-reference tables, root objects, and trailer objects for each revision.
+   * It consolidates, sorts, and validates the revisions, ensuring a structured representation
+   * of the document's historical states. Invalid revisions are skipped during the processing.
    *
-   * @throws IOException
-   *           on error loading PDF document data
+   * @throws IOException if an error occurs while handling the PDF document or its revisions
    */
   private void extractPdfRevisionData() throws IOException {
 
@@ -294,17 +306,28 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
   }
 
   /**
-   * Obtain the
+   * Retrieves the object ID of the root object from the given PDF trailer dictionary.
    *
-   * @param trailer
-   * @return
-   * @throws Exception
+   * @param trailer The trailer dictionary of a PDF file, containing information about the structure of the document.
+   * @return The object ID of the root object if it exists, otherwise 0.
+   * @throws Exception If the root object cannot be retrieved or an error occurs during processing.
    */
   private static long getRootObjectId(final COSDictionary trailer) throws Exception {
     final COSObject root = trailer.getCOSObject(COSName.ROOT);
-    return root.getObjectNumber();
+    return root.getKey().getNumber();
   }
 
+  /**
+   * Analyzes and identifies changes between the current document revision and the previous revision by inspecting
+   * cross-reference tables, root dictionary updates, and object validity. The method categorizes these changes
+   * as either safe or unsafe updates based on predefined validation rules.
+   *
+   * @param revData the current {@link PDFDocRevision} containing the details of the active document revision
+   *                including cross-reference tables and root dictionary.
+   * @param lastRevData the previous {@link PDFDocRevision} representing the last revision of the document. This
+   *                    parameter is used for comparison to identify changes. If null, all cross-references in
+   *                    the current revision are treated as new.
+   */
   private void getXrefUpdates(final PDFDocRevision revData, final PDFDocRevision lastRevData) {
     revData.setLegalRootObject(true);
     revData.setRootUpdate(false);
@@ -330,7 +353,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     revData.setChangedXref(changedXref);
     revData.setAddedXref(addedXref);
 
-    changedXref.keySet().stream().forEach(cosObjectKey -> {
+    changedXref.keySet().forEach(cosObjectKey -> {
       if (cosObjectKey.getNumber() == revData.getRootObjectId()) {
         revData.setRootUpdate(true);
       }
@@ -339,23 +362,48 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
       }
     });
 
-    // Check which root dictionaly items that are actually changed and which items in the root that has been added
-    // This change check is limited to known COSNames. If any other COSName appear in the root, it is treated as an
-    // illegal root dictionary.
-    // Illegal doesn't necessary mean that is is illegal, but it is not trusted to provide non visual changes.
-    final List<COSName> changedRootItems = new ArrayList<>();
-    final List<COSName> addedRootItems = new ArrayList<>();
-    // We will also detect objects referenced from safe COSName in the root. We will allow updates to these objects.
-    // These are /AcroForm /OpenAction and /Font. We will allow updates to referenced objects if the update is signature
+    // We will also detect objects referenced from safe COSName. We will allow updates to these objects.
+    // These are /AcroForm /OpenAction and /Font and non root objects that are considered valid below.
+    // We will allow updates to referenced objects if the update is signature
     // or timestamp.
     final List<Long> safeObjects = new ArrayList<>();
+
+
+    for (COSObjectKey objectKey : changedXref.keySet()) {
+      // Validation specific to non-root updates
+      if (objectKey.getNumber() != revData.getRootObjectId()) { // Non-root object
+        COSObject oldObject = lastRevData.getCosDocument().getObjectFromPool(objectKey);
+        COSObject newObject = revData.getCosDocument().getObjectFromPool(objectKey);
+        if (oldObject == null && newObject == null) {
+          // Safe object. Both are null
+          safeObjects.add(objectKey.getNumber());
+          continue;
+        }
+        if (oldObject == null || newObject == null) {
+          // Not considered safe non-root object
+          continue;
+        }
+        // Check if the only difference is a new annotation in /Annots
+        if (isOnlyNewAnnotations(oldObject, newObject)) {
+          // Safe object. Only safe annotation changes
+          safeObjects.add(objectKey.getNumber());
+        }
+      }
+
+    }
+
+    // Check which root dictionary items that are actually changed and which items in the root that has been added
+    // This change check is limited to known COSNames. If any other COSName appear in the root, it is treated as an
+    // illegal root dictionary.
+    // Illegal doesn't necessary mean that it's illegal, but it is not trusted to provide non-visual changes.
+    final List<COSName> changedRootItems = new ArrayList<>();
+    final List<COSName> addedRootItems = new ArrayList<>();
     if (revData.isRootUpdate()) {
       final COSBase baseObject = revData.getRootObject().getObject();
-      if (baseObject instanceof COSDictionary) {
+      if (baseObject instanceof final COSDictionary rootDic) {
         revData.setLegalRootObject(true);
         final COSObject lastRoot = lastRevData.getRootObject();
-        final COSDictionary rootDic = (COSDictionary) baseObject;
-        rootDic.entrySet().stream().forEach(cosNameCOSBaseEntry -> {
+        rootDic.entrySet().forEach(cosNameCOSBaseEntry -> {
           final COSName key = cosNameCOSBaseEntry.getKey();
           final ObjectValue value = new ObjectValue(cosNameCOSBaseEntry.getValue());
           if (lastRoot.getObject() instanceof COSDictionary){
@@ -392,18 +440,18 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     // Check changed root items for unsupported changes.
     // In this implementation only the Acroform are allowed to have changed content in the root dictionary
     final boolean unsupportedRootItemUpdate = revData.getChangedRootItems().stream()
-      .anyMatch(name -> !name.equals(COSName.ACRO_FORM));
+        .anyMatch(name -> !name.equals(COSName.ACRO_FORM));
 
     // Append the safeObjectList with other known safe objects
     this.safeObjectProvider.addGeneralSafeObjects(revData);
 
     // Check changed cross references against safe objects
     final boolean unsafeRefupdate = revData.getChangedXref().keySet().stream()
-      .map(COSObjectKey::getNumber)
-      .anyMatch(id -> id != revData.getRootObjectId() &&
-          !safeObjects.contains(id));
+        .map(COSObjectKey::getNumber)
+        .anyMatch(id -> id != revData.getRootObjectId() &&
+            !safeObjects.contains(id));
 
-    /**
+    /*
      * A new revision is considered safe with regard to not containing visual data changes when added after a signature
      * if:
      *
@@ -413,11 +461,11 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
      * interface implementation
      */
     revData.setSafeUpdate(
-      !unsupportedRootItemUpdate
-          && !unsafeRefupdate
-          && revData.isLegalRootObject());
+        !unsupportedRootItemUpdate
+            && !unsafeRefupdate
+            && revData.isLegalRootObject());
 
-    /**
+    /*
      * A revision is considered a valid DSS update if:
      *
      * - There is an update to the root object - There is no change to any other pre-existing xref other than to the
@@ -426,13 +474,119 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
      * DSS object or DSS + Extension object
      */
     revData.setValidDSS(
-      revData.isRootUpdate()
-          && revData.isSafeUpdate()
-          && revData.isLegalRootObject()
-          && revData.getChangedRootItems().size() == 0
-          && (revData.getAddedRootItems().size() == 1 && addedRootItemsContains(revData.getAddedRootItems(), "DSS")
-              || revData.getAddedRootItems().size() == 2 && addedRootItemsContains(revData.getAddedRootItems(), "DSS", "Extensions")));
+        revData.isRootUpdate()
+            && revData.isSafeUpdate()
+            && revData.isLegalRootObject()
+            && revData.getChangedRootItems().isEmpty()
+            && (revData.getAddedRootItems().size() == 1 && addedRootItemsContains(revData.getAddedRootItems(), "DSS")
+            || revData.getAddedRootItems().size() == 2 && addedRootItemsContains(revData.getAddedRootItems(), "DSS", "Extensions")));
 
+  }
+
+  /**
+   * Checks whether the difference between two COSObjects is only the addition of new invisible annotations.
+   *
+   * @param oldObject the original COSObject representing the old state
+   * @param newObject the updated COSObject representing the new state
+   * @return true if the updated COSObject only contains new invisible annotations, false otherwise
+   */
+  private boolean isOnlyNewAnnotations(COSObject oldObject, COSObject newObject) {
+    if (!(oldObject.getObject() instanceof final COSDictionary oldDict) || !(newObject.getObject() instanceof final COSDictionary newDict)) {
+      return false;
+    }
+
+    // Compare all entries except /Annots
+    for (COSName key : oldDict.keySet()) {
+      if (!key.equals(COSName.ANNOTS)) {
+        final COSBase oldDictItem = oldDict.getItem(key);
+        final COSBase newDictItem = newDict.getItem(key);
+        if (oldDictItem == null && newDictItem == null) {
+          // This is legal. Both items are null
+          continue;
+        }
+        if (newDictItem == null || oldDictItem == null) {
+          log.debug("Non root object is changed from content to null or from null to content");
+          return false;
+        }
+        if (!oldDictItem.toString().equals(newDictItem.toString())) {
+          log.debug("Non root object update non annotation content mismatch: {} New value: {}", oldDictItem,
+              newDictItem);
+          return false; // The references are not equal
+        }
+        log.trace("Non root object update non annotation content match: {}", newDictItem);
+      }
+    }
+
+    // Check that /Annots in the new object contains all items from the old object + only new ones
+    COSArray oldAnnots = oldDict.getCOSArray(COSName.ANNOTS);
+    COSArray newAnnots = newDict.getCOSArray(COSName.ANNOTS);
+
+    if (newAnnots == null || (oldAnnots != null && !containsAll(newAnnots, oldAnnots))) {
+      return false; // Annots has been modified in an invalid way
+    }
+
+    // Ensure new /Annots entries are valid (e.g., invisible signatures)
+    for (COSBase annot : newAnnots) {
+      if (oldAnnots == null || !arrayContains(oldAnnots, annot)) {
+        if (!isInvisibleAnnotation(annot)) {
+          return false; // New annotation is not invisible
+        }
+      }
+    }
+
+    return true;
+  }
+
+  // Helper function: Checks if an annotation is invisible
+  private boolean isInvisibleAnnotation(COSBase annot) {
+    if (annot instanceof COSObject) {
+      COSBase annotationObj = ((COSObject) annot).getObject();
+      if (annotationObj instanceof final COSDictionary annotDict) {
+
+        // Check /Rect for zero dimensions
+        COSArray rect = annotDict.getCOSArray(COSName.RECT);
+        if (rect != null && rect.size() == 4) {
+          float x1 = getFloatFromCOSArray(rect, 0);
+          float y1 = getFloatFromCOSArray(rect, 1);
+          float x2 = getFloatFromCOSArray(rect, 2);
+          float y2 = getFloatFromCOSArray(rect, 3);
+
+          return x2 - x1 == 0 && y2 - y1 == 0; // Invisible due to no dimensions
+        }
+      }
+    }
+    return false;
+  }
+
+  // Helper method: Safely extract a float from a COSArray at a given index
+  private float getFloatFromCOSArray(COSArray array, int index) {
+    if (index < array.size()) {
+      COSBase base = array.get(index);
+      if (base instanceof COSNumber) {
+        return ((COSNumber) base).floatValue();
+      }
+    }
+    return 0.0f; // Default to 0.0 if the value is missing or invalid
+  }
+
+  // Checks if 'superset' contains all elements in 'subset'
+  private boolean containsAll(COSArray superset, COSArray subset) {
+    for (COSBase item : subset) {
+      if (!arrayContains(superset, item)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Checks if a COSArray 'array' contains a specific COSBase 'element'
+  private boolean arrayContains(COSArray array, COSBase element) {
+    for (COSBase item : array) {
+      if (item.equals(element)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static boolean addedRootItemsContains(final List<COSName> addedRootItems, final String... matchNames) {
