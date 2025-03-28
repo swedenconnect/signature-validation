@@ -22,7 +22,7 @@ The signature validation modules builds upon the SignService Commons library ava
 
 ### Maven
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.sigval/cert-extensions/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.sigval/cert-extensions)
+[![Maven Central](https://img.shields.io/maven-central/v/se.swedenconnect.sigval/cert-extensions.svg)](https://central.sonatype.com/artifact/se.swedenconnect.sigval/cert-extensions)
 
 ```
 <dependency>
@@ -40,7 +40,7 @@ Java API documentation for [se.swedenconnect.sigval:cert-extensions](https://doc
 
 ### Maven
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.sigval/cert-validation/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.sigval/cert-validation)
+[![Maven Central](https://img.shields.io/maven-central/v/se.swedenconnect.sigval/cert-validation.svg)](https://central.sonatype.com/artifact/se.swedenconnect.sigval/cert-validation)
 
 ```
 <dependency>
@@ -103,7 +103,7 @@ The `crlCache` is a `CRLCache` object according the example above. The `certStor
 
 ### Maven
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.sigval/sigval-commons/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.sigval/sigval-commons)
+[![Maven Central](https://img.shields.io/maven-central/v/se.swedenconnect.sigval/sigval-commons.svg)](https://central.sonatype.com/artifact/se.swedenconnect.sigval/sigval-commons)
 
 ```
 <dependency>
@@ -121,7 +121,7 @@ Java API documentation for [se.swedenconnect.sigval:sigval-commons](https://docs
 
 ### Maven
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.sigval/sigval-pdf/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.sigval/sigval-pdf)
+[![Maven Central](https://img.shields.io/maven-central/v/se.swedenconnect.sigval/sigval-pdf.svg)](https://central.sonatype.com/artifact/se.swedenconnect.sigval/sigval-pdf)
 
 ```
 <dependency>
@@ -226,7 +226,7 @@ byte[] extendPDFwithSVT(
 
 ### Maven
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.sigval/sigval-xml/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.sigval/sigval-xml)
+[![Maven Central](https://img.shields.io/maven-central/v/se.swedenconnect.sigval/sigval-xml.svg)](https://central.sonatype.com/artifact/se.swedenconnect.sigval/sigval-xml)
 
 ```
 <dependency>
