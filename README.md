@@ -328,4 +328,4 @@ The `XMLDocumentSVTMethod` parameter instructs the SVT issuer what to do if a cu
 
 ---
 
-Copyright &copy; [The Swedish Agency for Digital Government (DIGG)](https://www.digg.se), 2019-2024. All Rights Reserved.
+Copyright &copy; [The Swedish Agency for Digital Government (DIGG)](https://www.digg.se), 2019-2025. All Rights Reserved.
