@@ -491,6 +491,12 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
    * @return true if the updated COSObject only contains new invisible annotations, false otherwise
    */
   private boolean isOnlyNewAnnotations(COSObject oldObject, COSObject newObject) {
+    // Check if the changed object is itself an annotation, if so, go directly to check if the annotatioin is safe
+    if (isAnnotationObject(oldObject) && isAnnotationObject(newObject)) {
+      // consider it safe if the *new* annotation is clearly non-visual
+       return isInvisibleAnnotation(newObject);
+    }
+
     if (!(oldObject.getObject() instanceof final COSDictionary oldDict) || !(newObject.getObject() instanceof final COSDictionary newDict)) {
       return false;
     }
@@ -508,7 +514,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
           log.debug("Non root object is changed from content to null or from null to content");
           return false;
         }
-        if (!oldDictItem.toString().equals(newDictItem.toString())) {
+        if (!new ObjectValue(oldDictItem).matches(new ObjectValue(newDictItem))) {
           log.debug("Non root object update non annotation content mismatch: {} New value: {}", oldDictItem,
               newDictItem);
           return false; // The references are not equal
@@ -517,18 +523,35 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
       }
     }
 
+    // Forbid adding any new non-/Annots keys
+    for (COSName key : newDict.keySet()) {
+      if (!key.equals(COSName.ANNOTS) && !oldDict.containsKey(key)) {
+        log.debug("Non root object added an unsafe non annotation item: {}", key);
+        return false;
+      }
+    }
+
     // Check that /Annots in the new object contains all items from the old object + only new ones
     COSArray oldAnnots = oldDict.getCOSArray(COSName.ANNOTS);
     COSArray newAnnots = newDict.getCOSArray(COSName.ANNOTS);
 
-    if (newAnnots == null || (oldAnnots != null && !containsAll(newAnnots, oldAnnots))) {
-      return false; // Annots has been modified in an invalid way
+    if (newAnnots == null) {
+      // if newAnnots is null, then this is an error because this function is only called if there is an xref change.
+      // Since there are no new annotations, the change must be something else.
+      log.debug("New annotation list is null, therefore the change is not an annotation change");
+      return false;
+    }
+    if (oldAnnots != null && !containsAll(newAnnots, oldAnnots)) {
+      // If there are old annotations but the new annotations don't contain all old annotations, something was removed.
+      log.debug("New annotation list does not contain all old annotations, an annotation was removed");
+      return false;
     }
 
     // Ensure new /Annots entries are valid (e.g., invisible signatures)
     for (COSBase annot : newAnnots) {
       if (oldAnnots == null || !arrayContains(oldAnnots, annot)) {
         if (!isInvisibleAnnotation(annot)) {
+          log.debug("New annotation is not invisible: {}", annot);
           return false; // New annotation is not invisible
         }
       }
@@ -537,25 +560,124 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     return true;
   }
 
-  // Helper function: Checks if an annotation is invisible
+  private boolean isAnnotationObject(COSBase b) {
+    if (b instanceof COSObject) b = ((COSObject) b).getObject();
+    return (b instanceof COSDictionary)
+        && COSName.ANNOT.equals(((COSDictionary) b).getCOSName(COSName.TYPE));
+  }
+
+  // Returns true iff the annotation is clearly non-visual for our purposes.
+  // Conservative policy: if anything is ambiguous → return false (potentially visible).
   private boolean isInvisibleAnnotation(COSBase annot) {
+    // --- 0) Resolve to annotation dictionary ---
+    COSDictionary a = null;
     if (annot instanceof COSObject) {
-      COSBase annotationObj = ((COSObject) annot).getObject();
-      if (annotationObj instanceof final COSDictionary annotDict) {
+      COSBase obj = ((COSObject) annot).getObject();
+      if (obj instanceof COSDictionary) a = (COSDictionary) obj;
+    } else if (annot instanceof COSDictionary) {
+      a = (COSDictionary) annot;
+    }
+    if (a == null) {
+      // Unknown / not a dict → don't claim "invisible"
+      return false;
+    }
 
-        // Check /Rect for zero dimensions
-        COSArray rect = annotDict.getCOSArray(COSName.RECT);
-        if (rect != null && rect.size() == 4) {
-          float x1 = getFloatFromCOSArray(rect, 0);
-          float y1 = getFloatFromCOSArray(rect, 1);
-          float x2 = getFloatFromCOSArray(rect, 2);
-          float y2 = getFloatFromCOSArray(rect, 3);
+    // --- 1) Read /F flags (visibility/print behavior) ---
+    int flags = 0;
+    COSBase f = a.getDictionaryObject(COSName.F);
+    if (f instanceof COSNumber) flags = ((COSNumber) f).intValue();
 
-          return x2 - x1 == 0 && y2 - y1 == 0; // Invisible due to no dimensions
-        }
+    final boolean INVISIBLE = (flags & 1)  != 0; // viewer should not display
+    final boolean HIDDEN    = (flags & 2)  != 0; // do not display/print
+    final boolean PRINT     = (flags & 4)  != 0; // print with page
+    final boolean NO_VIEW   = (flags & 32) != 0; // do not display on screen
+
+    // If the viewer is instructed not to show it on screen, treat as non-visual for screen mode.
+    if (INVISIBLE || HIDDEN || NO_VIEW) {
+      return true;
+    }
+
+    // --- 2) Subtype (used for a few safe special cases) ---
+    String subtype = "";
+    COSName subName = a.getCOSName(COSName.SUBTYPE);
+    if (subName != null) subtype = subName.getName();
+
+    // /Popup never renders by itself (only the parent markup summons it)
+    if ("Popup".equals(subtype)) {
+      return true;
+    }
+
+    // --- 3) /Rect (require presence before considering "zero-area") ---
+    // Using a small epsilon for robustness to float encoding noise.
+    final float EPS = 0.001f;
+
+    COSArray rect = a.getCOSArray(COSName.RECT);
+    boolean hasRect = rect != null && rect.size() == 4;
+
+    float x1 = hasRect ? getFloatFromCOSArray(rect, 0) : 0f;
+    float y1 = hasRect ? getFloatFromCOSArray(rect, 1) : 0f;
+    float x2 = hasRect ? getFloatFromCOSArray(rect, 2) : 0f;
+    float y2 = hasRect ? getFloatFromCOSArray(rect, 3) : 0f;
+
+    // Defensive: treat NaN/Inf as visibly non-zero
+    if (!hasRect || !isFinite(x1) || !isFinite(y1) || !isFinite(x2) || !isFinite(y2)) {
+      return false;
+    }
+
+    boolean zeroArea = Math.abs(x2 - x1) <= EPS && Math.abs(y2 - y1) <= EPS;
+
+    // --- 4) Appearance stream present? (/AP /N) ---
+    // If a normal appearance exists, we assume it's potentially visible (we don't parse it here).
+    boolean hasAppearance = false;
+    COSBase ap = a.getDictionaryObject(COSName.AP);
+    if (ap instanceof COSDictionary) {
+      hasAppearance = ((COSDictionary) ap).getDictionaryObject(COSName.N) != null;
+    }
+
+    // --- 5) Effective border width: from /Border or /BS /W (default 1) ---
+    float borderWidth = 1f;
+
+    COSArray border = a.getCOSArray(COSName.BORDER); // [hRadius vRadius width]
+    if (border != null && border.size() >= 3 && border.get(2) instanceof COSNumber) {
+      borderWidth = ((COSNumber) border.get(2)).floatValue();
+    } else {
+      COSBase bs = a.getDictionaryObject(COSName.BS);
+      if (bs instanceof COSDictionary) {
+        COSBase w = ((COSDictionary) bs).getDictionaryObject(COSName.W);
+        if (w instanceof COSNumber) borderWidth = ((COSNumber) w).floatValue();
       }
     }
+    if (!isFinite(borderWidth)) borderWidth = 1f;
+
+    // --- 6) Clearly non-visual cases (short-circuit to true) ---
+
+    // 6a) Invisible link: no appearance, effectively zero border, and zero-area rect
+    if ("Link".equals(subtype) && !hasAppearance && borderWidth <= EPS && zeroArea) {
+      return true;
+    }
+
+    // 6b) Signature widget (common for doc timestamps):
+    // /Subtype /Widget, /FT /Sig
+    if ("Widget".equals(subtype)) {
+      COSBase ft = a.getDictionaryObject(COSName.FT);
+      if (ft instanceof COSName && COSName.SIG.equals(ft)) {
+        return true;
+      }
+    }
+
+    // 6c) Print-equivalence shortcut:
+    // If not set to print, has no appearance, and occupies zero area → won't alter printed pages.
+    if (!PRINT && !hasAppearance && zeroArea) {
+      return true;
+    }
+
+    // --- 7) Otherwise: treat as potentially visible ---
     return false;
+  }
+
+  // Small helper to guard float values
+  private static boolean isFinite(float v) {
+    return !Float.isNaN(v) && !Float.isInfinite(v);
   }
 
   // Helper method: Safely extract a float from a COSArray at a given index
@@ -571,6 +693,8 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
 
   // Checks if 'superset' contains all elements in 'subset'
   private boolean containsAll(COSArray superset, COSArray subset) {
+    if (subset == null) return true;
+    if (superset == null) return false;
     for (COSBase item : subset) {
       if (!arrayContains(superset, item)) {
         return false;
@@ -579,14 +703,90 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     return true;
   }
 
-  // Checks if a COSArray 'array' contains a specific COSBase 'element'
+  // True if array contains an entry that refers to the same indirect object as `element`,
+  // or (for non-indirects) an equal value.
   private boolean arrayContains(COSArray array, COSBase element) {
-    for (COSBase item : array) {
-      if (item.equals(element)) {
-        return true;
+    if (array == null) return false;
+
+    COSObjectKey targetKey = getRefKey(element);
+    if (targetKey != null) {
+      for (COSBase item : array) {
+        COSObjectKey k = getRefKey(item);
+        if (targetKey.equals(k)) return true;
       }
+      return false;
+    }
+
+    // Non-indirect: fall back to value equality (lightweight)
+    COSBase elem = deref(element);
+    for (COSBase item : array) {
+      if (cosValueEquals(deref(item), elem)) return true;
     }
     return false;
+  }
+
+  private COSBase deref(COSBase b) {
+    return (b instanceof COSObject) ? ((COSObject) b).getObject() : b;
+  }
+
+  private COSObjectKey getRefKey(COSBase b) {
+    if (b instanceof COSObject) {
+      COSObject o = (COSObject) b;
+      COSObjectKey k = o.getKey();
+      return (k != null) ? k : new COSObjectKey(o.getObjectNumber(), o.getGenerationNumber());
+    }
+    return null;
+  }
+
+  private static final float NUM_EPS = 1e-4f;
+
+  private boolean numbersEqual(COSNumber a, COSNumber b) {
+    if (a == b) return true;
+    if (a == null || b == null) return false;
+
+    boolean aIsInt = a instanceof org.apache.pdfbox.cos.COSInteger;
+    boolean bIsInt = b instanceof org.apache.pdfbox.cos.COSInteger;
+
+    if (aIsInt && bIsInt) {
+      return a.longValue() == b.longValue();
+    }
+
+    float fa = a.floatValue();
+    float fb = b.floatValue();
+    if (Float.isNaN(fa) || Float.isNaN(fb) || Float.isInfinite(fa) || Float.isInfinite(fb)) return false;
+    return Math.abs(fa - fb) <= NUM_EPS;
+  }
+
+  private boolean cosValueEquals(COSBase a, COSBase b) {
+    if (a == b) return true;
+    if (a == null || b == null) return false;
+
+    // Names
+    if (a instanceof COSName && b instanceof COSName) return a.equals(b);
+
+    // Numbers (int/float tolerant)
+    if (a instanceof COSNumber && b instanceof COSNumber) {
+      return numbersEqual((COSNumber) a, (COSNumber) b);
+    }
+
+    // Strings (byte-wise)
+    if (a instanceof org.apache.pdfbox.cos.COSString && b instanceof org.apache.pdfbox.cos.COSString) {
+      return java.util.Arrays.equals(
+          ((org.apache.pdfbox.cos.COSString) a).getBytes(),
+          ((org.apache.pdfbox.cos.COSString) b).getBytes()
+      );
+    }
+
+    // Booleans / Null
+    if (a instanceof COSBoolean && b instanceof COSBoolean) {
+      return ((COSBoolean) a).getValue() == ((COSBoolean) b).getValue();
+    }
+    if (a instanceof org.apache.pdfbox.cos.COSNull && b instanceof org.apache.pdfbox.cos.COSNull) {
+      return true;
+    }
+
+    // Arrays / Dicts are handled by your containsAll(...) recursion; keep this shallow here.
+    return a.equals(b);
   }
 
   private static boolean addedRootItemsContains(final List<COSName> addedRootItems, final String... matchNames) {

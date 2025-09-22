@@ -51,6 +51,16 @@
     </developer>
   </developers>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>se.swedenconnect.schemas</groupId>
+        <artifactId>etsi-xades-jaxb</artifactId>
+        <version>3.0.3</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
 
     <dependency>
@@ -73,6 +83,13 @@
     <dependency>
       <groupId>se.swedenconnect.schemas</groupId>
       <artifactId>swedenconnect-jaxb</artifactId>
+      <version>3.0.3</version>
+    </dependency>
+
+    <dependency>
+      <groupId>se.swedenconnect.schemas</groupId>
+      <artifactId>etsi-xades-ext-jaxb</artifactId>
+      <version>3.0.3</version>
     </dependency>
 
     <dependency>
