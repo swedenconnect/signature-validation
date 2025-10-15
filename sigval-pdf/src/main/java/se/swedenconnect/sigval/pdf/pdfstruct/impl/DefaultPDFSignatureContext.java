@@ -244,7 +244,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
 
     PDFDocRevision lastRevData = null;
     for (final PDFDocRevision revData : this.PDFDocRevisions) {
-      this.getXrefUpdates(revData, lastRevData);
+      this.getXrefUpdates(revData, lastRevData, revData.isSignature() || revData.isDocumentTimestamp());
       lastRevData = revData;
     }
 
@@ -328,7 +328,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
    *                    parameter is used for comparison to identify changes. If null, all cross-references in
    *                    the current revision are treated as new.
    */
-  private void getXrefUpdates(final PDFDocRevision revData, final PDFDocRevision lastRevData) {
+  private void getXrefUpdates(final PDFDocRevision revData, final PDFDocRevision lastRevData, boolean signature) {
     revData.setLegalRootObject(true);
     revData.setRootUpdate(false);
     revData.setNonRootUpdate(false);
@@ -384,7 +384,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
           continue;
         }
         // Check if the only difference is a new annotation in /Annots
-        if (isOnlyNewAnnotations(oldObject, newObject)) {
+        if (isOnlyNewAnnotations(oldObject, newObject, signature)) {
           // Safe object. Only safe annotation changes
           safeObjects.add(objectKey.getNumber());
         }
@@ -490,11 +490,11 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
    * @param newObject the updated COSObject representing the new state
    * @return true if the updated COSObject only contains new invisible annotations, false otherwise
    */
-  private boolean isOnlyNewAnnotations(COSObject oldObject, COSObject newObject) {
+  private boolean isOnlyNewAnnotations(COSObject oldObject, COSObject newObject, boolean signature) {
     // Check if the changed object is itself an annotation, if so, go directly to check if the annotatioin is safe
     if (isAnnotationObject(oldObject) && isAnnotationObject(newObject)) {
       // consider it safe if the *new* annotation is clearly non-visual
-       return isInvisibleAnnotation(newObject);
+       return isInvisibleAnnotation(newObject, signature);
     }
 
     if (!(oldObject.getObject() instanceof final COSDictionary oldDict) || !(newObject.getObject() instanceof final COSDictionary newDict)) {
@@ -515,6 +515,12 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
           return false;
         }
         if (!new ObjectValue(oldDictItem).matches(new ObjectValue(newDictItem))) {
+          if (key.equals(COSName.FIELDS)) {
+            if (fieldsOnlyContainsNewSafeAnnotations(oldDictItem, newDictItem, signature)) {
+              log.trace("Fields dictionary contains only new safe annotations");
+              continue;
+            }
+          }
           log.debug("Non root object update non annotation content mismatch: {} New value: {}", oldDictItem,
               newDictItem);
           return false; // The references are not equal
@@ -550,7 +556,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     // Ensure new /Annots entries are valid (e.g., invisible signatures)
     for (COSBase annot : newAnnots) {
       if (oldAnnots == null || !arrayContains(oldAnnots, annot)) {
-        if (!isInvisibleAnnotation(annot)) {
+        if (!isInvisibleAnnotation(annot, signature)) {
           log.debug("New annotation is not invisible: {}", annot);
           return false; // New annotation is not invisible
         }
@@ -558,6 +564,16 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     }
 
     return true;
+  }
+
+  private boolean fieldsOnlyContainsNewSafeAnnotations(final COSBase oldDictItem, final COSBase newDictItem, boolean signature) {
+
+    COSBase newCosObject = new COSObject(newDictItem).getObject();
+    COSBase oldCosObject = new COSObject(oldDictItem).getCOSObject();
+
+    // TODO Currently all changes are allowed for signature. None for non signatures. Add logic if deemed necessary.
+    return signature;
+
   }
 
   private boolean isAnnotationObject(COSBase b) {
@@ -568,7 +584,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
 
   // Returns true iff the annotation is clearly non-visual for our purposes.
   // Conservative policy: if anything is ambiguous → return false (potentially visible).
-  private boolean isInvisibleAnnotation(COSBase annot) {
+  private boolean isInvisibleAnnotation(COSBase annot, boolean signature) {
     // --- 0) Resolve to annotation dictionary ---
     COSDictionary a = null;
     if (annot instanceof COSObject) {
@@ -659,8 +675,8 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     // 6b) Signature widget (common for doc timestamps):
     // /Subtype /Widget, /FT /Sig
     if ("Widget".equals(subtype)) {
-      COSBase ft = a.getDictionaryObject(COSName.FT);
-      if (ft instanceof COSName && COSName.SIG.equals(ft)) {
+      //COSBase ft = a.getDictionaryObject(COSName.FT);
+      if (signature) {
         return true;
       }
     }
