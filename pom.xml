@@ -6,7 +6,7 @@
   <groupId>se.swedenconnect.sigval</groupId>
   <artifactId>sigval-parent</artifactId>
   <packaging>pom</packaging>
-  <version>1.3.5</version>
+  <version>2.0.0</version>
 
   <name>Sweden Connect :: Parent POM for Signature Validation</name>
   <description>Parent POM for SignService Validation libraries</description>
@@ -59,6 +59,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <bouncy-castle.version>1.83</bouncy-castle.version>
     <java.version>17</java.version>
+    <slf4j.version>2.0.17</slf4j.version>
+    <jackson2.version>2.21</jackson2.version>
+    <jackson3.version>3.1.0</jackson3.version>
   </properties>
 
   <modules>
@@ -99,17 +102,65 @@
       </dependency>
 
       <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-collections4</artifactId>
-        <version>4.5.0</version>
+        <groupId>com.nimbusds</groupId>
+        <artifactId>nimbus-jose-jwt</artifactId>
+        <version>10.8</version>
+      </dependency>
+
+      <!-- XML Security -->
+      <dependency>
+        <groupId>org.apache.santuario</groupId>
+        <artifactId>xmlsec</artifactId>
+        <version>4.0.4</version>
       </dependency>
 
       <dependency>
-        <groupId>se.idsec.signservice.commons</groupId>
-        <artifactId>signservice-bom</artifactId>
-        <version>2.3.1</version>
-        <type>pom</type>
-        <scope>import</scope>
+        <groupId>tools.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${jackson3.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>tools.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson3.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>tools.jackson.module</groupId>
+        <artifactId>jackson-module-jakarta-xmlbind-annotations</artifactId>
+        <version>${jackson3.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-simple</artifactId>
+        <version>${slf4j.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>2.21.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-collections4</artifactId>
+        <version>4.5.0</version>
       </dependency>
 
       <dependency>
@@ -145,7 +196,7 @@
       <dependency>
         <groupId>se.swedenconnect.sigval</groupId>
         <artifactId>svt-core</artifactId>
-        <version>1.2.3</version>
+        <version>2.0.0</version>
         <type>jar</type>
         <scope>compile</scope>
       </dependency>
@@ -153,7 +204,7 @@
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
-        <version>1.18.42</version>
+        <version>1.18.44</version>
       </dependency>
 
       <dependency>
@@ -195,7 +246,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.14.1</version>
+          <version>3.15.0</version>
           <configuration>
             <release>${java.version}</release>
           </configuration>
@@ -204,7 +255,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.4.2</version>
+          <version>3.5.0</version>
         </plugin>
 
         <plugin>
@@ -241,13 +292,13 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-source-plugin</artifactId>
-          <version>3.3.1</version>
+          <version>3.4.0</version>
         </plugin>
 
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-antrun-plugin</artifactId>
-          <version>3.1.0</version>
+          <version>3.2.0</version>
         </plugin>
 
         <plugin>
@@ -335,7 +386,7 @@
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
-        <version>0.8.13</version>
+        <version>0.8.14</version>
         <executions>
           <execution>
             <goals>
@@ -401,7 +452,7 @@
           <plugin>
             <groupId>org.sonatype.central</groupId>
             <artifactId>central-publishing-maven-plugin</artifactId>
-            <version>0.9.0</version>
+            <version>0.10.0</version>
             <extensions>true</extensions>
             <configuration>
               <publishingServerId>central</publishingServerId>
@@ -412,7 +463,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
-            <version>3.2.7</version>
+            <version>3.2.8</version>
             <executions>
               <execution>
                 <id>sign-artifacts</id>
@@ -427,7 +478,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
-            <version>3.3.1</version>
+            <version>3.4.0</version>
             <executions>
               <execution>
                 <id>attach-sources</id>

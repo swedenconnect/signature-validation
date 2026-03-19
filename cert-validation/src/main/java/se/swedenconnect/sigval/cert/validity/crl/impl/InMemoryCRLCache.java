@@ -44,15 +44,12 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 
-import org.apache.commons.io.FileUtils;
 import org.bouncycastle.asn1.DERIA5String;
 import org.bouncycastle.asn1.x509.CRLDistPoint;
 import org.bouncycastle.asn1.x509.DistributionPoint;
 import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.GeneralNames;
 import org.bouncycastle.asn1.x509.ReasonFlags;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;

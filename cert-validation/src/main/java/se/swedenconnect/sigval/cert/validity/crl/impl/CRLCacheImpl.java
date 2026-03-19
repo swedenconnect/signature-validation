@@ -48,8 +48,6 @@ import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.GeneralNames;
 import org.bouncycastle.asn1.x509.ReasonFlags;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import se.swedenconnect.sigval.cert.validity.crl.CRLCache;
@@ -57,6 +55,7 @@ import se.swedenconnect.sigval.cert.validity.crl.CRLCacheData;
 import se.swedenconnect.sigval.cert.validity.crl.CRLCacheRecord;
 import se.swedenconnect.sigval.cert.validity.crl.CRLInfo;
 import se.swedenconnect.sigval.cert.validity.http.DefaultRevocationDataConnector;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * CRL cache implementation. Two main functions allows retrieval of a CRL from this cache which adds the CRL to the
@@ -70,7 +69,7 @@ import se.swedenconnect.sigval.cert.validity.http.DefaultRevocationDataConnector
 public class CRLCacheImpl implements CRLCache {
 
   /** Object mapper for JSON serialization */
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final JsonMapper jsonMapper = new JsonMapper();
 
   /** Default name of the cache file */
   private static final String CACHE_DATA_FILE = "crlCache.json";

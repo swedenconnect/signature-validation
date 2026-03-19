@@ -18,14 +18,14 @@ package se.swedenconnect.sigval.commons.svt;
 
 import java.text.ParseException;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
 import lombok.extern.slf4j.Slf4j;
 import se.swedenconnect.sigval.svt.claims.SVTClaims;
 import se.swedenconnect.sigval.svt.claims.ValidationConclusion;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Utility functions for SVT processing in signature validation context
@@ -36,15 +36,15 @@ import se.swedenconnect.sigval.svt.claims.ValidationConclusion;
 @Slf4j
 public class SVTUtils {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final JsonMapper JSON_MAPPER = new JsonMapper();
 
-  public static boolean checkValidatedSignatures(SignedJWT signedSvtJWT) throws ParseException, JsonProcessingException {
+  public static boolean checkValidatedSignatures(SignedJWT signedSvtJWT) throws ParseException, JacksonException {
     if (signedSvtJWT == null) {
       return false;
     }
     JWTClaimsSet claimsSet = signedSvtJWT.getJWTClaimsSet();
-    SVTClaims svtClaims = OBJECT_MAPPER.readValue(
-      OBJECT_MAPPER.writeValueAsString(claimsSet.getClaim("sig_val_claims")),
+    SVTClaims svtClaims = JSON_MAPPER.readValue(
+      JSON_MAPPER.writeValueAsString(claimsSet.getClaim("sig_val_claims")),
       SVTClaims.class);
     boolean allValidSignatures = svtClaims.getSig().stream()
       .allMatch(signatureClaims -> signatureClaims.getSig_val()
@@ -56,7 +56,7 @@ public class SVTUtils {
 
 
   public static boolean checkIfSVTShouldBeIssued(SignedJWT signedSvtJWT, boolean issueSvtOnFailedValidation)
-    throws ParseException, JsonProcessingException {
+    throws ParseException, JacksonException {
     if (signedSvtJWT == null) {
       log.debug("Null SVT issued");
       return false;
