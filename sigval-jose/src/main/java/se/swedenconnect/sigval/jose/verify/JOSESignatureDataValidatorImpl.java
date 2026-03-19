@@ -32,7 +32,6 @@ import java.util.stream.Collectors;
 
 import org.bouncycastle.util.encoders.Base64;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.UnprotectedHeader;
@@ -66,6 +65,7 @@ import se.swedenconnect.sigval.svt.claims.SignatureClaims;
 import se.swedenconnect.sigval.svt.claims.TimeValidationClaims;
 import se.swedenconnect.sigval.svt.claims.ValidationConclusion;
 import se.swedenconnect.sigval.svt.validation.SignatureSVTValidationResult;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Validator for validating single signature elements within an JSON document.
@@ -76,7 +76,7 @@ import se.swedenconnect.sigval.svt.validation.SignatureSVTValidationResult;
 @Slf4j
 public class JOSESignatureDataValidatorImpl implements JOSESignatureDataValidator {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final JsonMapper MAPPER = new JsonMapper();
   private static final SimpleDateFormat RFC3339_DATE_FORMAT = new SimpleDateFormat("yyy-MM-dd'T'HH:mm:ss'Z'");
 
   /** Optional certificate validator. */
@@ -309,14 +309,14 @@ public class JOSESignatureDataValidatorImpl implements JOSESignatureDataValidato
       String etsiUItem = (String) etsiUItemObject;
       // Attempt raw parsing
       try {
-        EtsiUComponent etsiUComponent = OBJECT_MAPPER.readValue(etsiUItem, EtsiUComponent.class);
+        EtsiUComponent etsiUComponent = MAPPER.readValue(etsiUItem, EtsiUComponent.class);
         etsiUComponentList.add(etsiUComponent);
         plainJson = true;
       }
       catch (Exception ex) {
         // Try to base64UrlDecode first
         try {
-          EtsiUComponent etsiUComponent = OBJECT_MAPPER.readValue(Base64URL.from(etsiUItem).decode(), EtsiUComponent.class);
+          EtsiUComponent etsiUComponent = MAPPER.readValue(Base64URL.from(etsiUItem).decode(), EtsiUComponent.class);
           etsiUComponentList.add(etsiUComponent);
           base64URLEncoded = true;
         }

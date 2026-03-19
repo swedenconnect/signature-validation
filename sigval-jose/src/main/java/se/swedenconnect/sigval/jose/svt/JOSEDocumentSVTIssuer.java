@@ -16,9 +16,6 @@
 
 package se.swedenconnect.sigval.jose.svt;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.SignedJWT;
@@ -30,6 +27,9 @@ import se.swedenconnect.sigval.commons.svt.SVTUtils;
 import se.swedenconnect.sigval.jose.data.JOSESignatureData;
 import se.swedenconnect.sigval.jose.verify.JOSESignedDocumentValidator;
 import se.swedenconnect.sigval.svt.issuer.SVTModel;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,7 +46,7 @@ import java.util.Map;
 @Slf4j
 public class JOSEDocumentSVTIssuer {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final JsonMapper MAPPER = new JsonMapper();
 
   private final JOSESVTSigValClaimsIssuer svtClaimsIssuer;
 
@@ -131,7 +131,7 @@ public class JOSEDocumentSVTIssuer {
       flattenedJoseDoc.setPayload(signatureData.isDetached() ? "" : signatureData.getPayload().toBase64URL().toString());
       flattenedJoseDoc.setProtectedHeader(signatureData.getHeader().toBase64URL().toString());
       flattenedJoseDoc.setUnprotectedHeader(extendUnprotectedHeader(svtExtensionData));
-      return OBJECT_MAPPER.writeValueAsBytes(flattenedJoseDoc);
+      return MAPPER.writeValueAsBytes(flattenedJoseDoc);
     }
 
 
@@ -150,7 +150,7 @@ public class JOSEDocumentSVTIssuer {
       signatureList.add(joseSignature);
     }
     JSONSerializedDocument jsonSerializedDocument = new JSONSerializedDocument(payloadStr, signatureList);
-    return OBJECT_MAPPER.writeValueAsBytes(jsonSerializedDocument);
+    return MAPPER.writeValueAsBytes(jsonSerializedDocument);
 
   }
 
@@ -175,11 +175,11 @@ public class JOSEDocumentSVTIssuer {
       final Object svtHeaderObj = unprotectedHeaders.get("svt");
 
       try {
-        base64URLSVTList = new ArrayList<>(OBJECT_MAPPER.readValue(
-          OBJECT_MAPPER.writeValueAsString(svtHeaderObj),
+        base64URLSVTList = new ArrayList<>(MAPPER.readValue(
+          MAPPER.writeValueAsString(svtHeaderObj),
           new TypeReference<>() {}));
       }
-      catch (JsonProcessingException e) {
+      catch (JacksonException e) {
         log.debug("Unable to parse existing SVT tokens");
       }
 

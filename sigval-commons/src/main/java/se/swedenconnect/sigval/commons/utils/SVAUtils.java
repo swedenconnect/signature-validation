@@ -27,7 +27,6 @@ import org.bouncycastle.asn1.tsp.TSTInfo;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
@@ -41,6 +40,7 @@ import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithm;
 import se.swedenconnect.sigval.commons.algorithms.DigestAlgorithmRegistry;
 import se.swedenconnect.sigval.svt.algorithms.SVTAlgoRegistry;
 import se.swedenconnect.sigval.svt.claims.SVTClaims;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Utility methods for SVT processing
@@ -51,7 +51,7 @@ import se.swedenconnect.sigval.svt.claims.SVTClaims;
 @Slf4j
 public class SVAUtils {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final JsonMapper JSON_MAPPER = new JsonMapper();
 
   /**
    * test if a CMS signature is a SVT document timestamp signature
@@ -85,7 +85,7 @@ public class SVAUtils {
   public static SVTClaims getSVTClaims(JWTClaimsSet jwtClaimsSet) throws IOException {
     try {
       String svaClaimsJson = JSONObjectUtils.toJSONString(jwtClaimsSet.getJSONObjectClaim("sig_val_claims"));
-      SVTClaims svaClaims = OBJECT_MAPPER.readValue(svaClaimsJson, SVTClaims.class);
+      SVTClaims svaClaims = JSON_MAPPER.readValue(svaClaimsJson, SVTClaims.class);
       return svaClaims;
     }
     catch (Exception ex) {
