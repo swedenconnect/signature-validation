@@ -530,8 +530,16 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     }
 
     // Forbid adding any new non-/Annots keys
+    boolean hasTypedAnnots = false;
     for (COSName key : newDict.keySet()) {
-      if (!key.equals(COSName.ANNOTS) && !oldDict.containsKey(key)) {
+      if (!oldDict.containsKey(key)) {
+        if (key.equals(COSName.ANNOTS)) {
+          continue;
+        }
+        if (key.equals(COSName.TYPE) && COSName.ANNOT.equals(newDict.getCOSName(COSName.TYPE))) {
+          hasTypedAnnots = true;
+          continue;
+        }
         log.debug("Non root object added an unsafe non annotation item: {}", key);
         return false;
       }
@@ -542,6 +550,10 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     COSArray newAnnots = newDict.getCOSArray(COSName.ANNOTS);
 
     if (newAnnots == null) {
+      if (hasTypedAnnots) {
+        log.debug("New annotation list is null, but /Type is Annot. This is an annotation change");
+        return true;
+      }
       // if newAnnots is null, then this is an error because this function is only called if there is an xref change.
       // Since there are no new annotations, the change must be something else.
       log.debug("New annotation list is null, therefore the change is not an annotation change");
