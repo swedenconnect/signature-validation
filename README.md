@@ -2,7 +2,7 @@
 
 # Signature Validation
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Maven Central](https://img.shields.io/maven-central/v/se.swedenconnect.sigval/sigval-parent)](https://central.sonatype.com/artifact/se.swedenconnect.ca/ca-engine)
 
 Core components for validating electronic signatures and to extend signed documents with Signature Validation Tokens (SVT). This includes the following independent modules:
 
