@@ -57,7 +57,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <bouncy-castle.version>1.83</bouncy-castle.version>
+    <bouncy-castle.version>1.84</bouncy-castle.version>
     <java.version>17</java.version>
     <slf4j.version>2.0.17</slf4j.version>
     <jackson2.version>2.21</jackson2.version>
