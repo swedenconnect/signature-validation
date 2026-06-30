@@ -81,8 +81,7 @@ public class AuthnContext extends ASN1Object {
     if (obj != null) {
       return new AuthnContext(ASN1Sequence.getInstance(obj), strictMode);
     }
-
-    return null;
+    throw new IllegalArgumentException("Invalid object: " + obj);
   }
 
   /**
