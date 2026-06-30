@@ -30,6 +30,8 @@ import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERUTF8String;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
+import java.util.Objects;
+
 public class SignedDocumentBinding extends ASN1Object {
 
   public static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.1.37");
@@ -57,10 +59,10 @@ public class SignedDocumentBinding extends ASN1Object {
       if (i == 0 && p instanceof ASN1OctetString) {
         this.dataTbsHash = ((ASN1OctetString) p).getOctets();
       }
-      else if (i == 1) {
+      try {
         this.hashAlg = AlgorithmIdentifier.getInstance(p);
-      }
-      else if (i == 2 && p instanceof ASN1UTF8String) {
+      } catch (Exception ignored) {}
+      if (p instanceof ASN1UTF8String) {
         this.bindingType = ((ASN1UTF8String) p).getString();
       }
     }
@@ -68,10 +70,14 @@ public class SignedDocumentBinding extends ASN1Object {
 
   @Override
   public ASN1Primitive toASN1Primitive() {
+    Objects.requireNonNull(this.dataTbsHash, "dataTbsHash must not be null");
+    Objects.requireNonNull(this.hashAlg, "hashAlg must not be null");
     final ASN1EncodableVector v = new ASN1EncodableVector();
     v.add(new DEROctetString(this.dataTbsHash));
     v.add(this.hashAlg);
-    v.add(new DERUTF8String(this.bindingType));
+    if (this.bindingType != null) {
+      v.add(new DERUTF8String(this.bindingType));
+    }
     return new DERSequence(v);
   }
 }
