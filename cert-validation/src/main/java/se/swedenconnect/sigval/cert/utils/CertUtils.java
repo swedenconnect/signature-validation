@@ -196,6 +196,28 @@ public class CertUtils {
   }
 
   /**
+   * Test if certificate has the noRevAvail extension (id-ce-noRevAvail, RFC 9608), indicating that no revocation
+   * information is available for the certificate.
+   *
+   * @param certificate
+   *          certificate
+   * @return true if the noRevAvail extension is present
+   */
+  public static boolean isNoRevAvailExt(final X509Certificate certificate) {
+    ASN1Primitive obj;
+    try {
+      // id-ce-noRevAvail (2.5.29.56)
+      obj = getExtensionValue(certificate, Extension.noRevAvail.getId());
+    }
+    catch (final IOException ex) {
+      log.warn("Exception while accessing noRevAvail extension" + ex.getMessage());
+      return false;
+    }
+    log.trace(obj != null ? "Target certificate has noRevAvail" : "Target certificate does not have noRevAvail");
+    return obj != null;
+  }
+
+  /**
    * Verifies that a certificate currently is within its validity period
    *
    * @param certificate

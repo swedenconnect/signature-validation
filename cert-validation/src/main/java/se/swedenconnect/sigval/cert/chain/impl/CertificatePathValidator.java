@@ -54,6 +54,12 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
    * Force the underlying validation operations to be performed in a single thread.
    */
   @Setter protected boolean singleThreaded;
+  /**
+   * If true (the default), a certificate carrying the noRevAvail extension (id-ce-noRevAvail, RFC 9608) is accepted
+   * without performing revocation checking. Set to false to require positive revocation status for all certificates,
+   * in which case a certificate with no available revocation source is treated as UNKNOWN and fails validation.
+   */
+  @Setter protected boolean acceptNoRevAvail = true;
   /** Result list of certificate status checks */
   protected List<ValidationStatus> validationStatusList;
   /** The result of certificate path building and PKIX path validation except revocation checking */
@@ -233,8 +239,16 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
 
     //Start validity threads
     for (int i = 0; i < pathBuilderCertPath.size() - 1; i++) {
+      X509Certificate checkedCert = pathBuilderCertPath.get(i);
+      if (acceptNoRevAvail && CertUtils.isNoRevAvailExt(checkedCert)) {
+        // No revocation information is available for this certificate (RFC 9608); accept without a revocation check.
+        synchronized (this) {
+          validationStatusList.add(noRevAvailStatus(checkedCert, pathBuilderCertPath.get(i + 1)));
+        }
+        continue;
+      }
       CertificateValidityChecker validityChecker = certificateValidityCheckerFactory.getCertificateValidityChecker(
-        pathBuilderCertPath.get(i), pathBuilderCertPath.get(i + 1), crlCache, this
+        checkedCert, pathBuilderCertPath.get(i + 1), crlCache, this
       );
       Thread validityThread = new Thread(validityChecker);
       validityThread.setDaemon(true);
@@ -263,10 +277,37 @@ public class CertificatePathValidator extends AbstractPathValidator implements P
    */
   private void getSingleThreadedValidityStatus() {
     for (int i = 0; i < pathBuilderCertPath.size() - 1; i++) {
+      X509Certificate checkedCert = pathBuilderCertPath.get(i);
+      if (acceptNoRevAvail && CertUtils.isNoRevAvailExt(checkedCert)) {
+        // No revocation information is available for this certificate (RFC 9608); accept without a revocation check.
+        validationStatusList.add(noRevAvailStatus(checkedCert, pathBuilderCertPath.get(i + 1)));
+        continue;
+      }
       CertificateValidityChecker validityChecker = certificateValidityCheckerFactory.getCertificateValidityChecker(
-        pathBuilderCertPath.get(i), pathBuilderCertPath.get(i + 1), crlCache);
+        checkedCert, pathBuilderCertPath.get(i + 1), crlCache);
       validationStatusList.add(validityChecker.checkValidity());
     }
+  }
+
+  /**
+   * Builds a synthetic VALID validation status for a certificate that carries the noRevAvail extension, indicating
+   * that revocation checking was intentionally skipped because no revocation information is available.
+   *
+   * @param cert   the certificate carrying the noRevAvail extension
+   * @param issuer the issuer certificate
+   * @return a VALID validation status with source type {@link ValidationStatus.ValidatorSourceType#NO_REV_AVAIL}
+   */
+  private ValidationStatus noRevAvailStatus(X509Certificate cert, X509Certificate issuer) {
+    log.debug("Accepting certificate without revocation checking due to noRevAvail extension for {}",
+      cert.getSubjectX500Principal());
+    return ValidationStatus.builder()
+      .certificate(cert)
+      .issuer(issuer)
+      .sourceType(ValidationStatus.ValidatorSourceType.NO_REV_AVAIL)
+      .validity(ValidationStatus.CertificateValidity.VALID)
+      .statusSignatureValid(true)
+      .validationTime(new Date())
+      .build();
   }
 
   @Override
