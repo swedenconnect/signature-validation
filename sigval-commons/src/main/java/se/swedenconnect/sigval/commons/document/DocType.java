@@ -17,7 +17,6 @@
 package se.swedenconnect.sigval.commons.document;
 
 import lombok.AllArgsConstructor;
-import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.util.Arrays;
@@ -75,24 +74,25 @@ public enum DocType {
             } else if (preambleString.equals("%PDF-")) {
                 return DocType.PDF;
             } else if (preamble[0] == 'P' && preamble[1] == 'K') {
-                ZipInputStream asics = new ZipInputStream(new BufferedInputStream(is));
-                ByteArrayOutputStream datafile = null;
-                ByteArrayOutputStream signatures = null;
-                ZipEntry entry;
-                try {
+                /*
+                 * ASiC classification depends only on the entry NAMES, never on the (decompressed)
+                 * entry content. The entry bodies are therefore deliberately never read into memory,
+                 * only the entry header with the entry names and other entry metadata.
+                 */
+                boolean hasSignatures = false;
+                boolean hasDataFile = false;
+                try (ZipInputStream asics = new ZipInputStream(input)) {
+                    ZipEntry entry;
                     while ((entry = asics.getNextEntry()) != null) {
-                        if (entry.getName().equals("META-INF/signatures.p7s")) {
-                            signatures = new ByteArrayOutputStream();
-                            IOUtils.copy(asics, signatures);
-                            signatures.close();
-                        } else if (entry.getName().equalsIgnoreCase("META-INF/signatures.p7s")) {
+                        final String name = entry.getName();
+                        if (name.equals("META-INF/signatures.p7s")) {
+                            hasSignatures = true;
+                        } else if (name.equalsIgnoreCase("META-INF/signatures.p7s")) {
                             /* Wrong case */
                             return DocType.ASICS_NON_ETSI;
-                        } else if (entry.getName().indexOf("/") == -1) {
-                            if (datafile == null) {
-                                datafile = new ByteArrayOutputStream();
-                                IOUtils.copy(asics, datafile);
-                                datafile.close();
+                        } else if (name.indexOf("/") == -1) {
+                            if (!hasDataFile) {
+                                hasDataFile = true;
                             } else {
                                 return DocType.ASICS_S;
                             }
@@ -101,7 +101,7 @@ public enum DocType {
                 } catch (Exception ex) {
                     return DocType.UNKNOWN;
                 }
-                if (datafile == null || signatures == null) {
+                if (!hasDataFile || !hasSignatures) {
                     return DocType.UNKNOWN;
                 }
                 return DocType.ASICS_CADES;

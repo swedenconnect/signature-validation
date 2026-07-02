@@ -21,41 +21,36 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.DERNull;
 import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
+import org.bouncycastle.asn1.x509.Extension;
 
 /**
- * OCSPNoCheck X.509 extension implementation for extending Bouncycastle
+ * noRevAvail X.509 extension RFC 9608 implementation for extending Bouncycastle
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
  */
-public class OCSPNoCheck extends ASN1Object {
+public class NoRevAvail extends ASN1Object {
 
-    public static final ASN1ObjectIdentifier OID = OCSPObjectIdentifiers.id_pkix_ocsp_nocheck;
+    public static final ASN1ObjectIdentifier OID = Extension.noRevAvail;
 
     /**
      * Creates an instance of the OCSPNoCheck extension
      *
      * @return OCSPNoCheck extension
      */
-    public static OCSPNoCheck getInstance() {
-            return new OCSPNoCheck();
+    public static NoRevAvail getInstance() {
+            return new NoRevAvail();
     }
 
     /**
      * Constructor
      */
-    private OCSPNoCheck() {
+    private NoRevAvail() {
     }
 
 
     /**
      * Produce an object suitable for an ASN1OutputStream.
-     * <pre>
-     * InhibitAnyPolicy ::= SkipCerts
-     * 
-     * SkipCerts ::= INTEGER (0..MAX)
-     * </pre>
-     *
      * @return ASN.1 object of the extension
      */
     @Override
@@ -66,6 +61,6 @@ public class OCSPNoCheck extends ASN1Object {
     /** {@inheritDoc} */
     @Override
     public String toString() {
-        return "OCSP Nocheck";
+        return "noRevAvail";
     }
 }

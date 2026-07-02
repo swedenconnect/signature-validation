@@ -6,7 +6,7 @@
   <groupId>se.swedenconnect.sigval</groupId>
   <artifactId>sigval-parent</artifactId>
   <packaging>pom</packaging>
-  <version>2.0.1</version>
+  <version>3.0.0</version>
 
   <name>Sweden Connect :: Parent POM for Signature Validation</name>
   <description>Parent POM for SignService Validation libraries</description>
@@ -57,21 +57,22 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <bouncy-castle.version>1.83</bouncy-castle.version>
-    <java.version>17</java.version>
-    <slf4j.version>2.0.17</slf4j.version>
-    <jackson2.version>2.21</jackson2.version>
-    <jackson3.version>3.1.0</jackson3.version>
+    <bouncy-castle.version>1.84</bouncy-castle.version>
+    <java.version>21</java.version>
+    <slf4j.version>2.0.18</slf4j.version>
+    <jackson2.version>2.22</jackson2.version>
+    <jackson3.version>3.2.0</jackson3.version>
   </properties>
 
   <modules>
     <module>cert-extensions</module>
     <module>cert-validation</module>
     <module>sigval-commons</module>
+    <module>sigval-report</module>
+    <module>sigval-test-support</module>
     <module>sigval-xml</module>
     <module>sigval-pdf</module>
     <module>sigval-jose</module>
-    <module>sigval-report</module>
   </modules>
 
   <dependencyManagement>
@@ -154,7 +155,7 @@
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
-        <version>2.21.0</version>
+        <version>2.22.0</version>
       </dependency>
 
       <dependency>
@@ -204,13 +205,37 @@
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
-        <version>1.18.44</version>
+        <version>1.18.46</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
         <version>3.20.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>se.swedenconnect.security</groupId>
+        <artifactId>credentials-support</artifactId>
+        <version>2.2.1</version>
+      </dependency>
+
+      <dependency>
+        <groupId>se.swedenconnect.ca</groupId>
+        <artifactId>ca-engine</artifactId>
+        <version>2.2.1</version>
+      </dependency>
+
+      <dependency>
+        <groupId>se.idsec.utils</groupId>
+        <artifactId>print-cert</artifactId>
+        <version>1.0.10</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>6.1.0</version>
       </dependency>
 
     </dependencies>
@@ -234,6 +259,11 @@
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <scope>test</scope>
+    </dependency>
 
   </dependencies>
 
@@ -242,6 +272,17 @@
     <pluginManagement>
 
       <plugins>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.5.2</version>
+          <configuration>
+            <systemPropertyVariables>
+              <org.slf4j.simpleLogger.defaultLogLevel>debug</org.slf4j.simpleLogger.defaultLogLevel>
+            </systemPropertyVariables>
+          </configuration>
+        </plugin>
 
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -331,6 +372,11 @@
     </pluginManagement>
 
     <plugins>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

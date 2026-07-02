@@ -10,7 +10,7 @@
   <parent>
     <artifactId>sigval-parent</artifactId>
     <groupId>se.swedenconnect.sigval</groupId>
-    <version>2.0.1</version>
+    <version>3.0.0</version>
   </parent>
 
   <name>Sweden Connect :: Signature validation :: PDF</name>
@@ -102,6 +102,20 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>se.swedenconnect.sigval</groupId>
+      <artifactId>sigval-test-support</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>6.1.0</version>
+      <scope>test</scope>
     </dependency>
 
   </dependencies>

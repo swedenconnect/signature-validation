@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>se.swedenconnect.sigval</groupId>
+    <artifactId>sigval-parent</artifactId>
+    <version>3.0.0</version>
+  </parent>
+
+  <artifactId>sigval-test-support</artifactId>
+  <name>Sweden Connect :: Signature Validation :: Test Support</name>
+  <description>
+    Embedded test CA infrastructure for signature validation testing. Provides a three-tier
+    certificate hierarchy (Root CA → Issuing CA → end-entity), in-memory CRL and OCSP support,
+    and custom CRLDataLoader / OCSPDataLoader implementations that route revocation requests
+    directly to the embedded CA without any HTTP network calls.
+  </description>
+
+  <dependencies>
+
+    <!-- CRLDataLoader and OCSPDataLoader interfaces live here -->
+    <dependency>
+      <groupId>se.swedenconnect.sigval</groupId>
+      <artifactId>cert-validation</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <!-- CA engine: certificate issuance, CRL, OCSP -->
+    <dependency>
+      <groupId>se.swedenconnect.ca</groupId>
+      <artifactId>ca-engine</artifactId>
+      <exclusions>
+        <!-- cert-extensions is a module in this project; exclude the older transitive version -->
+        <exclusion>
+          <groupId>se.swedenconnect.sigval</groupId>
+          <artifactId>cert-extensions</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!--
+      JUnit 5 is compile-scoped here because this module IS test infrastructure.
+      Downstream modules declare this module as <scope>test</scope>, so JUnit
+      does not leak into their compile classpath.
+    -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>se.idsec.utils</groupId>
+      <artifactId>print-cert</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>se.swedenconnect.sigval</groupId>
+          <artifactId>cert-extensions</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+  </dependencies>
+
+</project>

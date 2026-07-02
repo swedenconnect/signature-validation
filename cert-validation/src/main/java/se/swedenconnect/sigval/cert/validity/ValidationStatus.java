@@ -121,7 +121,7 @@ public class ValidationStatus {
   }
 
   public enum ValidatorSourceType {
-    OCSP, CRL, SELF_SIGNED
+    OCSP, CRL, SELF_SIGNED, NO_REV_AVAIL
   }
 
   public enum CertificateValidity {

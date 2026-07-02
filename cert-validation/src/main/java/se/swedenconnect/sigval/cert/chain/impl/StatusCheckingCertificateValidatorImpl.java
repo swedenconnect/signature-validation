@@ -70,6 +70,13 @@ public class StatusCheckingCertificateValidatorImpl implements CertificateValida
   private boolean singleThreaded = false;
 
   /**
+   * If true (the default), certificates carrying the noRevAvail extension (id-ce-noRevAvail, RFC 9608) are accepted
+   * without revocation checking. Set to false to require positive revocation status for all certificates.
+   */
+  @Setter
+  private boolean acceptNoRevAvail = true;
+
+  /**
    * Constructor for the CertificateValidator implementations
    *
    * @param crlCache
@@ -213,6 +220,7 @@ public class StatusCheckingCertificateValidatorImpl implements CertificateValida
       List<TrustAnchor> trustAnchors, CertStore certStore, CRLCache crlCache) {
     CertificatePathValidator pathValidator = new CertificatePathValidator(targetCert, chain, trustAnchors, certStore, crlCache);
     pathValidator.setSingleThreaded(singleThreaded);
+    pathValidator.setAcceptNoRevAvail(acceptNoRevAvail);
     return pathValidator;
   }
 
