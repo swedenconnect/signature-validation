@@ -19,14 +19,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import org.bouncycastle.asn1.DERNull;
-import org.bouncycastle.asn1.x509.Extension;
-
 import se.swedenconnect.ca.engine.ca.attribute.CertAttributes;
 import se.swedenconnect.ca.engine.ca.models.cert.AttributeTypeAndValueModel;
 import se.swedenconnect.ca.engine.ca.models.cert.CertNameModel;
 import se.swedenconnect.ca.engine.ca.models.cert.CertificateModel;
-import se.swedenconnect.ca.engine.ca.models.cert.extension.impl.GenericExtensionModel;
 import se.swedenconnect.ca.engine.ca.models.cert.impl.DefaultCertificateModelBuilder;
 import se.swedenconnect.ca.engine.ca.models.cert.impl.ExplicitCertNameModel;
 import se.swedenconnect.ca.engine.utils.CAUtils;
@@ -36,10 +32,10 @@ import se.swedenconnect.sigval.cert.chain.impl.StatusCheckingCertificateValidato
 import se.swedenconnect.sigval.cert.validity.ValidationStatus;
 import se.swedenconnect.sigval.cert.validity.crl.CRLCache;
 import se.swedenconnect.sigval.cert.validity.crl.impl.InMemoryCRLCache;
+import se.swedenconnect.sigval.cert.validity.ocsp.OCSPCertificateVerifier;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.security.spec.ECGenParameterSpec;
 import java.util.List;
@@ -48,12 +44,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * Validates the noRevAvail handling of {@link StatusCheckingCertificateValidatorImpl} against the embedded test CA,
- * whose CRL revocation data is served in-memory through {@link TestCRLDataLoader}. Because the CA has a working
- * revocation service, the control cases are real: a normal certificate is genuinely CRL-checked and a revoked one is
- * rejected, so the noRevAvail bypass is demonstrated against a live revocation backdrop rather than an empty cache.
+ * Revocation-focused integration tests for the certificate path validator, run against the embedded three-tier test CA
+ * whose CRL and OCSP revocation data are served in-memory (no network). Covers positive and revoked outcomes over both
+ * CRL and OCSP, plus the {@code noRevAvail} bypass (RFC 9608).
+ *
+ * <p>Full path validation ({@link StatusCheckingCertificateValidatorImpl}) exercises CRL, which the validator resolves
+ * through the injected {@link TestCRLDataLoader}. OCSP is exercised at the {@link OCSPCertificateVerifier} level with the
+ * {@link TestOCSPDataLoader}, because the path validator constructs its own OCSP verifier without a data-loader hook.
  */
-class NoRevAvailValidationTest {
+class RevocationValidationTest {
 
   @RegisterExtension
   static final SigValTestExtension CA = new SigValTestExtension();
@@ -67,67 +66,95 @@ class NoRevAvailValidationTest {
     subjectKeyPair = kpg.generateKeyPair();
   }
 
+  // ---- CRL (full path validation) ----
+
   @Test
-  void oneSignatureCertificate_acceptedByDefault() throws Exception {
-    final X509Certificate ee = issueCertificate("John Doe", true);
+  void validCertificate_validatesViaCrl() throws Exception {
+    final X509Certificate ee = issueCertificate("CRL Good", false);
 
     final PathValidationResult result = validator(true).validate(ee, chain(), null);
 
-    final ValidationStatus eeStatus = statusFor(result, ee);
-    assertEquals(ValidationStatus.CertificateValidity.VALID, eeStatus.getValidity());
-    assertEquals(ValidationStatus.ValidatorSourceType.NO_REV_AVAIL, eeStatus.getSourceType(),
-        "acceptance must be recorded as NO_REV_AVAIL, not a positive revocation check");
+    final ValidationStatus status = statusFor(result, ee);
+    assertEquals(ValidationStatus.CertificateValidity.VALID, status.getValidity());
+    assertEquals(ValidationStatus.ValidatorSourceType.CRL, status.getSourceType());
   }
 
   @Test
-  void oneSignatureCertificate_rejectedWhenAcceptanceDisabled() throws Exception {
-    final X509Certificate ee = issueCertificate("John Doe", true);
-
-    // No CRL/OCSP source and acceptance disabled -> validity UNKNOWN -> path validation fails.
-    assertThrows(ExtendedCertPathValidatorException.class,
-        () -> validator(false).validate(ee, chain(), null));
-  }
-
-  @Test
-  void normalCertificate_validatesViaCrl() throws Exception {
-    final X509Certificate ee = issueCertificate("Regular Signer", false);
-
-    final PathValidationResult result = validator(true).validate(ee, chain(), null);
-
-    final ValidationStatus eeStatus = statusFor(result, ee);
-    assertEquals(ValidationStatus.CertificateValidity.VALID, eeStatus.getValidity());
-    assertEquals(ValidationStatus.ValidatorSourceType.CRL, eeStatus.getSourceType(),
-        "a certificate without noRevAvail must be checked against the CRL");
-  }
-
-  @Test
-  void revokedCertificate_isRejected() throws Exception {
-    final X509Certificate ee = issueCertificate("Revoked Signer", false);
+  void revokedCertificate_isRejectedViaCrl() throws Exception {
+    final X509Certificate ee = issueCertificate("CRL Revoked", false);
     CA.getTestCA().revokeSigningCertificate(ee.getSerialNumber());
 
-    // The CA genuinely revokes, so a non-noRevAvail certificate must fail - proving the bypass is a real bypass.
     assertThrows(ExtendedCertPathValidatorException.class,
         () -> validator(true).validate(ee, chain(), null));
+  }
+
+  // ---- OCSP (verifier level) ----
+
+  @Test
+  void validCertificate_isGoodViaOcsp() throws Exception {
+    final X509Certificate ee = CA.getTestCA().issueSigningCertificate(subjectKeyPair.getPublic(), "OCSP Good");
+
+    final ValidationStatus status = ocspStatus(ee);
+    assertEquals(ValidationStatus.CertificateValidity.VALID, status.getValidity());
+    assertEquals(ValidationStatus.ValidatorSourceType.OCSP, status.getSourceType());
+  }
+
+  @Test
+  void revokedCertificate_isRevokedViaOcsp() throws Exception {
+    final X509Certificate ee = CA.getTestCA().issueSigningCertificate(subjectKeyPair.getPublic(), "OCSP Revoked");
+    CA.getTestCA().revokeSigningCertificate(ee.getSerialNumber());
+
+    final ValidationStatus status = ocspStatus(ee);
+    assertEquals(ValidationStatus.CertificateValidity.REVOKED, status.getValidity());
+  }
+
+  // ---- noRevAvail (RFC 9608) ----
+
+  @Test
+  void noRevAvailCertificate_acceptedByDefault() throws Exception {
+    final X509Certificate ee = issueCertificate("No Revocation", true);
+
+    final PathValidationResult result = validator(true).validate(ee, chain(), null);
+
+    final ValidationStatus status = statusFor(result, ee);
+    assertEquals(ValidationStatus.CertificateValidity.VALID, status.getValidity());
+    assertEquals(ValidationStatus.ValidatorSourceType.NO_REV_AVAIL, status.getSourceType());
+  }
+
+  @Test
+  void noRevAvailCertificate_rejectedWhenAcceptanceDisabled() throws Exception {
+    final X509Certificate ee = issueCertificate("No Revocation", true);
+
+    assertThrows(ExtendedCertPathValidatorException.class,
+        () -> validator(false).validate(ee, chain(), null));
   }
 
   // ---- helpers ----
 
   /**
-   * Issues an end-entity certificate from the test Issuing CA. When {@code noRevAvail} is true the certificate carries
-   * the noRevAvail extension and omits any revocation source (a one signature certificate); otherwise it keeps the
-   * CA's CRL distribution point. OCSP is omitted throughout so the test stays free of network calls.
+   * Issues an end-entity certificate from the test Issuing CA. OCSP is always omitted so full path validation stays
+   * network-free (CRL only). When {@code noRevAvail} is true the certificate carries the noRevAvail extension and omits
+   * the CRL distribution point (a one signature certificate).
    */
   private static X509Certificate issueCertificate(final String commonName, final boolean noRevAvail) throws Exception {
     final IssuerCAService issuingCA = CA.getTestCA().getIssuingCA();
     final DefaultCertificateModelBuilder builder = issuingCA.getCertificateModelBuilder(name(commonName),
         subjectKeyPair.getPublic())
-        .ocspServiceUrl(null); // keep the test hermetic - revocation is exercised via the in-memory CRL
+        .ocspServiceUrl(null);
     if (noRevAvail) {
       builder.crlDistributionPoints(null);
       builder.noRevAvail(true);
     }
     final CertificateModel model = builder.build();
     return CAUtils.getCert(issuingCA.issueCertificate(model));
+  }
+
+  private static ValidationStatus ocspStatus(final X509Certificate ee) throws Exception {
+    final OCSPCertificateVerifier verifier =
+        new OCSPCertificateVerifier(ee, CA.getTestCA().getIssuingCACertificate());
+    verifier.setOcspDataLoader(CA.getTestCA().createOCSPDataLoader());
+    verifier.setIncludeNonce(true);
+    return verifier.checkValidity();
   }
 
   private static StatusCheckingCertificateValidatorImpl validator(final boolean acceptNoRevAvail) throws Exception {
