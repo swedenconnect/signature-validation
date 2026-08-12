@@ -68,7 +68,7 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
    * <p>
    * This method does <b>not</b> throw to signal an invalid SVT. Validation failures (a bad SVT signature or a signing
    * certificate that fails path validation) are recorded in the {@code svaSignatureValid} field and must be read by the
-   * caller via {@link #isSvaSignatureValid()}. A {@code false} result means the SVT must not be trusted. Any exception
+   * caller via {@code isSvaSignatureValid()}. A {@code false} result means the SVT must not be trusted. Any exception
    * declared here relates only to unexpected processing errors, not to a negative validation outcome.
    * </p>
    *
