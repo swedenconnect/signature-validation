@@ -7,7 +7,7 @@
   <parent>
     <groupId>se.swedenconnect.sigval</groupId>
     <artifactId>sigval-parent</artifactId>
-    <version>3.0.0</version>
+    <version>3.1.0</version>
   </parent>
 
   <artifactId>sigval-test-support</artifactId>
