@@ -59,8 +59,8 @@ import se.swedenconnect.sigval.svt.validation.SignatureSVTValidationResult;
 
 /**
  * This class provides the functionality to validate signatures on a PDF where the signature validation process is enhanced with validation
- * based on SVA (Signature Validation Assertions). The latest valid SVA that can be verified given the provided trust validation resources is selected.
- * Signatures covered by this SVA is validated based on SVA. Any other signatures are validated through traditional signature validation methods.
+ * based on SVT (Signature Validation Tokens). The latest valid SVT that can be verified given the provided trust validation resources is selected.
+ * Signatures covered by this SVT is validated based on SVT. Any other signatures are validated through traditional signature validation methods.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -78,7 +78,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
   /**
    * Constructor if no SVT validation is supported
    *
-   * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVA
+   * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVT
    * @param pdfSignatureContextFactory factory for creating an instance of signature context for the validated document
    */
   public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureValidator pdfSingleSignatureValidator,
@@ -91,8 +91,8 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
   /**
    * Constructor
    *
-   * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVA
-   * @param pdfsvtValidator Certificate verifier for the certificate used to sign SVA tokens
+   * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVT
+   * @param pdfsvtValidator Certificate verifier for the certificate used to sign SVTs
    * @param pdfSignatureContextFactory factory for creating an instance of signature context for the validated document
    */
   public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureValidator pdfSingleSignatureValidator,
@@ -121,7 +121,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
   }
 
   /**
-   * Verifies the signatures of a PDF document. Validation based on SVA is given preference over traditional signature validation.
+   * Verifies the signatures of a PDF document. Validation based on SVT is given preference over traditional signature validation.
    *
    * @param pdfDocBytes signed PDF document to verify
    * @return Validation result from PDF verification
@@ -258,7 +258,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       byte[] sigBytes = signature.getContents(pdfDocBytes);
       cmsSVResult.setSignedData(sigBytes);
 
-      //Reaching this point means that the signature is valid and verified through the SVA.
+      //Reaching this point means that the signature is valid and verified through the SVT.
       SignedData signedData = SVAUtils.getSignedDataFromSignature(sigBytes);
       cmsSVResult.setEtsiAdes(signature.getSubFilter().equalsIgnoreCase(PDFSVAUtils.CADES_SIG_SUBFILETER_LC));
       cmsSVResult.setInvalidSignCert(false);
@@ -273,7 +273,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       }
       cmsSVResult.setSignedDocument(signedDocumentBytes);
 
-      //Get algorithms and public key type. Note that the source of these values is the SVA signature which is regarded as the algorithm
+      //Get algorithms and public key type. Note that the source of these values is the SVT signature which is regarded as the algorithm
       //That is effectively protecting the integrity of the signature, superseding the use of the original algorithms.
       SignedJWT signedJWT = svtValResult.getSignedJWT();
       JWSAlgorithm svtJwsAlgo = signedJWT.getHeader().getAlgorithm();
@@ -316,7 +316,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       }
       cmsSVResult.setSignatureClaims(signatureClaims);
       cmsSVResult.setValidationPolicyResultList(policyValidationClaims);
-      // Since we verify with SVA. We ignore any present signature timestamps.
+      // Since we verify with SVT. We ignore any present signature timestamps.
       // cmsSVResult.setSignatureTimeStampList(new ArrayList<>());
 
       //Add SVT document timestamp that was used to perform this SVT validation to verified times
@@ -343,7 +343,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
     }
     catch (Exception ex) {
       cmsSVResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
-      cmsSVResult.setStatusMessage("Unable to process SVA token or signature data");
+      cmsSVResult.setStatusMessage("Unable to process SVT or signature data");
       return cmsSVResult;
     }
     return cmsSVResult;

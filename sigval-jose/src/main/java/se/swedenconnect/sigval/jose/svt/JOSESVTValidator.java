@@ -53,7 +53,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 public class JOSESVTValidator extends SVTValidator<JOSESVTValInput> {
-  /** Certificate chain validator for SVA tokens **/
+  /** Certificate chain validator for SVTs **/
   private final CertificateValidator svtCertVerifier;
 
   /**
@@ -98,9 +98,9 @@ public class JOSESVTValidator extends SVTValidator<JOSESVTValInput> {
      *     Then gather data about this signature
      */
 
-    List<String> svaTokenList = getSignatureSvaTokens(signedDataInput.getSignatureData().getUnprotectedHeader());
+    List<String> svtTokenList = getSignatureSvtTokens(signedDataInput.getSignatureData().getUnprotectedHeader());
     List<SignedJWT>  signedJWTList = new ArrayList<>();
-    for (String jwt: svaTokenList){
+    for (String jwt: svtTokenList){
       try {
         SignedJWT signedJWT = SignedJWT.parse(jwt);
         verifyJWT(signedJWT);
@@ -239,7 +239,7 @@ public class JOSESVTValidator extends SVTValidator<JOSESVTValInput> {
       .collect(Collectors.toList());
   }
 
-  private List<String> getSignatureSvaTokens(UnprotectedHeader unprotectedHeader) {
+  private List<String> getSignatureSvtTokens(UnprotectedHeader unprotectedHeader) {
     List<String> svtTokenList = new ArrayList<>();
     if (unprotectedHeader == null){
       return svtTokenList;

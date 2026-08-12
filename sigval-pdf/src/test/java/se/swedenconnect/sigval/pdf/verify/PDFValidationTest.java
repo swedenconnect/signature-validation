@@ -186,7 +186,7 @@ class PDFValidationTest {
         CA.getTestCA().getIssuingCACertificate()));
 
     // The document timestamp is signed correctly (matches svtCert), but the SVT JWT it carries is signed
-    // with a DIFFERENT key while still presenting the trusted svtCert - a forged SVA token.
+    // with a DIFFERENT key while still presenting the trusted svtCert - a forged SVT.
     final KeyPair svtKeyPair = ecKeyPair();
     final X509Certificate svtCert = issueTimestampCertificate("SVT Issuer", svtKeyPair.getPublic());
     final List<X509Certificate> svtChain = List.of(svtCert, CA.getTestCA().getIssuingCACertificate());
