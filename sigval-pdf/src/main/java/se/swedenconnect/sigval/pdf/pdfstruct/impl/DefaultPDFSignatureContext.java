@@ -177,6 +177,28 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
 
   /** {@inheritDoc} */
   @Override
+  public void applyValidatedSignature(final PDSignature signature) {
+    final int idx;
+    try {
+      idx = this.getSignatureRevisionIndex(signature);
+    }
+    catch (final Exception ex) {
+      // The signature is not present in this document. Nothing to upgrade.
+      return;
+    }
+    if (idx < 0) {
+      return;
+    }
+    final PDFDocRevision revision = this.PDFDocRevisions.get(idx);
+    // Only a revision that is structurally a signature or document timestamp may be granted the lenient rules, and
+    // only once its signature/timestamp has been validated to a trusted anchor by the caller. Idempotent.
+    if (revision.isSignature() || revision.isDocumentTimestamp()) {
+      revision.setSafeUpdate(revision.isSafeUpdateLenient());
+    }
+  }
+
+  /** {@inheritDoc} */
+  @Override
   public List<PDFDocRevision> getPdfDocRevisions() {
     return this.PDFDocRevisions;
   }
@@ -244,7 +266,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
 
     PDFDocRevision lastRevData = null;
     for (final PDFDocRevision revData : this.PDFDocRevisions) {
-      this.getXrefUpdates(revData, lastRevData, revData.isSignature() || revData.isDocumentTimestamp());
+      this.getXrefUpdates(revData, lastRevData);
       lastRevData = revData;
     }
 
@@ -328,7 +350,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
    *                    parameter is used for comparison to identify changes. If null, all cross-references in
    *                    the current revision are treated as new.
    */
-  private void getXrefUpdates(final PDFDocRevision revData, final PDFDocRevision lastRevData, boolean signature) {
+  private void getXrefUpdates(final PDFDocRevision revData, final PDFDocRevision lastRevData) {
     revData.setLegalRootObject(true);
     revData.setRootUpdate(false);
     revData.setNonRootUpdate(false);
@@ -364,32 +386,20 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
 
     // We will also detect objects referenced from safe COSName. We will allow updates to these objects.
     // These are /AcroForm /OpenAction and /Font and non root objects that are considered valid below.
-    // We will allow updates to referenced objects if the update is signature
-    // or timestamp.
-    final List<Long> safeObjects = new ArrayList<>();
-
+    //
+    // The signature-dependent part (whether a signature/timestamp revision may leniently add annotation/field
+    // changes) is computed twice below - once strict, once lenient - via isSafeReferenceUpdate. Here we only gather
+    // the signature-INDEPENDENT base safe objects: non-root objects absent in both revisions, plus the root-referenced
+    // and general safe objects collected further down.
+    final List<Long> baseSafeObjects = new ArrayList<>();
 
     for (COSObjectKey objectKey : changedXref.keySet()) {
-      // Validation specific to non-root updates
-      if (objectKey.getNumber() != revData.getRootObjectId()) { // Non-root object
-        COSObject oldObject = lastRevData.getCosDocument().getObjectFromPool(objectKey);
-        COSObject newObject = revData.getCosDocument().getObjectFromPool(objectKey);
-        if (oldObject == null && newObject == null) {
-          // Safe object. Both are null
-          safeObjects.add(objectKey.getNumber());
-          continue;
-        }
-        if (oldObject == null || newObject == null) {
-          // Not considered safe non-root object
-          continue;
-        }
-        // Check if the only difference is a new annotation in /Annots
-        if (isOnlyNewAnnotations(oldObject, newObject, signature)) {
-          // Safe object. Only safe annotation changes
-          safeObjects.add(objectKey.getNumber());
-        }
+      // Non-root objects that are absent in both the old and new revision are safe regardless of signature status.
+      if (objectKey.getNumber() != revData.getRootObjectId()
+          && (lastRevData == null || lastRevData.getCosDocument().getObjectFromPool(objectKey) == null)
+          && revData.getCosDocument().getObjectFromPool(objectKey) == null) {
+        baseSafeObjects.add(objectKey.getNumber());
       }
-
     }
 
     // Check which root dictionary items that are actually changed and which items in the root that has been added
@@ -423,7 +433,7 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
               addedRootItems.add(key);
             }
             // Look for safe objects
-            addSafeObjects(key, cosNameCOSBaseEntry.getValue(), safeObjects, revData.getCosDocument());
+            addSafeObjects(key, cosNameCOSBaseEntry.getValue(), baseSafeObjects, revData.getCosDocument());
           } else {
             revData.setLegalRootObject(false);
           }
@@ -435,21 +445,15 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     }
     revData.setChangedRootItems(changedRootItems);
     revData.setAddedRootItems(addedRootItems);
-    revData.setSafeObjects(safeObjects);
+    revData.setSafeObjects(baseSafeObjects);
 
     // Check changed root items for unsupported changes.
     // In this implementation only the Acroform are allowed to have changed content in the root dictionary
     final boolean unsupportedRootItemUpdate = revData.getChangedRootItems().stream()
         .anyMatch(name -> !name.equals(COSName.ACRO_FORM));
 
-    // Append the safeObjectList with other known safe objects
+    // Append the safeObjectList with other known safe objects. This mutates revData.getSafeObjects() (baseSafeObjects).
     this.safeObjectProvider.addGeneralSafeObjects(revData);
-
-    // Check changed cross references against safe objects
-    final boolean unsafeRefupdate = revData.getChangedXref().keySet().stream()
-        .map(COSObjectKey::getNumber)
-        .anyMatch(id -> id != revData.getRootObjectId() &&
-            !safeObjects.contains(id));
 
     /*
      * A new revision is considered safe with regard to not containing visual data changes when added after a signature
@@ -459,11 +463,15 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
      * These are: o Objects containing the content of AcroForms o Objects holding Font inside DR dictionary inside
      * Acroform o Objects referenced under OpenAction in the root o Other safe ojects according to the GeneralSafeObject
      * interface implementation
+     *
+     * We compute two conclusions from the same rules: a strict one (the lenient signature/timestamp annotation rules
+     * are NOT applied) and a lenient one (they are). The effective safeUpdate starts strict; applyValidatedSignature
+     * promotes it to the lenient value only once this revision's signature/timestamp has been validated as trusted.
      */
-    revData.setSafeUpdate(
-        !unsupportedRootItemUpdate
-            && !unsafeRefupdate
-            && revData.isLegalRootObject());
+    revData.setSafeUpdate(this.isSafeReferenceUpdate(revData, lastRevData, changedXref,
+        revData.getSafeObjects(), unsupportedRootItemUpdate, false));
+    revData.setSafeUpdateLenient(this.isSafeReferenceUpdate(revData, lastRevData, changedXref,
+        revData.getSafeObjects(), unsupportedRootItemUpdate, true));
 
     /*
      * A revision is considered a valid DSS update if:
@@ -481,6 +489,48 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
             && (revData.getAddedRootItems().size() == 1 && addedRootItemsContains(revData.getAddedRootItems(), "DSS")
             || revData.getAddedRootItems().size() == 2 && addedRootItemsContains(revData.getAddedRootItems(), "DSS", "Extensions")));
 
+  }
+
+  /**
+   * Determines whether all changed non-root cross references of a revision are covered by safe objects, given a choice
+   * of whether the lenient signature/timestamp annotation rules apply.
+   *
+   * <p>The base safe objects (signature-independent) are provided by the caller. This method adds the annotation-based
+   * safe objects computed for the requested {@code signature} leniency and then verifies that no changed non-root
+   * object falls outside the resulting safe set.</p>
+   *
+   * @param revData the current revision
+   * @param lastRevData the previous revision (may be null for the first revision)
+   * @param changedXref the changed cross references of this revision
+   * @param baseSafeObjects the signature-independent safe objects
+   * @param unsupportedRootItemUpdate whether the root dictionary carries an unsupported changed item
+   * @param signature whether lenient signature/timestamp annotation rules apply
+   * @return true if the revision is a safe (non-visual) update under the given leniency
+   */
+  private boolean isSafeReferenceUpdate(final PDFDocRevision revData, final PDFDocRevision lastRevData,
+      final Map<COSObjectKey, Long[]> changedXref, final List<Long> baseSafeObjects,
+      final boolean unsupportedRootItemUpdate, final boolean signature) {
+
+    final List<Long> safeObjects = new ArrayList<>(baseSafeObjects);
+    for (final COSObjectKey objectKey : changedXref.keySet()) {
+      if (objectKey.getNumber() != revData.getRootObjectId()) {
+        final COSObject oldObject = lastRevData == null ? null : lastRevData.getCosDocument().getObjectFromPool(objectKey);
+        final COSObject newObject = revData.getCosDocument().getObjectFromPool(objectKey);
+        if (oldObject == null || newObject == null) {
+          // Both-null objects are already in the base safe set; a single-null change is not a safe annotation change.
+          continue;
+        }
+        if (isOnlyNewAnnotations(oldObject, newObject, signature)) {
+          safeObjects.add(objectKey.getNumber());
+        }
+      }
+    }
+
+    final boolean unsafeRefupdate = changedXref.keySet().stream()
+        .map(COSObjectKey::getNumber)
+        .anyMatch(id -> id != revData.getRootObjectId() && !safeObjects.contains(id));
+
+    return !unsupportedRootItemUpdate && !unsafeRefupdate && revData.isLegalRootObject();
   }
 
   /**
@@ -615,13 +665,18 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     COSBase f = a.getDictionaryObject(COSName.F);
     if (f instanceof COSNumber) flags = ((COSNumber) f).intValue();
 
-    final boolean INVISIBLE = (flags & 1)  != 0; // viewer should not display
-    final boolean HIDDEN    = (flags & 2)  != 0; // do not display/print
+    final boolean HIDDEN    = (flags & 2)  != 0; // do not display or print, regardless of type
     final boolean PRINT     = (flags & 4)  != 0; // print with page
-    final boolean NO_VIEW   = (flags & 32) != 0; // do not display on screen
+    final boolean NO_VIEW   = (flags & 32) != 0; // do not display on screen (may still print)
 
-    // If the viewer is instructed not to show it on screen, treat as non-visual for screen mode.
-    if (INVISIBLE || HIDDEN || NO_VIEW) {
+    // NOTE: The Invisible flag (/F bit 1) is deliberately NOT treated as hiding the annotation.
+    // Per ISO 32000-1, 12.5.3 (Table 165), Invisible only suppresses rendering of annotations whose
+    // subtype is non-standard AND for which the viewer has no annotation handler. Standard, renderable
+    // subtypes (Square, FreeText, Circle, Line, Stamp, Polygon, ...) are still painted by viewers when
+    // Invisible is set - so a full-page white Square plus FreeText overlays flagged /F 1 would be
+    // displayed by every viewer while masquerading as a "safe, invisible" update. Only Hidden and NoView
+    // reliably suppress on-screen display for all subtypes.
+    if (HIDDEN || NO_VIEW) {
       return true;
     }
 
@@ -684,8 +739,22 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
       return true;
     }
 
+    // 6b-0) Zero-area signature/timestamp field:
+    // A zero-area Widget renders nothing - its appearance is scaled into an empty /Rect - so it cannot alter the
+    // visual content regardless of the Print flag or the presence of an (empty) appearance stream. This is recognized
+    // as non-visual independently of trust, so that legitimate invisible signature and document-timestamp fields never
+    // depend on the lenient (validated-signature) path below. This matters for SVT re-issuance: an older SVT whose
+    // key/algorithm no longer validates at present time still leaves its invisible field non-visual under the strict
+    // rules, so document coverage does not break merely because the old SVT is no longer independently trusted.
+    // Scoped to Widget because signature/timestamp fields are always Widgets and Widgets render strictly within their
+    // /Rect (unlike Line/Ink/Polygon, whose geometry may extend outside /Rect).
+    if ("Widget".equals(subtype) && zeroArea) {
+      return true;
+    }
+
     // 6b) Signature widget (common for doc timestamps):
-    // /Subtype /Widget, /FT /Sig
+    // /Subtype /Widget, /FT /Sig. A visible widget is only accepted when this revision is a validated
+    // (trusted) signature or document timestamp - see the trust-gating in getXrefUpdates/applyValidatedSignature.
     if ("Widget".equals(subtype)) {
       //COSBase ft = a.getDictionaryObject(COSName.FT);
       if (signature) {

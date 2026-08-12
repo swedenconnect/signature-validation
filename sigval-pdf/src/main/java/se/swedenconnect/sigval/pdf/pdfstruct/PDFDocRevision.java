@@ -44,8 +44,15 @@ public class PDFDocRevision {
   private boolean documentTimestamp;
   /** True if the incremental update of this revision provides a Document Security Store */
   private boolean validDSS;
-  /** True if this revision update is considered safe to not provide visual changes to the PDF visual content */
+  /** True if this revision update is considered safe to not provide visual changes to the PDF visual content. This is
+   * the effective value used by coverage checks. It starts as the strict conclusion and is upgraded to
+   * {@link #safeUpdateLenient} only once the signature or document timestamp of this revision has been validated to a
+   * trusted anchor. */
   private boolean safeUpdate;
+  /** The safe-update conclusion computed with the lenient signature/timestamp annotation rules applied. This value is
+   * promoted into {@link #safeUpdate} only for revisions whose signature/document timestamp has been validated as
+   * trusted. */
+  private boolean safeUpdateLenient;
   /** The object identifier value of the root object of this revision */
   private long rootObjectId;
   /** The COSDocument for this revision providing data about this revision */
