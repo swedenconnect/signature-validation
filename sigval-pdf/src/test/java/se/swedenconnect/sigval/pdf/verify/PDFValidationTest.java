@@ -78,6 +78,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * End-to-end PDF (PAdES) signature validation tests. A blank PDF is signed at test time with a certificate issued by
@@ -122,6 +123,23 @@ class PDFValidationTest {
   }
 
   @Test
+  void tamperedSignature_isRejected() throws Exception {
+    final X509Certificate signerCert = issueEndEntity("PDF Signer", signerKeyPair.getPublic());
+    final byte[] signed = signPdf(credential(signerKeyPair.getPrivate(), signerCert,
+        CA.getTestCA().getIssuingCACertificate()));
+
+    // Alter a byte inside the signed byte-range (the PDF header version), leaving the signature dictionary,
+    // /Contents (the CMS) and the certificate chain untouched. The signed digest no longer matches, so the
+    // CMS signature verification must fail. This pins that the verify() result is actually enforced.
+    final byte[] tampered = tamperSignedContent(signed);
+
+    final ExtendedPdfSigValResult result = validateFirst(tampered);
+
+    assertEquals(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE, result.getStatus(),
+        "a PDF whose signed content was altered must be reported as invalid");
+  }
+
+  @Test
   void svtRoundTrip_validatesViaSvt() throws Exception {
     // 1. A trusted, valid PDF signature.
     final X509Certificate signerCert = issueEndEntity("SVT PDF Signer", signerKeyPair.getPublic());
@@ -161,6 +179,42 @@ class PDFValidationTest {
     assertNotNull(result.getSvtJWT(), "result must be produced via the SVT validation path");
   }
 
+  @Test
+  void svtWithForgedSignature_isRejected() throws Exception {
+    final X509Certificate signerCert = issueEndEntity("SVT PDF Signer", signerKeyPair.getPublic());
+    final byte[] signedPdf = signPdf(credential(signerKeyPair.getPrivate(), signerCert,
+        CA.getTestCA().getIssuingCACertificate()));
+
+    // The document timestamp is signed correctly (matches svtCert), but the SVT JWT it carries is signed
+    // with a DIFFERENT key while still presenting the trusted svtCert - a forged SVA token.
+    final KeyPair svtKeyPair = ecKeyPair();
+    final X509Certificate svtCert = issueTimestampCertificate("SVT Issuer", svtKeyPair.getPublic());
+    final List<X509Certificate> svtChain = List.of(svtCert, CA.getTestCA().getIssuingCACertificate());
+    final KeyPair attackerKeyPair = ecKeyPair();
+
+    final PDFSVTSigValClaimsIssuer forgingIssuer = new PDFSVTSigValClaimsIssuer(
+        JWSAlgorithm.ES256, attackerKeyPair.getPrivate(), svtChain, documentVerifier(null));
+    final SVTModel svtModel = SVTModel.builder()
+        .svtIssuerId("https://example.com/svt-issuer")
+        .certRef(false)
+        .validityPeriod(Duration.ofDays(365).toMillis())
+        .build();
+    final SignedJWT forgedSvtJwt = forgingIssuer.getSignedSvtJWT(signedPdf, svtModel);
+
+    final DefaultPDFDocTimestampSignatureInterface tsSigner = new DefaultPDFDocTimestampSignatureInterface(
+        svtKeyPair.getPrivate(), svtChain, SVTAlgoRegistry.getAlgoParams(JWSAlgorithm.ES256).getSigAlgoId());
+    final byte[] svtSealedPdf = PDFDocTimstampProcessor.createSVTSealedPDF(
+        signedPdf, forgedSvtJwt.serialize(), tsSigner).getDocument();
+
+    final PDFSVTValidator svtValidator = new PDFSVTValidator(certificateValidator(),
+        new BasicTimstampPolicyVerifier(certificateValidator()));
+    final List<SignatureValidationResult> results = documentVerifier(svtValidator).validate(svtSealedPdf);
+    final ExtendedPdfSigValResult result = (ExtendedPdfSigValResult) results.get(0);
+
+    // The forged SVT must be rejected - validation must NOT be produced via the SVT path.
+    assertNull(result.getSvtJWT(), "an SVT with an invalid signature must not be accepted");
+  }
+
   // ---- helpers ----
 
   private ExtendedPdfSigValResult validateFirst(final byte[] signedPdf) throws Exception {
@@ -184,6 +238,30 @@ class PDFValidationTest {
     signer.setIncludeCertificateChain(true);
     final PDFSignerResult result = signer.sign(blankPdf());
     return result.getSignedDocument();
+  }
+
+  /** Flips the PDF header version digit, which lies inside the signed byte-range but outside the signature
+   * dictionary and its {@code /Contents}. PDFBox still parses the document (and the intact signature), but the
+   * signed content digest no longer matches, so CMS verification fails. */
+  private static byte[] tamperSignedContent(final byte[] signedPdf) {
+    final byte[] copy = signedPdf.clone();
+    final byte[] marker = "%PDF-1.".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+    int idx = -1;
+    outer:
+    for (int i = 0; i + marker.length < copy.length; i++) {
+      for (int j = 0; j < marker.length; j++) {
+        if (copy[i + j] != marker[j]) {
+          continue outer;
+        }
+      }
+      idx = i + marker.length;
+      break;
+    }
+    if (idx < 0) {
+      throw new IllegalStateException("PDF header not found");
+    }
+    copy[idx] = (byte) (copy[idx] == '4' ? '5' : '4');
+    return copy;
   }
 
   private static byte[] blankPdf() throws Exception {

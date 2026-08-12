@@ -356,14 +356,15 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
     if (policyValidationClaims.isEmpty()) {
       return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
     }
-    if (policyValidationClaims.stream().anyMatch(pvc -> pvc.getRes().equals(ValidationConclusion.PASSED))) {
-      return SignatureValidationResult.Status.SUCCESS;
-    }
+    // A FAILED claim takes precedence over any PASSED claim in the same token.
     if (policyValidationClaims.stream().anyMatch(pvc -> pvc.getRes().equals(ValidationConclusion.FAILED))) {
       return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
     }
     if (policyValidationClaims.stream().anyMatch(pvc -> pvc.getRes().equals(ValidationConclusion.INDETERMINATE))) {
       return SignatureValidationResult.Status.INTERDETERMINE;
+    }
+    if (policyValidationClaims.stream().allMatch(pvc -> pvc.getRes().equals(ValidationConclusion.PASSED))) {
+      return SignatureValidationResult.Status.SUCCESS;
     }
     return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
   }

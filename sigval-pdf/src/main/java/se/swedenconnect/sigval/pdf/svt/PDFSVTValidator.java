@@ -189,13 +189,17 @@ public class PDFSVTValidator extends SVTValidator<byte[]> {
           continue;
         }
         List<PolicyValidationClaims> policyValidationClaimsList = svaTs.getPolicyValidationClaimsList();
-        for (PolicyValidationClaims pv : policyValidationClaimsList) {
-          if (!pv.getRes().equals(ValidationConclusion.PASSED)) {
-            //SVA TS did not pass one of the attached TS validation policies
-            continue;
-          }
+        boolean allPoliciesPassed = policyValidationClaimsList.stream()
+          .allMatch(pv -> ValidationConclusion.PASSED.equals(pv.getRes()));
+        if (!allPoliciesPassed) {
+          //SVA TS did not pass one of the attached TS validation policies. Skip this SVA.
+          continue;
         }
         svaTs.verifySVA();
+        if (!svaTs.isSvaSignatureValid()) {
+          //The SVA token signature or the cert path validation of its signing certificate failed. Skip this SVA.
+          continue;
+        }
         // The SVA is valid
         validSvaTsList.add(svaTs);
       }

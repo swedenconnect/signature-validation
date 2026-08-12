@@ -63,11 +63,18 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
   }
 
   /**
-   * Verifies the SVA.
+   * Verifies the SVA token: its signature is checked against the SVA signing certificate and that certificate is path
+   * validated.
+   * <p>
+   * This method does <b>not</b> throw to signal an invalid SVA. Validation failures (a bad SVA signature or a signing
+   * certificate that fails path validation) are recorded in the {@code svaSignatureValid} field and must be read by the
+   * caller via {@link #isSvaSignatureValid()}. A {@code false} result means the SVA must not be trusted. Any exception
+   * declared here relates only to unexpected processing errors, not to a negative validation outcome.
+   * </p>
    *
    * @param certificates Optional array of certificates. If more than one certificate is provided, the first certificate is used as the
    *                     signing certificate and the rest is regarded as supporting chain certificates.
-   * @throws Exception if validation of SVA fails
+   * @throws Exception on unexpected processing errors (not raised for a negative validation result)
    */
   public void verifySVA(X509Certificate... certificates) throws Exception {
     svaSignatureValid = false;

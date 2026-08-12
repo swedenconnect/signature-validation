@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.PublicKey;
+import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -308,6 +309,17 @@ public class SVAUtils {
    *           if validation of SVA fails
    */
   public static void verifySVA(SignedJWT signedJWT, PublicKey publicKey) throws Exception {
+
+    final JWSVerifier verifier = publicKey instanceof RSAPublicKey ? new RSASSAVerifier((RSAPublicKey) publicKey)
+        : new ECDSAVerifier((ECPublicKey) publicKey);
+
+    // Verify the SVA token signature FIRST, before trusting any claim read from the token.
+    // Nimbus SignedJWT.verify() returns false on a bad signature (it does not throw), so the boolean
+    // result MUST be checked - ignoring it would accept a forged SVA token.
+    if (!signedJWT.verify(verifier)) {
+      throw new SignatureException("SVA token signature validation failed");
+    }
+
     // Check for expiry
     Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
     if (expirationTime != null) {
@@ -315,9 +327,6 @@ public class SVAUtils {
         throw new RuntimeException("The SVA has expired");
       }
     }
-
-    JWSVerifier verifier = publicKey instanceof RSAPublicKey ? new RSASSAVerifier((RSAPublicKey) publicKey)
-        : new ECDSAVerifier((ECPublicKey) publicKey);
 
     // Verify that the hash algorithm is consistent with the SVA claims
     JWSAlgorithm algorithm = signedJWT.getHeader().getAlgorithm();
@@ -328,9 +337,8 @@ public class SVAUtils {
     DigestAlgorithm svaClaimsHashAlgo = DigestAlgorithmRegistry.get(svtClaims.getHash_algo());
     if (!svaSigHashAlgo.equals(svaClaimsHashAlgo)) {
       throw new IOException(
-        "SVA hahs algo mismatch. SVA algo: " + svaClaimsHashAlgo.getUri() + ", SVA token sig algo: " + svaSigHashAlgo.getUri());
+        "SVA hash algo mismatch. SVA algo: " + svaClaimsHashAlgo.getUri() + ", SVA token sig algo: " + svaSigHashAlgo.getUri());
     }
-    signedJWT.verify(verifier);
   }
 
   public static SignedJWT getMostRecentJwt(List<SignedJWT> signedJWTList) {
