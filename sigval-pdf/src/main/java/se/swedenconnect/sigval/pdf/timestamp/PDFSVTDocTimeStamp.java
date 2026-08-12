@@ -48,37 +48,44 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
   private CertificateValidationResult svaCertValidationResult;
 
   public PDFSVTDocTimeStamp(PDSignature documentTimestampSig, byte[] pdfDoc,
-    CertificateValidator svaTokenCertVerifier, TimeStampPolicyVerifier tsPolicyVerifier) throws Exception {
+    CertificateValidator svtTokenCertVerifier, TimeStampPolicyVerifier tsPolicyVerifier) throws Exception {
     super(documentTimestampSig, pdfDoc, tsPolicyVerifier);
-    this.svaTokenCertVerifier = svaTokenCertVerifier;
+    this.svaTokenCertVerifier = svtTokenCertVerifier;
   }
 
   @Override
   protected void init() throws Exception {
     super.init();
-    String svajwt = SVAUtils.getSVTJWT(tstInfo);
-    this.signedJWT = SignedJWT.parse(svajwt);
+    String svtjwt = SVAUtils.getSVTJWT(tstInfo);
+    this.signedJWT = SignedJWT.parse(svtjwt);
     this.svtClaims = SVAUtils.getSVTClaims(signedJWT.getJWTClaimsSet());
     signedJWT.getHeader().getAlgorithm();
   }
 
   /**
-   * Verifies the SVA.
+   * Verifies the SVT: its signature is checked against the SVT signing certificate and that certificate is path
+   * validated.
+   * <p>
+   * This method does <b>not</b> throw to signal an invalid SVT. Validation failures (a bad SVT signature or a signing
+   * certificate that fails path validation) are recorded in the {@code svaSignatureValid} field and must be read by the
+   * caller via {@link #isSvaSignatureValid()}. A {@code false} result means the SVT must not be trusted. Any exception
+   * declared here relates only to unexpected processing errors, not to a negative validation outcome.
+   * </p>
    *
    * @param certificates Optional array of certificates. If more than one certificate is provided, the first certificate is used as the
    *                     signing certificate and the rest is regarded as supporting chain certificates.
-   * @throws Exception if validation of SVA fails
+   * @throws Exception on unexpected processing errors (not raised for a negative validation result)
    */
   public void verifySVA(X509Certificate... certificates) throws Exception {
     svaSignatureValid = false;
-    getSvaSigningCertificate(certificates);
+    getSvtSigningCertificate(certificates);
 
-    // Verify cert and signature of SVA
+    // Verify cert and signature of SVT
     svaCertValidationResult = new PathValidationResult();
     try {
       SVAUtils.verifySVA(signedJWT, svaSigCert.getPublicKey());
       svaSignatureValid = true;
-      log.debug("SVA signature verification succeeded");
+      log.debug("SVT signature verification succeeded");
     }
     catch (Exception ex) {
       log.warn("Error validating the SVT signature: {}", ex.getMessage());
@@ -100,21 +107,21 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
   }
 
   /**
-   * Obtain SVA validation certificates from the provided SVA
-   * If the SVA does not contain any certificates, we will choose the certificate and chain used to sign the timstamp
-   * that included the SVA.
+   * Obtain SVT validation certificates from the provided SVT
+   * If the SVT does not contain any certificates, we will choose the certificate and chain used to sign the timstamp
+   * that included the SVT.
    * <p>
-   * There are three possible certificate sources and the SVA certificate is selected in the following order
+   * There are three possible certificate sources and the SVT certificate is selected in the following order
    *
    * <ol>
    *   <li>Use certificates provided in the verifySVA function call</li>
-   *   <li>Use certificates provided in the SVA</li>
-   *   <li>Fallback to use the certificates used to validate the Time Stamp holding the SVA</li>
+   *   <li>Use certificates provided in the SVT</li>
+   *   <li>Fallback to use the certificates used to validate the Time Stamp holding the SVT</li>
    * </ol>*
    *
    * @param certificates
    */
-  private void getSvaSigningCertificate(X509Certificate[] certificates) {
+  private void getSvtSigningCertificate(X509Certificate[] certificates) {
     if (certificates.length > 0) {
       // Function call contained certificates. Use them
       svaSigCert = certificates[0];
@@ -130,9 +137,9 @@ public class PDFSVTDocTimeStamp extends PDFDocTimeStamp {
         ASN1ObjectIdentifier digestAlgoOID = PDFAlgorithmRegistry.getAlgorithmProperties(
           JWSAlgorithmRegistry.getUri(signedJWT.getHeader().getAlgorithm())).getMessageDigestAlgorithm().getAlgorithmIdentifier().getAlgorithm();
         DigestAlgorithm digestAlgorithm = DigestAlgorithmRegistry.get(digestAlgoOID);
-        MessageDigest svaDigestAlgo = digestAlgorithm.getInstance();
-        String svaSigCertHashB64 = Base64.encodeBase64String(svaDigestAlgo.digest(sigCert.getEncoded()));
-        if (keyID.equals(svaSigCertHashB64)) {
+        MessageDigest svtDigestAlgo = digestAlgorithm.getInstance();
+        String svtSigCertHashB64 = Base64.encodeBase64String(svtDigestAlgo.digest(sigCert.getEncoded()));
+        if (keyID.equals(svtSigCertHashB64)) {
           // The keyID holds the Base64 encoded hash value of the signing cert used to sign the SVT timestamp
           svaSigCert = sigCert;
           svaChain = certList;

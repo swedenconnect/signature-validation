@@ -90,7 +90,7 @@ public class ExtendedSigValResult extends DefaultSignatureValidationResult {
   private List<TimeValidationResult> timeValidationResults = new ArrayList<>();
 
   /**
-   * The signature SVA claims of this signature.
+   * The signature SVT claims of this signature.
    **/
   @Setter
   @Getter

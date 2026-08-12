@@ -51,6 +51,9 @@ import se.swedenconnect.sigval.cert.validity.crl.impl.InMemoryCRLCache;
 import se.swedenconnect.sigval.commons.timestamp.TimeStampPolicyVerifier;
 import se.swedenconnect.sigval.commons.timestamp.impl.BasicTimstampPolicyVerifier;
 import se.swedenconnect.sigval.pdf.data.ExtendedPdfSigValResult;
+import se.swedenconnect.sigval.pdf.pdfstruct.PDFDocRevision;
+import se.swedenconnect.sigval.pdf.pdfstruct.impl.DefaultGeneralSafeObjects;
+import se.swedenconnect.sigval.pdf.pdfstruct.impl.DefaultPDFSignatureContext;
 import se.swedenconnect.sigval.pdf.pdfstruct.impl.DefaultPDFSignatureContextFactory;
 import se.swedenconnect.sigval.pdf.svt.PDFSVTSigValClaimsIssuer;
 import se.swedenconnect.sigval.pdf.svt.PDFSVTValidator;
@@ -78,6 +81,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * End-to-end PDF (PAdES) signature validation tests. A blank PDF is signed at test time with a certificate issued by
@@ -122,6 +127,23 @@ class PDFValidationTest {
   }
 
   @Test
+  void tamperedSignature_isRejected() throws Exception {
+    final X509Certificate signerCert = issueEndEntity("PDF Signer", signerKeyPair.getPublic());
+    final byte[] signed = signPdf(credential(signerKeyPair.getPrivate(), signerCert,
+        CA.getTestCA().getIssuingCACertificate()));
+
+    // Alter a byte inside the signed byte-range (the PDF header version), leaving the signature dictionary,
+    // /Contents (the CMS) and the certificate chain untouched. The signed digest no longer matches, so the
+    // CMS signature verification must fail. This pins that the verify() result is actually enforced.
+    final byte[] tampered = tamperSignedContent(signed);
+
+    final ExtendedPdfSigValResult result = validateFirst(tampered);
+
+    assertEquals(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE, result.getStatus(),
+        "a PDF whose signed content was altered must be reported as invalid");
+  }
+
+  @Test
   void svtRoundTrip_validatesViaSvt() throws Exception {
     // 1. A trusted, valid PDF signature.
     final X509Certificate signerCert = issueEndEntity("SVT PDF Signer", signerKeyPair.getPublic());
@@ -161,6 +183,97 @@ class PDFValidationTest {
     assertNotNull(result.getSvtJWT(), "result must be produced via the SVT validation path");
   }
 
+  @Test
+  void svtWithForgedSignature_isRejected() throws Exception {
+    final X509Certificate signerCert = issueEndEntity("SVT PDF Signer", signerKeyPair.getPublic());
+    final byte[] signedPdf = signPdf(credential(signerKeyPair.getPrivate(), signerCert,
+        CA.getTestCA().getIssuingCACertificate()));
+
+    // The document timestamp is signed correctly (matches svtCert), but the SVT JWT it carries is signed
+    // with a DIFFERENT key while still presenting the trusted svtCert - a forged SVT.
+    final KeyPair svtKeyPair = ecKeyPair();
+    final X509Certificate svtCert = issueTimestampCertificate("SVT Issuer", svtKeyPair.getPublic());
+    final List<X509Certificate> svtChain = List.of(svtCert, CA.getTestCA().getIssuingCACertificate());
+    final KeyPair attackerKeyPair = ecKeyPair();
+
+    final PDFSVTSigValClaimsIssuer forgingIssuer = new PDFSVTSigValClaimsIssuer(
+        JWSAlgorithm.ES256, attackerKeyPair.getPrivate(), svtChain, documentVerifier(null));
+    final SVTModel svtModel = SVTModel.builder()
+        .svtIssuerId("https://example.com/svt-issuer")
+        .certRef(false)
+        .validityPeriod(Duration.ofDays(365).toMillis())
+        .build();
+    final SignedJWT forgedSvtJwt = forgingIssuer.getSignedSvtJWT(signedPdf, svtModel);
+
+    final DefaultPDFDocTimestampSignatureInterface tsSigner = new DefaultPDFDocTimestampSignatureInterface(
+        svtKeyPair.getPrivate(), svtChain, SVTAlgoRegistry.getAlgoParams(JWSAlgorithm.ES256).getSigAlgoId());
+    final byte[] svtSealedPdf = PDFDocTimstampProcessor.createSVTSealedPDF(
+        signedPdf, forgedSvtJwt.serialize(), tsSigner).getDocument();
+
+    final PDFSVTValidator svtValidator = new PDFSVTValidator(certificateValidator(),
+        new BasicTimstampPolicyVerifier(certificateValidator()));
+    final List<SignatureValidationResult> results = documentVerifier(svtValidator).validate(svtSealedPdf);
+    final ExtendedPdfSigValResult result = (ExtendedPdfSigValResult) results.get(0);
+
+    // The forged SVT must be rejected - validation must NOT be produced via the SVT path.
+    assertNull(result.getSvtJWT(), "an SVT with an invalid signature must not be accepted");
+  }
+
+  /**
+   * Build-time canary for PDFBox regressions. This library only ever grants "lenient" treatment to SVTs it produces
+   * itself, and it relies on the fact that our SVT document-timestamp field is invisible (zero-area), so that it
+   * passes the STRICT safe-update rules on its own - without depending on the validated-signature (trust) upgrade.
+   * That property is what lets SVT re-issuance keep full document coverage even when an older SVT's key/algorithm no
+   * longer validates at present time.
+   *
+   * <p>This test seals an SVT into a PDF exactly the way the library does (a PDFBox document timestamp), builds the
+   * signature context the way production does (but WITHOUT running the validator, so no trust upgrade is applied), and
+   * asserts that the SVT revision is a safe update under the strict rules. If a future PDFBox release changes how the
+   * timestamp field is created (e.g. a non-zero {@code /Rect}), this fails loudly at build time - before it can
+   * silently break coverage in production.</p>
+   */
+  @Test
+  void svtTimestampField_isInvisibleUnderStrictRules() throws Exception {
+    final X509Certificate signerCert = issueEndEntity("SVT PDF Signer", signerKeyPair.getPublic());
+    final byte[] signedPdf = signPdf(credential(signerKeyPair.getPrivate(), signerCert,
+        CA.getTestCA().getIssuingCACertificate()));
+
+    final KeyPair svtKeyPair = ecKeyPair();
+    final X509Certificate svtCert = issueTimestampCertificate("SVT Issuer", svtKeyPair.getPublic());
+    final List<X509Certificate> svtChain = List.of(svtCert, CA.getTestCA().getIssuingCACertificate());
+    final PDFSVTSigValClaimsIssuer claimsIssuer = new PDFSVTSigValClaimsIssuer(
+        JWSAlgorithm.ES256, svtKeyPair.getPrivate(), svtChain, documentVerifier(null));
+    final SVTModel svtModel = SVTModel.builder()
+        .svtIssuerId("https://example.com/svt-issuer")
+        .certRef(false)
+        .validityPeriod(Duration.ofDays(365).toMillis())
+        .build();
+    final SignedJWT svtJwt = claimsIssuer.getSignedSvtJWT(signedPdf, svtModel);
+    assertNotNull(svtJwt, "an SVT should be issued for the valid, trusted signature");
+
+    final DefaultPDFDocTimestampSignatureInterface tsSigner = new DefaultPDFDocTimestampSignatureInterface(
+        svtKeyPair.getPrivate(), svtChain, SVTAlgoRegistry.getAlgoParams(JWSAlgorithm.ES256).getSigAlgoId());
+    final byte[] svtSealedPdf = PDFDocTimstampProcessor.createSVTSealedPDF(
+        signedPdf, svtJwt.serialize(), tsSigner).getDocument();
+
+    // Build the context exactly as production does (DefaultGeneralSafeObjects) but WITHOUT running the validator, so
+    // no trust upgrade is applied - every revision's isSafeUpdate() reflects the STRICT rules.
+    final DefaultPDFSignatureContext context =
+        new DefaultPDFSignatureContext(svtSealedPdf, new DefaultGeneralSafeObjects());
+    final List<PDFDocRevision> revisions = context.getPdfDocRevisions();
+    assertTrue(revisions.size() >= 3,
+        "expected base + signature + SVT-timestamp revisions, got " + revisions.size());
+
+    // The SVT document timestamp is the last incremental update.
+    final PDFDocRevision svtRevision = revisions.get(revisions.size() - 1);
+    assertTrue(svtRevision.isSafeUpdate(),
+        "The SVT document-timestamp field must be recognised as invisible (zero-area) under the STRICT safe-update "
+            + "rules, i.e. WITHOUT relying on the validated-signature upgrade. This just failed, which almost "
+            + "certainly means a PDFBox change altered how the timestamp field is created (e.g. a non-zero /Rect). "
+            + "Fix the field creation or the isInvisibleAnnotation rules before this reaches production - otherwise "
+            + "SVT re-issuance will silently lose full document coverage once the older SVT is no longer trusted.");
+  }
+
   // ---- helpers ----
 
   private ExtendedPdfSigValResult validateFirst(final byte[] signedPdf) throws Exception {
@@ -184,6 +297,30 @@ class PDFValidationTest {
     signer.setIncludeCertificateChain(true);
     final PDFSignerResult result = signer.sign(blankPdf());
     return result.getSignedDocument();
+  }
+
+  /** Flips the PDF header version digit, which lies inside the signed byte-range but outside the signature
+   * dictionary and its {@code /Contents}. PDFBox still parses the document (and the intact signature), but the
+   * signed content digest no longer matches, so CMS verification fails. */
+  private static byte[] tamperSignedContent(final byte[] signedPdf) {
+    final byte[] copy = signedPdf.clone();
+    final byte[] marker = "%PDF-1.".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+    int idx = -1;
+    outer:
+    for (int i = 0; i + marker.length < copy.length; i++) {
+      for (int j = 0; j < marker.length; j++) {
+        if (copy[i + j] != marker[j]) {
+          continue outer;
+        }
+      }
+      idx = i + marker.length;
+      break;
+    }
+    if (idx < 0) {
+      throw new IllegalStateException("PDF header not found");
+    }
+    copy[idx] = (byte) (copy[idx] == '4' ? '5' : '4');
+    return copy;
   }
 
   private static byte[] blankPdf() throws Exception {

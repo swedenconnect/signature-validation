@@ -459,7 +459,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
       xmlSvResult.setClaimedSigningTime(xAdESObjectParser.getClaimedSigningTime());
       xmlSvResult.setSignedDocument(signatureData.getSignedDocument());
 
-      // Get algorithms and public key type. Note that the source of these values is the SVA signature which is regarded
+      // Get algorithms and public key type. Note that the source of these values is the SVT signature which is regarded
       // as the algorithm
       // That is effectively protecting the integrity of the signature, superseding the use of the original algorithms.
       final SignedJWT signedJWT = svtValResult.getSignedJWT();
@@ -523,7 +523,7 @@ public class XMLSignatureElementValidatorImpl implements XMLSignatureElementVali
     }
     catch (final Exception ex) {
       xmlSvResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
-      xmlSvResult.setStatusMessage("Unable to process SVA token or signature data");
+      xmlSvResult.setStatusMessage("Unable to process SVT or signature data");
       return xmlSvResult;
     }
     return xmlSvResult;

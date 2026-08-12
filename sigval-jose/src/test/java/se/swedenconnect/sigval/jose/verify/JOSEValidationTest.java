@@ -68,6 +68,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * End-to-end JOSE (JWS) signature validation tests. A compact JWS is signed at test time with a certificate issued by
@@ -109,6 +110,23 @@ class JOSEValidationTest {
   }
 
   @Test
+  void tamperedSignature_isRejected() throws Exception {
+    final X509Certificate signerCert = issueEndEntity("JOSE Signer", signerKeyPair.getPublic());
+    final byte[] jws = signJws("Signed JOSE payload", signerKeyPair.getPrivate(),
+        List.of(signerCert, CA.getTestCA().getIssuingCACertificate()));
+
+    // Corrupt the signature segment of the compact JWS. The certificate is trusted and the reference digest
+    // still matches - only the cryptographic signature value is wrong. This pins that the signature verify
+    // result is actually enforced (the SVAUtils class of bug).
+    final byte[] tampered = corruptSignatureSegment(jws);
+
+    final ExtendedJOSESigvalResult result = validateFirst(tampered);
+
+    assertEquals(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE, result.getStatus(),
+        "a JWS with a corrupted signature value must be reported as invalid");
+  }
+
+  @Test
   void svtRoundTrip_validatesViaSvt() throws Exception {
     // 1. A trusted, valid JWS.
     final X509Certificate signerCert = issueEndEntity("SVT Doc Signer", signerKeyPair.getPublic());
@@ -144,6 +162,41 @@ class JOSEValidationTest {
     assertNotNull(result.getSvtJWT(), "result must be produced via the SVT validation path");
   }
 
+  @Test
+  void svtWithForgedSignature_isRejected() throws Exception {
+    final X509Certificate signerCert = issueEndEntity("SVT Doc Signer", signerKeyPair.getPublic());
+    final byte[] jws = signJws("Signed JOSE payload", signerKeyPair.getPrivate(),
+        List.of(signerCert, CA.getTestCA().getIssuingCACertificate()));
+
+    // Forge: present a trusted SVT issuer certificate but sign the SVT with a DIFFERENT key.
+    final KeyPair svtKeyPair = ecKeyPair();
+    final X509Certificate svtCert = issueEndEntity("SVT Issuer", svtKeyPair.getPublic());
+    final KeyPair attackerKeyPair = ecKeyPair();
+    final JOSESignatureDataValidatorImpl plainValidator = new JOSESignatureDataValidatorImpl(
+        certificateValidator(), new PkixJOSESignaturePolicyValidator(false), null);
+    final JOSESVTSigValClaimsIssuer forgingIssuer = new JOSESVTSigValClaimsIssuer(
+        JWSAlgorithm.ES256, attackerKeyPair.getPrivate(),
+        List.of(svtCert, CA.getTestCA().getIssuingCACertificate()), plainValidator);
+    final SVTModel svtModel = SVTModel.builder()
+        .svtIssuerId("https://example.com/svt-issuer")
+        .certRef(true)
+        .validityPeriod(Duration.ofDays(365).toMillis())
+        .build();
+    final byte[] svtDocument = new JOSEDocumentSVTIssuer(forgingIssuer)
+        .issueSvt(jws, svtModel, SVTExtendpolicy.REPLACE, false);
+
+    final JOSESVTValidator svtValidator = new JOSESVTValidator(certificateValidator(),
+        List.of(svtCert, CA.getTestCA().getIssuingCACertificate()));
+    final JOSESignatureDataValidatorImpl svtAwareValidator = new JOSESignatureDataValidatorImpl(
+        certificateValidator(), new PkixJOSESignaturePolicyValidator(false), null, svtValidator);
+    final List<SignatureValidationResult> results =
+        new JOSESignedDocumentValidator(svtAwareValidator).validate(svtDocument, null);
+    final ExtendedJOSESigvalResult result = (ExtendedJOSESigvalResult) results.get(0);
+
+    // The forged SVT must be rejected - validation must NOT be produced via the SVT path.
+    assertNull(result.getSvtJWT(), "an SVT with an invalid signature must not be accepted");
+  }
+
   // ---- helpers ----
 
   private ExtendedJOSESigvalResult validateFirst(final byte[] jws) throws Exception {
@@ -173,6 +226,19 @@ class JOSEValidationTest {
     final JWSObject jws = new JWSObject(header, new Payload(payload));
     jws.sign(new ECDSASigner((ECPrivateKey) signingKey));
     return jws.serialize().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+  }
+
+  /** Flips one character in the signature segment of a compact JWS, invalidating the signature value while keeping
+   * the header, payload and cert chain intact. */
+  private static byte[] corruptSignatureSegment(final byte[] jws) {
+    final String compact = new String(jws, java.nio.charset.StandardCharsets.UTF_8);
+    final int lastDot = compact.lastIndexOf('.');
+    final String head = compact.substring(0, lastDot + 1);
+    final String sig = compact.substring(lastDot + 1);
+    final char first = sig.charAt(0);
+    final char replacement = first == 'A' ? 'B' : 'A';
+    final String tamperedSig = replacement + sig.substring(1);
+    return (head + tamperedSig).getBytes(java.nio.charset.StandardCharsets.UTF_8);
   }
 
   /** Issues an end-entity certificate with a CRL distribution point but no OCSP (keeps validation network-free). */

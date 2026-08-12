@@ -62,8 +62,8 @@ import se.swedenconnect.sigval.xml.xmlstruct.XMLSigConstants;
  */
 @Slf4j
 public class XMLSVTValidator extends SVTValidator<XMLSigValInput> implements XMLSigConstants {
-  /** Certificate chain validator for SVA tokens **/
-  private final CertificateValidator svaCertVerifier;
+  /** Certificate chain validator for SVTs **/
+  private final CertificateValidator svtCertVerifier;
 
   /**
    * Supporting certificates used to verify the signature on the SVT. A key ID is valid ref if it matches one of the certificates in this list.
@@ -73,20 +73,20 @@ public class XMLSVTValidator extends SVTValidator<XMLSigValInput> implements XML
 
   /**
    * Constructor without any supporting validation certificates
-   * @param svaCertVerifier certificate verifier used to verify the SVT signing certificate
+   * @param svtCertVerifier certificate verifier used to verify the SVT signing certificate
    */
-  public XMLSVTValidator(CertificateValidator svaCertVerifier) {
-    this.svaCertVerifier = svaCertVerifier;
+  public XMLSVTValidator(CertificateValidator svtCertVerifier) {
+    this.svtCertVerifier = svtCertVerifier;
     this.supportingCertificates = new ArrayList<>();
   }
 
   /**
    * Constructor that allows passing of supporting certificates
-   * @param svaCertVerifier certificate verifier used to verify the SVT signing certificate
+   * @param svtCertVerifier certificate verifier used to verify the SVT signing certificate
    * @param supportingCertificates supporting certificates used to verify the SVT signature
    */
-  public XMLSVTValidator(CertificateValidator svaCertVerifier, List<X509Certificate> supportingCertificates) {
-    this.svaCertVerifier = svaCertVerifier;
+  public XMLSVTValidator(CertificateValidator svtCertVerifier, List<X509Certificate> supportingCertificates) {
+    this.svtCertVerifier = svtCertVerifier;
     this.supportingCertificates = supportingCertificates != null ? supportingCertificates : new ArrayList<>();
   }
 
@@ -107,9 +107,9 @@ public class XMLSVTValidator extends SVTValidator<XMLSigValInput> implements XML
      *     Then gather data about this signature
      */
 
-    List<String> svaTokenList = getSignatureSvaTokens(signedDataInput.getSignatureElement());
+    List<String> svtTokenList = getSignatureSvtTokens(signedDataInput.getSignatureElement());
     List<SignedJWT>  signedJWTList = new ArrayList<>();
-    for (String jwt: svaTokenList){
+    for (String jwt: svtTokenList){
       try {
         SignedJWT signedJWT = SignedJWT.parse(jwt);
         verifyJWT(signedJWT);
@@ -134,7 +134,7 @@ public class XMLSVTValidator extends SVTValidator<XMLSigValInput> implements XML
   }
 
   /**
-   * Collects the data from XML signature to compare with SVT token data to validate the signature through the SVT
+   * Collects the data from XML signature to compare with SVT data to validate the signature through the SVT
    * @param signedDataInput signature validation input for XML signatures
    * @param mostRecentJwt the most recent SVT JWT
    * @return Signature SVT data
@@ -204,7 +204,7 @@ public class XMLSVTValidator extends SVTValidator<XMLSigValInput> implements XML
     List<X509Certificate> jwtCertList = getJWTCerts(signedJWT.getHeader().getX509CertChain());
     JWTCerts jwtCerts = getAllJwtCerts (algorithm, keyID, jwtCertList);
     if (jwtCerts.getSigningCert() == null) throw new IOException("Unable to locate a SVT signing certificate");
-    svaCertVerifier.validate(jwtCerts.getSigningCert(), jwtCerts.getSupportingCertList(), null);
+    svtCertVerifier.validate(jwtCerts.getSigningCert(), jwtCerts.getSupportingCertList(), null);
     SVAUtils.verifySVA(signedJWT, jwtCerts.signingCert.getPublicKey());
   }
 
@@ -259,7 +259,7 @@ public class XMLSVTValidator extends SVTValidator<XMLSigValInput> implements XML
       .collect(Collectors.toList());
   }
 
-  private List<String> getSignatureSvaTokens(Element signatureElement) {
+  private List<String> getSignatureSvtTokens(Element signatureElement) {
     NodeList sigObjectNodes = signatureElement.getElementsByTagNameNS(XMLDSIG_NS, "Object");
     if (sigObjectNodes == null || sigObjectNodes.getLength() == 0) return new ArrayList<>();
 

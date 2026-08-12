@@ -76,6 +76,23 @@ public interface PDFSignatureContext {
   boolean isCoversWholeDocument(PDSignature signature) throws IllegalArgumentException;
 
   /**
+   * Registers that the provided signature or document timestamp has been validated to a trusted anchor, allowing the
+   * revision it introduced to be treated with the lenient "safe update" rules (i.e. a trusted signer/timestamp is
+   * permitted to have added its own signature widget or field changes without that counting as an unsafe visual
+   * update for earlier signatures).
+   *
+   * <p>Implementations must only upgrade a revision that is structurally a signature or document timestamp, and the
+   * call must be idempotent. Coverage queries ({@link #isCoversWholeDocument(PDSignature)}) should only be trusted
+   * after every validated signature and document timestamp has been registered. The default implementation is a
+   * no-op.</p>
+   *
+   * @param signature the signature or document timestamp that has been validated as trusted
+   */
+  default void applyValidatedSignature(PDSignature signature) {
+    // Default no-op: contexts that do not distinguish validated signatures keep their structural behaviour.
+  }
+
+  /**
    * Getter for PDF document revision data
    * @return PDF document revision data for all document revisions
    */

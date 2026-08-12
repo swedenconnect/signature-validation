@@ -59,8 +59,8 @@ import se.swedenconnect.sigval.svt.validation.SignatureSVTValidationResult;
 
 /**
  * This class provides the functionality to validate signatures on a PDF where the signature validation process is enhanced with validation
- * based on SVA (Signature Validation Assertions). The latest valid SVA that can be verified given the provided trust validation resources is selected.
- * Signatures covered by this SVA is validated based on SVA. Any other signatures are validated through traditional signature validation methods.
+ * based on SVT (Signature Validation Tokens). The latest valid SVT that can be verified given the provided trust validation resources is selected.
+ * Signatures covered by this SVT is validated based on SVT. Any other signatures are validated through traditional signature validation methods.
  *
  * @author Martin Lindström (martin@idsec.se)
  * @author Stefan Santesson (stefan@idsec.se)
@@ -78,7 +78,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
   /**
    * Constructor if no SVT validation is supported
    *
-   * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVA
+   * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVT
    * @param pdfSignatureContextFactory factory for creating an instance of signature context for the validated document
    */
   public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureValidator pdfSingleSignatureValidator,
@@ -91,8 +91,8 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
   /**
    * Constructor
    *
-   * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVA
-   * @param pdfsvtValidator Certificate verifier for the certificate used to sign SVA tokens
+   * @param pdfSingleSignatureValidator The verifier used to verify signatures not supported by SVT
+   * @param pdfsvtValidator Certificate verifier for the certificate used to sign SVTs
    * @param pdfSignatureContextFactory factory for creating an instance of signature context for the validated document
    */
   public SVTenabledPDFDocumentSigVerifier(PDFSingleSignatureValidator pdfSingleSignatureValidator,
@@ -121,7 +121,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
   }
 
   /**
-   * Verifies the signatures of a PDF document. Validation based on SVA is given preference over traditional signature validation.
+   * Verifies the signatures of a PDF document. Validation based on SVT is given preference over traditional signature validation.
    *
    * @param pdfDocBytes signed PDF document to verify
    * @return Validation result from PDF verification
@@ -157,12 +157,20 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
 
       // Create empty result list
       List<SignatureValidationResult> sigVerifyResultList = new ArrayList<>();
-      // This list starts empty. It is only filled with objects if there is a signature that is validated without SVT.
-      List<PDFDocTimeStamp> docTimeStampList = new ArrayList<>();
-      boolean docTsVerified = false;
       // Obtain any SVT validation results from a present SVT validator
       List<SignatureSVTValidationResult> svtValidationResults =
         pdfsvtValidator == null ? null : pdfsvtValidator.validate(pdfDocBytes);
+
+      // Validate all document timestamps up front. Only timestamps that validate to a trusted anchor may grant the
+      // lenient "safe update" rules to the revision they introduced. This closes the bypass where an untrusted,
+      // self-made document timestamp would otherwise unlock lenient treatment purely by being structurally a timestamp.
+      List<PDFDocTimeStamp> docTimeStampList =
+        pdfSingleSignatureValidator.verifyDocumentTimestamps(docTsSigList, pdfDocBytes);
+      for (PDFDocTimeStamp docTimeStamp : docTimeStampList) {
+        if (docTimeStamp.hasVerifiedTimestamp()) {
+          signatureContext.applyValidatedSignature(docTimeStamp.getDocumentTimestampSig());
+        }
+      }
 
       for (PDSignature signature : signatureList) {
         SignatureSVTValidationResult svtValResult = null;
@@ -172,31 +180,48 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
           log.debug("Error looking for signature validation result: {}", e.getMessage());
         }
 
+        ExtendedPdfSigValResult sigResult;
         if (svtValResult == null) {
           // This signature is not covered by a valid SVT. Perform normal signature verification
           try {
-            //Get verified documentTimestamps if not previously loaded
-            if (!docTsVerified) {
-              docTimeStampList = pdfSingleSignatureValidator.verifyDocumentTimestamps(docTsSigList, pdfDocBytes);
-              docTsVerified = true;
-            }
-
-            SignatureValidationResult directVerifyResult = pdfSingleSignatureValidator.verifySignature(signature,
-              pdfDocBytes, docTimeStampList,
+            sigResult = pdfSingleSignatureValidator.verifySignature(signature, pdfDocBytes, docTimeStampList,
               signatureContext);
-            sigVerifyResultList.add(directVerifyResult);
           }
           catch (Exception e) {
             LOG.warning("Error parsing the PDF signature: " + e.getMessage());
-            sigVerifyResultList.add(getErrorResult(signature, e.getMessage()));
+            sigResult = getErrorResult(signature, e.getMessage());
           }
         }
         else {
           // There is SVT validation results. Use them.
-          sigVerifyResultList.add(
-            compliePDFSigValResultsFromSvtValidation(svtValResult, signature, pdfDocBytes, signatureContext));
+          sigResult = compliePDFSigValResultsFromSvtValidation(svtValResult, signature, pdfDocBytes, signatureContext);
+        }
+        sigVerifyResultList.add(sigResult);
+
+        // Only a signature that validated to a trusted anchor may grant lenient "safe update" treatment to the
+        // revision it introduced (benefiting the coverage assessment of signatures beneath it).
+        if (sigResult.isSuccess()) {
+          signatureContext.applyValidatedSignature(signature);
         }
       }
+
+      // Final pass: now that every trusted signature and document timestamp has been applied to the context, record
+      // whether each signature covers the whole document. This must run last because coverage looks forward over later
+      // revisions whose trust status is only established above.
+      for (SignatureValidationResult result : sigVerifyResultList) {
+        if (result instanceof ExtendedPdfSigValResult) {
+          ExtendedPdfSigValResult pdfResult = (ExtendedPdfSigValResult) result;
+          try {
+            if (pdfResult.getPdfSignature() != null) {
+              pdfResult.setCoversDocument(signatureContext.isCoversWholeDocument(pdfResult.getPdfSignature()));
+            }
+          }
+          catch (Exception ex) {
+            log.debug("Unable to determine document coverage for signature: {}", ex.getMessage());
+          }
+        }
+      }
+
       return sigVerifyResultList;
     }
     catch (Exception ex) {
@@ -258,12 +283,13 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       byte[] sigBytes = signature.getContents(pdfDocBytes);
       cmsSVResult.setSignedData(sigBytes);
 
-      //Reaching this point means that the signature is valid and verified through the SVA.
+      //Reaching this point means that the signature is valid and verified through the SVT.
       SignedData signedData = SVAUtils.getSignedDataFromSignature(sigBytes);
       cmsSVResult.setEtsiAdes(signature.getSubFilter().equalsIgnoreCase(PDFSVAUtils.CADES_SIG_SUBFILETER_LC));
       cmsSVResult.setInvalidSignCert(false);
       cmsSVResult.setClaimedSigningTime(PDFSVAUtils.getClaimedSigningTime(signature.getSignDate(), signedData));
-      cmsSVResult.setCoversDocument(signatureContext.isCoversWholeDocument(signature));
+      // Note: coversDocument is recorded in a final pass by validate(), after all trusted signatures/timestamps have
+      // been applied to the signature context.
       byte[] signedDocumentBytes = null;
       try {
         signedDocumentBytes = signatureContext.getSignedDocument(signature);
@@ -273,7 +299,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       }
       cmsSVResult.setSignedDocument(signedDocumentBytes);
 
-      //Get algorithms and public key type. Note that the source of these values is the SVA signature which is regarded as the algorithm
+      //Get algorithms and public key type. Note that the source of these values is the SVT signature which is regarded as the algorithm
       //That is effectively protecting the integrity of the signature, superseding the use of the original algorithms.
       SignedJWT signedJWT = svtValResult.getSignedJWT();
       JWSAlgorithm svtJwsAlgo = signedJWT.getHeader().getAlgorithm();
@@ -316,7 +342,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
       }
       cmsSVResult.setSignatureClaims(signatureClaims);
       cmsSVResult.setValidationPolicyResultList(policyValidationClaims);
-      // Since we verify with SVA. We ignore any present signature timestamps.
+      // Since we verify with SVT. We ignore any present signature timestamps.
       // cmsSVResult.setSignatureTimeStampList(new ArrayList<>());
 
       //Add SVT document timestamp that was used to perform this SVT validation to verified times
@@ -343,7 +369,7 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
     }
     catch (Exception ex) {
       cmsSVResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
-      cmsSVResult.setStatusMessage("Unable to process SVA token or signature data");
+      cmsSVResult.setStatusMessage("Unable to process SVT or signature data");
       return cmsSVResult;
     }
     return cmsSVResult;
@@ -356,14 +382,15 @@ public class SVTenabledPDFDocumentSigVerifier implements ExtendedPDFSignatureVal
     if (policyValidationClaims.isEmpty()) {
       return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
     }
-    if (policyValidationClaims.stream().anyMatch(pvc -> pvc.getRes().equals(ValidationConclusion.PASSED))) {
-      return SignatureValidationResult.Status.SUCCESS;
-    }
+    // A FAILED claim takes precedence over any PASSED claim in the same token.
     if (policyValidationClaims.stream().anyMatch(pvc -> pvc.getRes().equals(ValidationConclusion.FAILED))) {
       return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
     }
     if (policyValidationClaims.stream().anyMatch(pvc -> pvc.getRes().equals(ValidationConclusion.INDETERMINATE))) {
       return SignatureValidationResult.Status.INTERDETERMINE;
+    }
+    if (policyValidationClaims.stream().allMatch(pvc -> pvc.getRes().equals(ValidationConclusion.PASSED))) {
+      return SignatureValidationResult.Status.SUCCESS;
     }
     return SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE;
   }

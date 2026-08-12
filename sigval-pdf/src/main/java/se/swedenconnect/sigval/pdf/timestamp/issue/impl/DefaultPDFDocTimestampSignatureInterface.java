@@ -162,7 +162,7 @@ public class DefaultPDFDocTimestampSignatureInterface implements PDFDocTimestamp
       //Generate tsRequest
       TimeStampRequestGenerator tsReqGen = new TimeStampRequestGenerator();
       tsReqGen.setCertReq(true);
-      //Add SVA extension
+      //Add SVT extension
       tsReqGen.addExtension(new ASN1ObjectIdentifier(SVT_TOKEN_EXTENSION_OID),
         false,
         svt.getBytes(StandardCharsets.UTF_8)

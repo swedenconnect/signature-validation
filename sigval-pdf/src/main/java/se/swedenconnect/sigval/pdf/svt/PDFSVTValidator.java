@@ -45,8 +45,8 @@ import se.swedenconnect.sigval.svt.validation.SignatureSVTData;
 @Slf4j
 public class PDFSVTValidator extends SVTValidator<byte[]> {
 
-  /** Certificate chain validator for SVA tokens **/
-  private CertificateValidator svaCertVerifier;
+  /** Certificate chain validator for SVTs **/
+  private CertificateValidator svtCertVerifier;
 
   /**
    * Array of document timestamp policy verifiers. A timestamp is regarded as trusted if all present policy validators returns a positive result
@@ -58,12 +58,12 @@ public class PDFSVTValidator extends SVTValidator<byte[]> {
   /**
    * Constructor
    *
-   * @param svaCertVerifier          Certificate verifier for the certificate used to sign SVA tokens
+   * @param svtCertVerifier          Certificate verifier for the certificate used to sign SVTs
    * @param timeStampPolicyVerifier Time stamp policy verifiers to verify Document time stamps
    */
-  public PDFSVTValidator(CertificateValidator svaCertVerifier,
+  public PDFSVTValidator(CertificateValidator svtCertVerifier,
     TimeStampPolicyVerifier timeStampPolicyVerifier) {
-    this.svaCertVerifier = svaCertVerifier;
+    this.svtCertVerifier = svtCertVerifier;
     this.timeStampPolicyVerifier = timeStampPolicyVerifier;
   }
 
@@ -85,8 +85,8 @@ public class PDFSVTValidator extends SVTValidator<byte[]> {
       }
     }
 
-    // Obtain the SVA time stamp in this PDF that is the most recent available and valid SVA. This returns null if there is no valid SVA.
-    PDFSVTDocTimeStamp svtTimeStamp = getMostRecentValidSVA(svtSigList, pdfDocBytes);
+    // Obtain the SVT time stamp in this PDF that is the most recent available and valid SVT. This returns null if there is no valid SVT.
+    PDFSVTDocTimeStamp svtTimeStamp = getMostRecentValidSVT(svtSigList, pdfDocBytes);
 
     if (svtTimeStamp == null) {
       return new ArrayList<>();
@@ -125,7 +125,7 @@ public class PDFSVTValidator extends SVTValidator<byte[]> {
       SignedData signedData = SVAUtils.getSignedDataFromSignature(sigContentInfo);
       SignerInfo signerInfo = SignerInfo.getInstance(signedData.getSignerInfos().getObjectAt(0));
 
-      // Get signature SVA claims maching this signature
+      // Get signature SVT claims maching this signature
       byte[] sigValBytes = signerInfo.getEncryptedDigest().getOctets();
       DigestAlgorithm digestAlgorithm = DigestAlgorithmRegistry.get(svtClaims.getHash_algo());
       MessageDigest md = digestAlgorithm.getInstance();
@@ -171,43 +171,47 @@ public class PDFSVTValidator extends SVTValidator<byte[]> {
   }
 
   /**
-   * Retrieves the most recent valid SVA token timestamp
+   * Retrieves the most recent valid SVT timestamp
    *
-   * @param svaSigList  list of present SVA document timestamps
+   * @param svtSigList  list of present SVT document timestamps
    * @param pdfDocBytes bytes of the signed PDF document
-   * @return the document timestamp with the most recent valid SVA token
+   * @return the document timestamp with the most recent valid SVT
    */
-  private PDFSVTDocTimeStamp getMostRecentValidSVA(List<PDSignature> svaSigList, byte[] pdfDocBytes) {
+  private PDFSVTDocTimeStamp getMostRecentValidSVT(List<PDSignature> svtSigList, byte[] pdfDocBytes) {
     svtTsList = new ArrayList<>();
-    List<PDFSVTDocTimeStamp> validSvaTsList = new ArrayList<>();
-    for (PDSignature svaTsSig : svaSigList) {
+    List<PDFSVTDocTimeStamp> validSvtTsList = new ArrayList<>();
+    for (PDSignature svtTsSig : svtSigList) {
       try {
-        PDFSVTDocTimeStamp svaTs = new PDFSVTDocTimeStamp(svaTsSig, pdfDocBytes, svaCertVerifier, timeStampPolicyVerifier);
-        svtTsList.add(svaTs);
-        if (!svaTs.isSigValid()) {
-          //SVA TS was not signed correctly by trusted authority
+        PDFSVTDocTimeStamp svtTs = new PDFSVTDocTimeStamp(svtTsSig, pdfDocBytes, svtCertVerifier, timeStampPolicyVerifier);
+        svtTsList.add(svtTs);
+        if (!svtTs.isSigValid()) {
+          //SVT TS was not signed correctly by trusted authority
           continue;
         }
-        List<PolicyValidationClaims> policyValidationClaimsList = svaTs.getPolicyValidationClaimsList();
-        for (PolicyValidationClaims pv : policyValidationClaimsList) {
-          if (!pv.getRes().equals(ValidationConclusion.PASSED)) {
-            //SVA TS did not pass one of the attached TS validation policies
-            continue;
-          }
+        List<PolicyValidationClaims> policyValidationClaimsList = svtTs.getPolicyValidationClaimsList();
+        boolean allPoliciesPassed = policyValidationClaimsList.stream()
+          .allMatch(pv -> ValidationConclusion.PASSED.equals(pv.getRes()));
+        if (!allPoliciesPassed) {
+          //SVT TS did not pass one of the attached TS validation policies. Skip this SVT.
+          continue;
         }
-        svaTs.verifySVA();
-        // The SVA is valid
-        validSvaTsList.add(svaTs);
+        svtTs.verifySVA();
+        if (!svtTs.isSvaSignatureValid()) {
+          //The SVT signature or the cert path validation of its signing certificate failed. Skip this SVT.
+          continue;
+        }
+        // The SVT is valid
+        validSvtTsList.add(svtTs);
       }
       catch (Exception e) {
-        log.debug("Signature validation failed on this SVA JWT - {}", e.getMessage());
+        log.debug("Signature validation failed on this SVT JWT - {}", e.getMessage());
       }
     }
-    if (validSvaTsList.isEmpty()) {
+    if (validSvtTsList.isEmpty()) {
       return null;
     }
-    //Sort valid SVA by date, placing the most recent SVA on top
-    Collections.sort(validSvaTsList, new Comparator<PDFSVTDocTimeStamp>() {
+    //Sort valid SVT by date, placing the most recent SVT on top
+    Collections.sort(validSvtTsList, new Comparator<PDFSVTDocTimeStamp>() {
       @Override public int compare(PDFSVTDocTimeStamp o1, PDFSVTDocTimeStamp o2) {
         try {
           Date o1Date = o1.getTstInfo().getGenTime().getDate();
@@ -220,6 +224,6 @@ public class PDFSVTValidator extends SVTValidator<byte[]> {
       }
     });
 
-    return validSvaTsList.get(0);
+    return validSvtTsList.get(0);
   }
 }

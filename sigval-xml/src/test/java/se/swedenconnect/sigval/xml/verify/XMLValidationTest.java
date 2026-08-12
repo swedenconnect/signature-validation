@@ -74,6 +74,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * End-to-end XML (XML-DSig) signature validation tests. An enveloped signature is created at test time with a
@@ -118,6 +119,22 @@ class XMLValidationTest {
   }
 
   @Test
+  void tamperedSignature_isRejected() throws Exception {
+    final X509Certificate signerCert = issueEndEntity("XML Signer", signerKeyPair.getPublic());
+    final Document signed = signXml("Signed XML payload",
+        credential(signerKeyPair.getPrivate(), signerCert, CA.getTestCA().getIssuingCACertificate()));
+
+    // Corrupt the SignatureValue element. The signer certificate is trusted and the references still resolve -
+    // only the cryptographic signature value is wrong. This pins that the checkSignatureValue result is enforced.
+    corruptSignatureValue(signed);
+
+    final ExtendedXmlSigvalResult result = validateFirst(signed, null);
+
+    assertEquals(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE, result.getStatus(),
+        "an XML signature with a corrupted SignatureValue must be reported as invalid");
+  }
+
+  @Test
   void svtRoundTrip_validatesViaSvt() throws Exception {
     // 1. A trusted, valid XML signature.
     final X509Certificate signerCert = issueEndEntity("SVT XML Signer", signerKeyPair.getPublic());
@@ -147,6 +164,37 @@ class XMLValidationTest {
 
     assertEquals(SignatureValidationResult.Status.SUCCESS, result.getStatus());
     assertNotNull(result.getSvtJWT(), "result must be produced via the SVT validation path");
+  }
+
+  @Test
+  void svtWithForgedSignature_isRejected() throws Exception {
+    final X509Certificate signerCert = issueEndEntity("SVT XML Signer", signerKeyPair.getPublic());
+    final Document signed = signXml("Signed XML payload",
+        credential(signerKeyPair.getPrivate(), signerCert, CA.getTestCA().getIssuingCACertificate()));
+
+    // Forge: present a trusted SVT issuer certificate but sign the SVT with a DIFFERENT key.
+    final KeyPair svtKeyPair = ecKeyPair();
+    final X509Certificate svtCert = issueEndEntity("SVT Issuer", svtKeyPair.getPublic());
+    final KeyPair attackerKeyPair = ecKeyPair();
+    final XMLSignatureElementValidatorImpl plainValidator = new XMLSignatureElementValidatorImpl(
+        certificateValidator(), new PkixXmlSignaturePolicyValidator(false), null);
+    final XMLSVTSigValClaimsIssuer forgingIssuer = new XMLSVTSigValClaimsIssuer(
+        JWSAlgorithm.ES256, attackerKeyPair.getPrivate(),
+        List.of(svtCert, CA.getTestCA().getIssuingCACertificate()), plainValidator);
+    final SVTModel svtModel = SVTModel.builder()
+        .svtIssuerId("https://example.com/svt-issuer")
+        .certRef(true)
+        .validityPeriod(Duration.ofDays(365).toMillis())
+        .build();
+    final byte[] svtDocumentBytes = new XMLDocumentSVTIssuer(forgingIssuer)
+        .issueSvt(signed, svtModel, SVTExtendpolicy.REPLACE, false);
+
+    final XMLSVTValidator svtValidator = new XMLSVTValidator(certificateValidator(),
+        List.of(svtCert, CA.getTestCA().getIssuingCACertificate()));
+    final ExtendedXmlSigvalResult result = validateFirst(parse(svtDocumentBytes), svtValidator);
+
+    // The forged SVT must be rejected - validation must NOT be produced via the SVT path.
+    assertNull(result.getSvtJWT(), "an SVT with an invalid signature must not be accepted");
   }
 
   // ---- helpers ----
@@ -202,6 +250,21 @@ class XMLValidationTest {
     final ContentSigner signer = new JcaContentSignerBuilder("SHA256withECDSA").setProvider("BC")
         .build(kp.getPrivate());
     return new JcaX509CertificateConverter().setProvider("BC").getCertificate(builder.build(signer));
+  }
+
+  /** Flips one character in the {@code ds:SignatureValue} element, invalidating the signature value while keeping the
+   * signed references and the certificate chain intact. */
+  private static void corruptSignatureValue(final Document document) {
+    final org.w3c.dom.NodeList nodes =
+        document.getElementsByTagNameNS("http://www.w3.org/2000/09/xmldsig#", "SignatureValue");
+    if (nodes.getLength() == 0) {
+      throw new IllegalStateException("No SignatureValue element found");
+    }
+    final Element sigValue = (Element) nodes.item(0);
+    final String value = sigValue.getTextContent().trim();
+    final char first = value.charAt(0);
+    final char replacement = first == 'A' ? 'B' : 'A';
+    sigValue.setTextContent(replacement + value.substring(1));
   }
 
   private static Document newDocument(final String text) throws Exception {

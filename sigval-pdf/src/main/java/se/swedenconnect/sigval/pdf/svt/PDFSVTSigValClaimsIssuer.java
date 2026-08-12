@@ -131,7 +131,7 @@ public class PDFSVTSigValClaimsIssuer extends AbstractSVTSigValClaimsIssuer<byte
   }
 
   /**
-   * Extract signed attributes and signature data and provide hash of both in a signature reference for an SVA claims
+   * Extract signed attributes and signature data and provide hash of both in a signature reference for an SVT claims
    * set.
    *
    * @param contentInfoBytes

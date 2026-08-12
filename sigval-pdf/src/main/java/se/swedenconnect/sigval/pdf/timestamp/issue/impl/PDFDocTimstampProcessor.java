@@ -121,13 +121,13 @@ public class PDFDocTimstampProcessor {
   }
 
   /**
-   * Calculate the minimum reserved space for the SVA timestamp as lenthg of SVA + Length of certs + 2000
+   * Calculate the minimum reserved space for the SVT timestamp as lenthg of SVT + Length of certs + 2000
    *
    * @param certList Array of signing certificates
-   * @param sva       Signature validation assertion JWT
+   * @param svt       Signature Validation Token JWT
    * @return reserve length
    */
-  private static int getLengthestimate(List<X509Certificate> certList, String sva) {
+  private static int getLengthestimate(List<X509Certificate> certList, String svt) {
     int certLenTotal = 0;
     for (X509Certificate cert : certList) {
       try {
@@ -137,8 +137,8 @@ public class PDFDocTimstampProcessor {
         e.printStackTrace();
       }
     }
-    int svaLen = sva.getBytes(StandardCharsets.UTF_8).length;
-    int reservedLen = svaLen + certLenTotal + 2000;
+    int svtLen = svt.getBytes(StandardCharsets.UTF_8).length;
+    int reservedLen = svtLen + certLenTotal + 2000;
     return reservedLen;
   }
 

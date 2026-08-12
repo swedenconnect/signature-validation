@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.PublicKey;
+import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -63,8 +64,8 @@ public class SVAUtils {
   public static boolean isSVADocTimestamp(byte[] sigBytes) {
     try {
       TSTInfo tstInfo = getCmsSigTSTInfo(sigBytes);
-      String svaJwt = getSVTJWT(tstInfo);
-      SignedJWT parsedJWT = SignedJWT.parse(svaJwt);
+      String svtJwt = getSVTJWT(tstInfo);
+      SignedJWT parsedJWT = SignedJWT.parse(svtJwt);
       getSVTClaims(parsedJWT.getJWTClaimsSet());
       return true;
     }
@@ -84,12 +85,12 @@ public class SVAUtils {
    */
   public static SVTClaims getSVTClaims(JWTClaimsSet jwtClaimsSet) throws IOException {
     try {
-      String svaClaimsJson = JSONObjectUtils.toJSONString(jwtClaimsSet.getJSONObjectClaim("sig_val_claims"));
-      SVTClaims svaClaims = JSON_MAPPER.readValue(svaClaimsJson, SVTClaims.class);
-      return svaClaims;
+      String svtClaimsJson = JSONObjectUtils.toJSONString(jwtClaimsSet.getJSONObjectClaim("sig_val_claims"));
+      SVTClaims svtClaims = JSON_MAPPER.readValue(svtClaimsJson, SVTClaims.class);
+      return svtClaims;
     }
     catch (Exception ex) {
-      throw new IOException("No SVA claims available");
+      throw new IOException("No SVT claims available");
     }
   }
 
@@ -105,12 +106,12 @@ public class SVAUtils {
   public static String getSVTJWT(TSTInfo tstInfo) throws IOException {
     try {
       Extensions extensions = tstInfo.getExtensions();
-      Extension svaExt = extensions.getExtension(new ASN1ObjectIdentifier("1.2.752.201.5.2"));
-      String svaJwt = new String(svaExt.getExtnValue().getOctets(), StandardCharsets.UTF_8);
-      return svaJwt;
+      Extension svtExt = extensions.getExtension(new ASN1ObjectIdentifier("1.2.752.201.5.2"));
+      String svtJwt = new String(svtExt.getExtnValue().getOctets(), StandardCharsets.UTF_8);
+      return svtJwt;
     }
     catch (Exception ex) {
-      throw new IOException("No SVA JWT is available in TSTInfo");
+      throw new IOException("No SVT JWT is available in TSTInfo");
     }
 
   }
@@ -303,34 +304,41 @@ public class SVAUtils {
    * @param signedJWT
    *          signed JWT holding the SVT
    * @param publicKey
-   *          the public key used to verify the SVA token signature
+   *          the public key used to verify the SVT signature
    * @throws Exception
-   *           if validation of SVA fails
+   *           if validation of SVT fails
    */
   public static void verifySVA(SignedJWT signedJWT, PublicKey publicKey) throws Exception {
+
+    final JWSVerifier verifier = publicKey instanceof RSAPublicKey ? new RSASSAVerifier((RSAPublicKey) publicKey)
+        : new ECDSAVerifier((ECPublicKey) publicKey);
+
+    // Verify the SVT signature FIRST, before trusting any claim read from the token.
+    // Nimbus SignedJWT.verify() returns false on a bad signature (it does not throw), so the boolean
+    // result MUST be checked - ignoring it would accept a forged SVT.
+    if (!signedJWT.verify(verifier)) {
+      throw new SignatureException("SVT signature validation failed");
+    }
+
     // Check for expiry
     Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
     if (expirationTime != null) {
       if (new Date().after(expirationTime)) {
-        throw new RuntimeException("The SVA has expired");
+        throw new RuntimeException("The SVT has expired");
       }
     }
 
-    JWSVerifier verifier = publicKey instanceof RSAPublicKey ? new RSASSAVerifier((RSAPublicKey) publicKey)
-        : new ECDSAVerifier((ECPublicKey) publicKey);
-
-    // Verify that the hash algorithm is consistent with the SVA claims
+    // Verify that the hash algorithm is consistent with the SVT claims
     JWSAlgorithm algorithm = signedJWT.getHeader().getAlgorithm();
     SVTAlgoRegistry.AlgoProperties algoParams = SVTAlgoRegistry.getAlgoParams(algorithm);
 
-    DigestAlgorithm svaSigHashAlgo = DigestAlgorithmRegistry.get(algoParams.getDigestAlgoId());
+    DigestAlgorithm svtSigHashAlgo = DigestAlgorithmRegistry.get(algoParams.getDigestAlgoId());
     SVTClaims svtClaims = getSVTClaims(signedJWT.getJWTClaimsSet());
-    DigestAlgorithm svaClaimsHashAlgo = DigestAlgorithmRegistry.get(svtClaims.getHash_algo());
-    if (!svaSigHashAlgo.equals(svaClaimsHashAlgo)) {
+    DigestAlgorithm svtClaimsHashAlgo = DigestAlgorithmRegistry.get(svtClaims.getHash_algo());
+    if (!svtSigHashAlgo.equals(svtClaimsHashAlgo)) {
       throw new IOException(
-        "SVA hahs algo mismatch. SVA algo: " + svaClaimsHashAlgo.getUri() + ", SVA token sig algo: " + svaSigHashAlgo.getUri());
+        "SVT hash algo mismatch. SVT algo: " + svtClaimsHashAlgo.getUri() + ", SVT sig algo: " + svtSigHashAlgo.getUri());
     }
-    signedJWT.verify(verifier);
   }
 
   public static SignedJWT getMostRecentJwt(List<SignedJWT> signedJWTList) {

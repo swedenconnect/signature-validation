@@ -547,7 +547,7 @@ public class JOSESignatureDataValidatorImpl implements JOSESignatureDataValidato
       joseSvResult.setInvalidSignCert(!signatureData.isVerified());
       joseSvResult.setClaimedSigningTime(getClaimedSigningTime(signatureData.getHeader()));
 
-      // Get algorithms and public key type. Note that the source of these values is the SVA signature which is regarded
+      // Get algorithms and public key type. Note that the source of these values is the SVT signature which is regarded
       // as the algorithm
       // That is effectively protecting the integrity of the signature, superseding the use of the original algorithms.
       final SignedJWT signedJWT = svtValResult.getSignedJWT();
@@ -611,7 +611,7 @@ public class JOSESignatureDataValidatorImpl implements JOSESignatureDataValidato
     }
     catch (final Exception ex) {
       joseSvResult.setStatus(SignatureValidationResult.Status.ERROR_INVALID_SIGNATURE);
-      joseSvResult.setStatusMessage("Unable to process SVA token or signature data");
+      joseSvResult.setStatusMessage("Unable to process SVT or signature data");
       return joseSvResult;
     }
     return joseSvResult;

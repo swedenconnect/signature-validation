@@ -112,7 +112,9 @@ public class PDFSingleSignatureValidatorImpl implements PDFSingleSignatureValida
     ExtendedPdfSigValResult sigResult = new ExtendedPdfSigValResult();
     sigResult.setPdfSignature(signature);
     sigResult.setSignedData(signature.getContents(pdfDocument));
-    sigResult.setCoversDocument(signatureContext.isCoversWholeDocument(signature));
+    // Note: coversDocument is intentionally NOT set here. Document coverage depends on whether later
+    // signature/timestamp revisions validate to a trusted anchor, which is only known after all signatures and
+    // timestamps have been validated. It is therefore recorded in a final pass by SVTenabledPDFDocumentSigVerifier.
     byte[] unsignedDocument = null;
     try {
       unsignedDocument = signatureContext.getSignedDocument(signature);
