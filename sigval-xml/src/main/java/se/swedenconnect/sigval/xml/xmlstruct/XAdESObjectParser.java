@@ -118,7 +118,12 @@ public class XAdESObjectParser implements XMLSigConstants {
       final JAXBContext jaxbContext = JAXBContextUtils.createJAXBContext(QualifyingProperties.class);
       final QualifyingProperties qp = (QualifyingProperties) jaxbContext.createUnmarshaller().unmarshal(qpNodes.item(i));
       try {
-        if (signatureData.getRefDataMap().containsKey("#" + qp.getSignedProperties().getId())) {
+        // Guard against a null/empty SignedProperties id: "#" + null becomes the literal "#null", which would wrongly
+        // match a signature that references an element with Id="null" and let an unsigned QualifyingProperties be
+        // treated as the signed one (an XML signature-wrapping vector). Only match on a non-empty SignedProperties id.
+        final String signedPropsId = qp.getSignedProperties() != null ? qp.getSignedProperties().getId() : null;
+        if (signedPropsId != null && !signedPropsId.isEmpty()
+            && signatureData.getRefDataMap().containsKey("#" + signedPropsId)) {
           this.qualifyingProperties = qp;
           break;
         }
