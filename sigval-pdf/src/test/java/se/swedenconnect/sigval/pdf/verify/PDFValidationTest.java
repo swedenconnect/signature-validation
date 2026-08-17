@@ -17,6 +17,7 @@ package se.swedenconnect.sigval.pdf.verify;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.Extension;
@@ -80,6 +81,7 @@ import java.util.Date;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -272,6 +274,39 @@ class PDFValidationTest {
             + "certainly means a PDFBox change altered how the timestamp field is created (e.g. a non-zero /Rect). "
             + "Fix the field creation or the isInvisibleAnnotation rules before this reaches production - otherwise "
             + "SVT re-issuance will silently lose full document coverage once the older SVT is no longer trusted.");
+  }
+
+  /**
+   * Regression for the "incomplete incremental update" bypass. Content appended after the last {@code %%EOF} - an
+   * incremental update whose terminating {@code %%EOF} was removed - forms no recognized revision (the analysis slices
+   * on {@code %%EOF}) so it is invisible to the coverage logic, yet recovering PDF viewers render it. Such trailing
+   * non-whitespace content must force {@code isCoversWholeDocument} to false.
+   */
+  @Test
+  void contentAfterLastEof_breaksCoverage() throws Exception {
+    final X509Certificate signerCert = issueEndEntity("PDF Signer", signerKeyPair.getPublic());
+    final byte[] signedPdf = signPdf(credential(signerKeyPair.getPrivate(), signerCert,
+        CA.getTestCA().getIssuingCACertificate()));
+
+    // Control: a plain signed document - the signature is the last revision and covers the whole document.
+    final DefaultPDFSignatureContext cleanContext =
+        new DefaultPDFSignatureContext(signedPdf, new DefaultGeneralSafeObjects());
+    final PDSignature signature = cleanContext.getSignatures().get(0);
+    assertTrue(cleanContext.isCoversWholeDocument(signature),
+        "a plain signed document must cover the whole document");
+
+    // Append forged content after the last %%EOF, with no terminating %%EOF of its own.
+    final byte[] forgedTail =
+        "\n<forged incremental update with no terminating EOF>\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+    final byte[] tamperedPdf = new byte[signedPdf.length + forgedTail.length];
+    System.arraycopy(signedPdf, 0, tamperedPdf, 0, signedPdf.length);
+    System.arraycopy(forgedTail, 0, tamperedPdf, signedPdf.length, forgedTail.length);
+
+    final DefaultPDFSignatureContext tamperedContext =
+        new DefaultPDFSignatureContext(tamperedPdf, new DefaultGeneralSafeObjects());
+    final PDSignature tamperedSignature = tamperedContext.getSignatures().get(0);
+    assertFalse(tamperedContext.isCoversWholeDocument(tamperedSignature),
+        "non-whitespace content after the last %%EOF must break whole-document coverage");
   }
 
   // ---- helpers ----

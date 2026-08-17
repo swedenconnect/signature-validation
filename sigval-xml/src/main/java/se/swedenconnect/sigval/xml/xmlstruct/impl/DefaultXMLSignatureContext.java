@@ -161,6 +161,13 @@ public class DefaultXMLSignatureContext implements XMLSignatureContext, XMLSigCo
   private boolean isCoversWholeDocument(Map<String, byte[]> refDataMap) {
     if (refDataMap.containsKey(""))
       return true;
+    // Guard against a null/empty root id: "#" + null yields the literal string "#null", which would wrongly match a
+    // signature that references an element with Id="null" (an XML signature-wrapping vector - a signed element is
+    // moved below a new, id-less attacker root). When the document root has no id attribute, only the empty-URI
+    // reference (checked above) can cover the whole document. This mirrors the guard in isFragmentMatchingRootElement.
+    if (rootIdAttrVal == null || rootIdAttrVal.isEmpty()) {
+      return false;
+    }
     return refDataMap.containsKey("#" + rootIdAttrVal);
   }
 

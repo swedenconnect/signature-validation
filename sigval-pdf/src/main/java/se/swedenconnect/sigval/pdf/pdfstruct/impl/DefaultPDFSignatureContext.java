@@ -71,6 +71,13 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
   List<PDSignature> signatures = new ArrayList<>();
   /** Provider of objects safe to update without altering the visual content of the document */
   private final GeneralSafeObjects safeObjectProvider;
+  /**
+   * True if the document carries non-whitespace content after the last {@code %%EOF} - i.e. it was extended with an
+   * incremental update whose terminating {@code %%EOF} is absent. Such trailing bytes are invisible to the revision
+   * analysis (which slices on {@code %%EOF}) but are shown by recovering PDF viewers, so no signature can be said to
+   * cover the whole physical document. When set, {@link #isCoversWholeDocument(PDSignature)} always returns false.
+   */
+  private boolean documentExtendedWithIncompleteIncrement = false;
 
   /**
    * Constructs a DefaultPDFSignatureContext instance.
@@ -161,6 +168,12 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     if (revisionIndex == -1) {
       throw new IllegalArgumentException("The specified signature was not found in the document");
     }
+    if (this.documentExtendedWithIncompleteIncrement) {
+      // Non-whitespace content follows the last %%EOF: the document was extended with an incremental update whose
+      // terminating %%EOF is absent. That content forms no recognized revision but is rendered by recovering viewers,
+      // so no signature can cover the whole physical document - regardless of which revision this signature is in.
+      return false;
+    }
     if (revisionIndex == this.PDFDocRevisions.size() - 1) {
       // The signature is the last revision
       return true;
@@ -173,6 +186,76 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
       }
     }
     return true;
+  }
+
+  /** The {@code %%EOF} marker as bytes. */
+  private static final byte[] EOF_BYTES = EOF.getBytes(StandardCharsets.US_ASCII);
+
+  /**
+   * Maximum number of bytes permitted after the terminating {@code %%EOF}. A well-formed PDF ends with {@code %%EOF}
+   * and at most a line terminator, so the terminating marker must fall within this window of end-of-file; anything
+   * beyond it is treated as an extension. Searching only this tail also bounds the work to a small constant regardless
+   * of document size (no whole-document copy, no unbounded scan).
+   */
+  private static final int MAX_BYTES_AFTER_LAST_EOF = 4096;
+
+  /**
+   * Returns true if the document carries content after the terminating {@code %%EOF}, i.e. it was extended with an
+   * incremental update whose {@code %%EOF} is absent. The terminating {@code %%EOF} is located only within the last
+   * {@link #MAX_BYTES_AFTER_LAST_EOF} bytes: if it is not there, the document has a large trailing extension and is
+   * flagged without scanning it; otherwise only the small remainder after it is checked, permitting only PDF whitespace
+   * (NUL, HT, LF, FF, CR, SPACE).
+   *
+   * @return true if the document has content after its terminating {@code %%EOF}
+   */
+  private boolean hasNonWhitespaceContentAfterLastEof() {
+    final int lastEof = this.lastEofInTail(MAX_BYTES_AFTER_LAST_EOF);
+    if (lastEof == -1) {
+      // No terminating %%EOF within the permitted tail window: the document was extended past its %%EOF (or has none).
+      return true;
+    }
+    for (int i = lastEof + EOF_BYTES.length; i < this.pdfBytes.length; i++) {
+      if (!isPdfWhitespace(this.pdfBytes[i])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Returns the byte index of the last {@code %%EOF} occurring within the final {@code maxTailBytes} bytes of the
+   * document, or -1 if there is none within that window. Bounding the search to the tail avoids copying the document
+   * and keeps the work constant regardless of document size.
+   *
+   * @param maxTailBytes the number of trailing bytes (before the marker) to search
+   * @return the index of the last {@code %%EOF} within the tail window, or -1
+   */
+  private int lastEofInTail(final int maxTailBytes) {
+    final int stop = Math.max(0, this.pdfBytes.length - EOF_BYTES.length - maxTailBytes);
+    for (int i = this.pdfBytes.length - EOF_BYTES.length; i >= stop; i--) {
+      if (matchesAt(this.pdfBytes, i, EOF_BYTES)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /** Returns true if {@code pattern} occurs in {@code data} starting at {@code offset}. */
+  private static boolean matchesAt(final byte[] data, final int offset, final byte[] pattern) {
+    if (offset < 0 || offset + pattern.length > data.length) {
+      return false;
+    }
+    for (int j = 0; j < pattern.length; j++) {
+      if (data[offset + j] != pattern[j]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** PDF whitespace characters per ISO 32000-1: NUL, HT, LF, FF, CR and SPACE. */
+  private static boolean isPdfWhitespace(final byte b) {
+    return b == 0x00 || b == 0x09 || b == 0x0a || b == 0x0c || b == 0x0d || b == 0x20;
   }
 
   /** {@inheritDoc} */
@@ -263,6 +346,11 @@ public class DefaultPDFSignatureContext implements PDFSignatureContext {
     this.PDFDocRevisions = consolidatedList.stream()
       .sorted(Comparator.comparingInt(value -> value.getLength()))
       .collect(Collectors.toList());
+
+    // Detect an incremental update whose terminating %%EOF was removed: any non-whitespace content after the last
+    // %%EOF. Such trailing bytes form no recognized revision (revisions are sliced on %%EOF) yet recovering viewers
+    // still render them, so when present no signature can cover the whole physical document.
+    this.documentExtendedWithIncompleteIncrement = this.hasNonWhitespaceContentAfterLastEof();
 
     PDFDocRevision lastRevData = null;
     for (final PDFDocRevision revData : this.PDFDocRevisions) {
