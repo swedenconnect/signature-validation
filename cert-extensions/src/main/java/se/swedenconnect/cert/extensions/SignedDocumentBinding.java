@@ -52,7 +52,7 @@ import java.util.Objects;
  * SignedDocumentBinding ::= SEQUENCE {
  *     dataTbsHash     OCTET STRING,
  *     hashAlg         DigestAlgorithmIdentifier,
- *     bindingType     UTF8String OPTIONAL }
+ *     bindingType     OBJECT IDENTIFIER OPTIONAL }
  * </pre>
  *
  * <p>
@@ -67,6 +67,10 @@ public class SignedDocumentBinding extends ASN1Object {
 
   /** The OID of the signedDocumentBinding extension: {@code 1.3.6.1.5.5.7.1.37} ({@code id-pe 37}). */
   public static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.1.37");
+  public static final ASN1ObjectIdentifier CADES_BINDING = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.678.1");
+  public static final ASN1ObjectIdentifier XADES_BINDING = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.678.2");
+  public static final ASN1ObjectIdentifier JWS_BINDING = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.678.3");
+  public static final ASN1ObjectIdentifier COSE_BINDING = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.678.4");
 
   /** The hash of the data to be signed, binding this certificate to that content. */
   @Getter @Setter
@@ -81,7 +85,7 @@ public class SignedDocumentBinding extends ASN1Object {
    * means the default binding applies.
    */
   @Getter @Setter
-  private String bindingType;
+  private ASN1ObjectIdentifier bindingType;
 
   /**
    * Parses an object into a {@link SignedDocumentBinding}.
@@ -115,7 +119,7 @@ public class SignedDocumentBinding extends ASN1Object {
     this.dataTbsHash = ASN1OctetString.getInstance(seq.getObjectAt(0)).getOctets();
     this.hashAlg = AlgorithmIdentifier.getInstance(seq.getObjectAt(1));
     if (seq.size() == 3) {
-      this.bindingType = ASN1UTF8String.getInstance(seq.getObjectAt(2)).getString();
+      this.bindingType = ASN1ObjectIdentifier.getInstance(seq.getObjectAt(2));
     }
   }
 
@@ -131,7 +135,7 @@ public class SignedDocumentBinding extends ASN1Object {
    * @param bindingType the binding type identifier, or {@code null} for the default binding
    */
   public SignedDocumentBinding(final byte[] dataTbsHash, final AlgorithmIdentifier hashAlg,
-      final String bindingType) {
+      final ASN1ObjectIdentifier bindingType) {
     this.dataTbsHash = dataTbsHash;
     this.hashAlg = hashAlg;
     this.bindingType = bindingType;
@@ -151,7 +155,7 @@ public class SignedDocumentBinding extends ASN1Object {
     v.add(new DEROctetString(this.dataTbsHash));
     v.add(this.hashAlg);
     if (this.bindingType != null) {
-      v.add(new DERUTF8String(this.bindingType));
+      v.add(this.bindingType);
     }
     return new DERSequence(v);
   }
@@ -168,8 +172,9 @@ public class SignedDocumentBinding extends ASN1Object {
     final String digestName = this.hashAlg != null
         ? MessageDigestUtils.getDigestName(this.hashAlg.getAlgorithm())
         : "null";
+    final String bindingTypeString = this.bindingType != null ? this.bindingType.getId() : "null";
     return "SignedDocumentBinding [dataTbsHash=" + hash
         + ", hashAlg=" + digestName
-        + ", bindingType=" + this.bindingType + "]";
+        + ", bindingType=" + bindingTypeString + "]";
   }
 }

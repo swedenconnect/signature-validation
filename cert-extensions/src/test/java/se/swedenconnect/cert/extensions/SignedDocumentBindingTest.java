@@ -64,14 +64,14 @@ class SignedDocumentBindingTest {
 
   @Test
   void roundTripWithBindingType() throws IOException {
-    final SignedDocumentBinding original = new SignedDocumentBinding(HASH, SHA256, "cades");
+    final SignedDocumentBinding original = new SignedDocumentBinding(HASH, SHA256, SignedDocumentBinding.CADES_BINDING);
 
     final byte[] encoded = original.getEncoded("DER");
     final SignedDocumentBinding decoded = SignedDocumentBinding.getInstance(encoded);
 
     assertArrayEquals(HASH, decoded.getDataTbsHash());
     assertHashAlgIsSha256(decoded.getHashAlg());
-    assertEquals("cades", decoded.getBindingType());
+    assertEquals(SignedDocumentBinding.CADES_BINDING, decoded.getBindingType());
 
     // Encoding must be stable across a decode/re-encode cycle.
     assertArrayEquals(encoded, decoded.getEncoded("DER"));
@@ -82,8 +82,8 @@ class SignedDocumentBindingTest {
 
   @Test
   void toStringTest() {
-    final SignedDocumentBinding binding = new SignedDocumentBinding(HASH, SHA256, "cose");
-    assertEquals("SignedDocumentBinding [dataTbsHash=0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20, hashAlg=SHA-256, bindingType=cose]", binding.toString());
+    final SignedDocumentBinding binding = new SignedDocumentBinding(HASH, SHA256, SignedDocumentBinding.COSE_BINDING);
+    assertEquals("SignedDocumentBinding [dataTbsHash=0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20, hashAlg=SHA-256, bindingType=1.3.6.1.5.5.7.678.4]", binding.toString());
   }
 
   @Test
@@ -122,16 +122,16 @@ class SignedDocumentBindingTest {
 
   @Test
   void getInstanceReturnsSameInstanceForSignedDocumentBinding() {
-    final SignedDocumentBinding original = new SignedDocumentBinding(HASH, SHA256, "xades");
+    final SignedDocumentBinding original = new SignedDocumentBinding(HASH, SHA256, SignedDocumentBinding.XADES_BINDING);
     assertSame(original, SignedDocumentBinding.getInstance(original));
   }
 
   @Test
   void getInstanceAcceptsAsn1Sequence() {
-    final SignedDocumentBinding original = new SignedDocumentBinding(HASH, SHA256, "jws");
+    final SignedDocumentBinding original = new SignedDocumentBinding(HASH, SHA256, SignedDocumentBinding.JWS_BINDING);
     final ASN1Primitive seq = original.toASN1Primitive();
     final SignedDocumentBinding decoded = SignedDocumentBinding.getInstance(seq);
-    assertEquals("jws", decoded.getBindingType());
+    assertEquals(SignedDocumentBinding.JWS_BINDING, decoded.getBindingType());
   }
 
   @Test
@@ -149,21 +149,21 @@ class SignedDocumentBindingTest {
 
   @Test
   void encodeRejectsNullDataTbsHash() {
-    final SignedDocumentBinding binding = new SignedDocumentBinding(HASH, SHA256, "cose");
+    final SignedDocumentBinding binding = new SignedDocumentBinding(HASH, SHA256, SignedDocumentBinding.COSE_BINDING);
     binding.setDataTbsHash(null);
     assertThrows(NullPointerException.class, () -> binding.getEncoded("DER"));
   }
 
   @Test
   void encodeRejectsNullHashAlg() {
-    final SignedDocumentBinding binding = new SignedDocumentBinding(HASH, SHA256, "cose");
+    final SignedDocumentBinding binding = new SignedDocumentBinding(HASH, SHA256, SignedDocumentBinding.COSE_BINDING);
     binding.setHashAlg(null);
     assertThrows(NullPointerException.class, () -> binding.getEncoded("DER"));
   }
 
   @Test
   void bindingTypeCanBeClearedAndOmittedFromEncoding() throws IOException {
-    final SignedDocumentBinding binding = new SignedDocumentBinding(HASH, SHA256, "cades");
+    final SignedDocumentBinding binding = new SignedDocumentBinding(HASH, SHA256, SignedDocumentBinding.CADES_BINDING);
     binding.setBindingType(null);
 
     final byte[] encoded = binding.getEncoded("DER");
@@ -174,7 +174,7 @@ class SignedDocumentBindingTest {
 
   @Test
   void toStringRendersJcaDigestName() {
-    final SignedDocumentBinding binding = new SignedDocumentBinding(HASH, SHA256, "cades");
+    final SignedDocumentBinding binding = new SignedDocumentBinding(HASH, SHA256, SignedDocumentBinding.CADES_BINDING);
     final String s = binding.toString();
     assertTrue(s.contains("SHA-256"), "toString should render the JCA digest name");
     assertFalse(s.contains(NISTObjectIdentifiers.id_sha256.getId()),
