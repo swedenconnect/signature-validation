@@ -28,13 +28,15 @@ import org.xml.sax.SAXException;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import se.swedenconnect.cert.extensions.AuthnContext;
+import se.swedenconnect.cert.extensions.data.ProtocolAuthContext;
 import se.swedenconnect.cert.extensions.utils.DOMUtils;
 
 /**
  * DOM based implementation of SAMLAuthContext for the AuhtnContext extension RFC 7773
  */
 @EqualsAndHashCode(callSuper = true) @Data
-public class SAMLAuthContext extends AbstractDomData {
+public class SAMLAuthContext extends AbstractDomData implements ProtocolAuthContext {
 
   /** SAMLAuthContext element name */
   private static final String SAML_AUTH_CONTEXT_ELEMENT = "SAMLAuthContext";
@@ -148,6 +150,18 @@ public class SAMLAuthContext extends AbstractDomData {
     if (idAttributesElm != null) {
       idAttributes = new IdAttributes(idAttributesElm, strictMode);
     }
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public String getContextType() {
+    return AuthnContext.SACI_CONTEXT_TYPE;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public String toContextInfo(final boolean formatted) throws IOException {
+    return AuthnContext.printAuthnContext(this, formatted);
   }
 
 }

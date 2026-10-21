@@ -14,6 +14,7 @@ The following XML schema files are compiled in support of producing this report 
 
 - [ETSI TS 119 102-2 schema](src/main/schema/TS119102-2-v131_fixed.xsd)
 - [RFC 7773 Authentication context extension schema](src/main/schema/CertAuthContextExtension-SAML-1.0.xsd)
+- [Generic authentication context schema](src/main/schema/CertAuthContextExtension-Generic-1.0.xsd) for context types whose content is not XML, such as OpenID Connect Authentication Context Information
 
 The validation report follows the following basic structure:
 
@@ -81,6 +82,7 @@ The following SignatureElements are supported and included if applicable:
 | SignatureTimestamp | Reference to one or more timestamps supporting the POE of this signature                                                                                   |
 | SignatureMethod    | This is a non ETSI standard amendment and includes information about the signature algorithm using this element from the XML digital signature XML schema. |
 | SAMLAuthContext    | Includes the authentication context data from the signer certificate if present using the format specified in RFC 7773.                                    |
+| AuthenticationContext | Included instead of SAMLAuthContext when the signer certificate carries an authentication context of another type, such as OpenID Connect Authentication Context Information. The `ContextType` attribute holds the context type URI and the element content holds the context information as carried in the certificate. |
 
 Note: DataObjectFormat refer to the signature data format rather than the signed data format. In case of PDF and XML, signature
 format and data format is the same but in other signature formats such as JOSE, the signed data may be using any data format.

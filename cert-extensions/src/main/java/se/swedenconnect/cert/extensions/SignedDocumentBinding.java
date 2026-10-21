@@ -67,10 +67,10 @@ public class SignedDocumentBinding extends ASN1Object {
 
   /** The OID of the signedDocumentBinding extension: {@code 1.3.6.1.5.5.7.1.37} ({@code id-pe 37}). */
   public static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.1.37");
-  public static final ASN1ObjectIdentifier CADES_BINDING = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.678.1");
-  public static final ASN1ObjectIdentifier XADES_BINDING = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.678.2");
-  public static final ASN1ObjectIdentifier JWS_BINDING = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.678.3");
-  public static final ASN1ObjectIdentifier COSE_BINDING = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.678.4");
+  public static final ASN1ObjectIdentifier CADES_BINDING = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.26.1");
+  public static final ASN1ObjectIdentifier XADES_BINDING = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.26.2");
+  public static final ASN1ObjectIdentifier JWS_BINDING = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.26.3");
+  public static final ASN1ObjectIdentifier COSE_BINDING = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.26.4");
 
   /** The hash of the data to be signed, binding this certificate to that content. */
   @Getter @Setter

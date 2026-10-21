@@ -37,10 +37,12 @@ import org.w3.x2000.x09.xmldsig.SignatureMethodDocument;
 import org.w3.x2000.x09.xmldsig.SignatureMethodType;
 import org.w3.x2000.x09.xmldsig.SignatureValueType;
 import se.elegnamnden.id.authCont.x10.saci.SAMLAuthContextDocument;
+import se.swedenconnect.cert.extensions.AuthnContextEntry;
+import se.swedenconnect.id.authCont.x10.generic.AuthenticationContextDocument;
+import se.swedenconnect.id.authCont.x10.generic.AuthenticationContextType;
 import se.idsec.signservice.security.sign.SignatureValidationResult;
 import se.swedenconnect.cert.extensions.AuthnContext;
 import se.swedenconnect.cert.extensions.QCStatements;
-import se.swedenconnect.cert.extensions.data.saci.SAMLAuthContext;
 import se.swedenconnect.sigval.cert.chain.PathValidationResult;
 import se.swedenconnect.sigval.cert.validity.ValidationStatus;
 import se.swedenconnect.sigval.commons.data.ExtendedSigValResult;
@@ -400,27 +402,45 @@ public abstract class AbstractSigValReportGenerator<R extends ExtendedSigValResu
     // Set document format
     signatureAttributesType.setDataObjectFormatArray(new SADataObjectFormatType[] { getDataObjectFormat() });
     // Process the signer certificate
-    SAMLAuthContextDocument authnContextDoc = null;
+    XmlObject authnContextDoc = null;
     try {
       VOReferenceType certificateRef = signatureAttributesType.addNewSigningCertificate().addNewAttributeObject();
       certificateRef.setVOReference(List.of(
         ValidationObjectProcessor.getId(signerCertificate.getEncoded(), hashAlgoId,
           se.swedenconnect.sigval.report.validationobjects.ValidationObjectType.certificate)));
 
-      //Get Authn Context extension info
+      // Authentication Context extension (RFC 7773). The first entry is reported: SAML Authentication Context
+      // Information as its XML element, any other context type (e.g. OpenID Connect Authentication Context
+      // Information) as a generic element carrying the contextType URI and the contextInfo string.
       X509CertificateHolder signCertHolder = new JcaX509CertificateHolder(signerCertificate);
       Extension authnContextExt = signCertHolder.getExtension(AuthnContext.OID);
       if (authnContextExt != null) {
         try {
-          AuthnContext authnContext = AuthnContext.getInstance(authnContextExt.getParsedValue());
-          List<SAMLAuthContext> statementInfoList = authnContext.getStatementInfoList();
-          if (statementInfoList != null && !statementInfoList.isEmpty()) {
-            SAMLAuthContext samlAuthContext = statementInfoList.get(0);
-            String authContextXmlStr = AuthnContext.printAuthnContext(samlAuthContext, false);
-            authnContextDoc = SAMLAuthContextDocument.Factory.parse(new ByteArrayInputStream(authContextXmlStr.getBytes(StandardCharsets.UTF_8)));
+          // Lenient parsing: the report renders the content of the certificate as issued. Conformance of the
+          // extension content to RFC 7773 or to the applicable certificate profile is evaluated by the validator,
+          // not by the report generator.
+          AuthnContext authnContext = AuthnContext.getInstance(authnContextExt.getParsedValue(), false);
+          List<AuthnContextEntry> entries = authnContext.getEntries();
+          if (!entries.isEmpty()) {
+            AuthnContextEntry entry = entries.get(0);
+            if (entry.isSaml()) {
+              String authContextXmlStr = AuthnContext.printAuthnContext(entry.getSamlAuthContext(), false);
+              authnContextDoc = SAMLAuthContextDocument.Factory.parse(
+                new ByteArrayInputStream(authContextXmlStr.getBytes(StandardCharsets.UTF_8)));
+            }
+            else {
+              String contextInfo = entry.getContextInfo(false);
+              if (contextInfo != null) {
+                AuthenticationContextDocument genericDoc = AuthenticationContextDocument.Factory.newInstance();
+                AuthenticationContextType genericContext = genericDoc.addNewAuthenticationContext();
+                genericContext.setContextType(entry.getContextType());
+                genericContext.setStringValue(contextInfo);
+                authnContextDoc = genericDoc;
+              }
+            }
           }
         } catch (Exception ex) {
-          log.error("SAML Authn context parsing error - Probably caused by JAXB dependency setup errors");
+          log.warn("Unable to process the Authentication Context extension of the signer certificate: {}", ex.toString());
           // Proceed without adding auth context data
         }
       }

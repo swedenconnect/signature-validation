@@ -74,6 +74,12 @@
       <artifactId>bcpkix-jdk18on</artifactId>
     </dependency>
 
+    <!-- JSON support for OpenID Connect Authentication Context Information (OACI) -->
+    <dependency>
+      <groupId>tools.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
 
     <dependency>
       <groupId>org.glassfish.jaxb</groupId>

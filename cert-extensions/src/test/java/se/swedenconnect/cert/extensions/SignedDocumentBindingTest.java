@@ -83,7 +83,7 @@ class SignedDocumentBindingTest {
   @Test
   void toStringTest() {
     final SignedDocumentBinding binding = new SignedDocumentBinding(HASH, SHA256, SignedDocumentBinding.COSE_BINDING);
-    assertEquals("SignedDocumentBinding [dataTbsHash=0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20, hashAlg=SHA-256, bindingType=1.3.6.1.5.5.7.678.4]", binding.toString());
+    assertEquals("SignedDocumentBinding [dataTbsHash=0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20, hashAlg=SHA-256, bindingType=1.3.6.1.5.5.7.26.4]", binding.toString());
   }
 
   @Test

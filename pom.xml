@@ -62,6 +62,7 @@
     <slf4j.version>2.0.20</slf4j.version>
     <jackson2.version>2.22</jackson2.version>
     <jackson3.version>3.2.3</jackson3.version>
+    <lombok.version>1.18.46</lombok.version>
   </properties>
 
   <modules>
@@ -205,7 +206,7 @@
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
-        <version>1.18.46</version>
+        <version>${lombok.version}</version>
       </dependency>
 
       <dependency>
@@ -290,6 +291,15 @@
           <version>3.15.0</version>
           <configuration>
             <release>${java.version}</release>
+            <!-- Lombok must be declared explicitly: since JDK 23 javac no longer runs
+                 annotation processors that are merely discovered on the class path -->
+            <annotationProcessorPaths>
+              <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+              </path>
+            </annotationProcessorPaths>
           </configuration>
         </plugin>
 

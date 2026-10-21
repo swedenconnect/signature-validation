@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Generic representation of an AuthenticationContext entry of the Authentication Context certificate extension
+  (RFC 7773) for context types whose contextInfo is not XML, such as OpenID Connect Authentication Context
+  Information (OACI, draft-santesson-oidc-cert-auth-context). The element content is the contextInfo string as
+  carried in the certificate and the ContextType attribute is the contextType URI.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified"
+    targetNamespace="http://id.swedenconnect.se/auth-cont/1.0/generic"
+    xmlns:gac="http://id.swedenconnect.se/auth-cont/1.0/generic">
+
+  <xs:element name="AuthenticationContext" type="gac:AuthenticationContextType" />
+
+  <xs:complexType name="AuthenticationContextType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="ContextType" type="xs:anyURI" use="required" />
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+</xs:schema>
